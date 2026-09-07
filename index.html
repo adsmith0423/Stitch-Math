@@ -697,6 +697,18 @@
                             <option value="7 - Jumbo">7 - Jumbo (Jumbo, Roving)</option>
                         </select>
                     </div>
+                    <!-- US and UK crochet terms collide: a UK "dc" is a US "sc", and a UK "tr" is a US
+                         "dc". Setting this flags terms that cannot belong to the dialect chosen. It
+                         never rewrites a stitch name and never changes a count - see validator.js
+                         section 4b. Off by default, and off in every project saved before it existed. -->
+                    <div class="form-group">
+                        <label for="meta-terminology">Terminology</label>
+                        <select id="meta-terminology" title="Flags US terms in a UK pattern, and UK terms in a US one. Never rewrites your stitches.">
+                            <option value="">Off &mdash; don't check</option>
+                            <option value="us">US terms</option>
+                            <option value="uk">UK terms</option>
+                        </select>
+                    </div>
                 </div>
             </section>
 
@@ -1033,6 +1045,10 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                         <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg>
                         <span class="pub-text"><strong>Save as PDF</strong><span>The pattern as a PDF file, with metadata and stitch table.</span></span>
                     </button>
+                    <button type="button" id="pub-export-markup" class="publish-action">
+                        <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-alert"></use></svg>
+                        <span class="pub-text"><strong>Export annotated draft</strong><span>The pattern with the linter&rsquo;s marks still on it, for review.</span></span>
+                    </button>
                     <button type="button" id="pub-export-history" class="publish-action">
                         <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-trend"></use></svg>
                         <span class="pub-text"><strong>Export gauge history</strong><span>Every swatch you have logged, as a file.</span></span>
@@ -1310,6 +1326,17 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                      the text sitting behind a transparent textarea, carrying the underlines; the textarea
                      itself is untouched, so it stays the one place the pattern lives and every existing
                      reader of its value keeps working. Everything inside is built at run time. -->
+                <!-- === PATTERN SKELETONS ===
+                     The blank canvas, answered. Each skeleton opens with the front matter every
+                     pattern is required to state, so the structure is learned by having it in front of
+                     you rather than by being told off for its absence. Built at run time from
+                     PATTERN_TEMPLATES in app.js, which is also what tests/test-templates.js reads -
+                     one table, so a skeleton cannot be offered here that the suite has not validated. -->
+                <details id="template-picker" class="template-picker">
+                    <summary>Start from a template</summary>
+                    <p class="helper-text">Each one is a complete, working pattern that already states its hook, yarn, gauge and abbreviations &mdash; the four things a pattern has to say before anyone else can work it. Change the numbers and make it yours.</p>
+                    <div id="template-list" class="template-list"></div>
+                </details>
                 <div class="lint-shell">
                     <div class="lint-editor">
                         <div class="lint-gutter" id="lint-gutter" aria-hidden="true"></div>
@@ -1368,6 +1395,9 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <button type="button" id="clear-all-btn">Clear All</button>
                     <button type="button" id="export-txt-btn" class="btn-success">Save as Text</button>
                     <button type="button" id="export-pdf-btn" class="btn-info">Save as PDF</button>
+                    <!-- The working, not the answer: the pattern with the linter's underlines still on
+                         it and a numbered note for every one. What a teacher grades a draft from. -->
+                    <button type="button" id="export-markup-btn" class="btn-info" title="The pattern with every linter underline still visible, and a numbered list of what each one says.">Export Annotated Draft</button>
                 </div>
             </section>
 
@@ -1411,6 +1441,12 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <h3>Pattern Validation Matrix</h3>
                     <button type="button" id="jump-error-btn" class="btn-jump-error" onclick="window.jumpToFirstError()"><svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-alert"></use></svg> Jump to First Error</button>
                 </div>
+                <!-- === THE VALIDATION BADGE ===
+                     One verdict for the whole document, so a teacher can see at a glance whether the
+                     arithmetic needs checking by hand before grading the parts worth grading. Built in
+                     app.js section 8; deliberately separate from the 0-100 health score, which measures
+                     how well the pattern is WRITTEN rather than whether it is finished. -->
+                <div id="validation-badge" class="validation-badge"></div>
                 <div class="matrix-view-options">
                     <label for="toggle-trend-markers">
                         <input type="checkbox" id="toggle-trend-markers" checked>
@@ -1419,6 +1455,10 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <label for="toggle-collapse-repeats">
                         <input type="checkbox" id="toggle-collapse-repeats">
                         <span>Collapse repeated rows</span>
+                    </label>
+                    <label for="toggle-outline-view" title="Strips the prose and shows only the stitch count each row produces, so a shape going off track is visible at a glance.">
+                        <input type="checkbox" id="toggle-outline-view">
+                        <span>Geometric outline only</span>
                     </label>
                 </div>
                 <div class="table-responsive">

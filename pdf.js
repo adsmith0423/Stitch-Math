@@ -39,6 +39,28 @@
     const COLUMNS = Math.floor((PAGE.width - PAGE.margin * 2) / (BODY_SIZE * COURIER_ADVANCE));
 
     /**
+     * The linter's three severities, as PDF colour.
+     *
+     * "No colour" was one of this file's stated omissions, and the annotated draft export is what
+     * bought it back: a teacher reviewing a student's uncorrected working needs to see the same coral
+     * and teal that were on the screen, or the export is a different document from the one the student
+     * was reading. It costs two operators, which is a fair price for the one thing the feature is for.
+     *
+     * The values are the --brand-coral / --brand-gold / --brand-teal of style.css, converted to the
+     * 0-1 triples PDF wants. Keep them in step: the page and the printout claiming different colours
+     * for the same severity is the failure this whole export exists to avoid.
+     */
+    const MARK_COLORS = {
+        math:   [0.855, 0.502, 0.357],   /* #da805b coral - the arithmetic does not work   */
+        syntax: [0.788, 0.604, 0.243],   /* #c99a3e gold  - the notation is malformed      */
+        style:  [0.337, 0.463, 0.416]    /* #56766a teal  - a teaching note, not an error  */
+    };
+
+    /* How far under the baseline the rule sits, and how thick it is. Both in PDF units. */
+    const RULE_DROP = 2.5;
+    const RULE_WEIGHT = 0.7;
+
+    /**
      * Latin-1 is what the base-14 fonts encode, so anything outside it has to become something.
      *
      * Dropping unknown characters silently would quietly mangle a designer's own words, so the
@@ -97,7 +119,14 @@
         return out;
     }
 
-    /** Splits the document into pages of positioned lines. */
+    /**
+     * Splits the document into pages of positioned lines.
+     *
+     * `lines` may be plain strings, or `{ text, mark }` objects where `mark` names one of
+     * MARK_COLORS. A marked line carries its underline with it through wrapping and pagination, so a
+     * flagged row that wraps onto three lines is underlined on all three, and one that lands at a page
+     * break keeps its rule on the page its text ended up on.
+     */
     function paginate(lines, title) {
         const top = PAGE.height - PAGE.margin;
         const bottom = PAGE.margin + LINE_HEIGHT;
@@ -117,24 +146,62 @@
         startPage();
 
         for (const raw of lines) {
-            for (const piece of wrap(raw, COLUMNS)) {
+            // Strings and {text, mark} both accepted, so every existing caller is unchanged.
+            const text = raw && typeof raw === 'object' ? String(raw.text == null ? '' : raw.text) : String(raw == null ? '' : raw);
+            const mark = raw && typeof raw === 'object' && MARK_COLORS[raw.mark] ? raw.mark : null;
+
+            for (const piece of wrap(text, COLUMNS)) {
                 if (y < bottom) startPage();
                 // Blank lines advance without emitting an operator - a Tj of an empty string is legal
                 // but writes an object for nothing, and a long export is mostly blank lines.
-                if (piece.trim()) page.push({ text: piece, x: PAGE.margin, y, size: BODY_SIZE });
+                if (piece.trim()) {
+                    page.push({ text: piece, x: PAGE.margin, y, size: BODY_SIZE, mark });
+                    if (mark) {
+                        // Exactly as wide as the text it sits under, which is arithmetic rather than
+                        // measurement only because every Courier glyph is the same width. Leading
+                        // whitespace is skipped so an indented line's rule starts at its first
+                        // character rather than out in the margin.
+                        const lead = piece.length - piece.replace(/^\s+/, '').length;
+                        const body = piece.replace(/^\s+/, '').replace(/\s+$/, '');
+                        const unit = BODY_SIZE * COURIER_ADVANCE;
+                        page.push({
+                            rule: mark,
+                            x: PAGE.margin + lead * unit,
+                            y: y - RULE_DROP,
+                            width: body.length * unit
+                        });
+                    }
+                }
                 y -= LINE_HEIGHT;
             }
         }
         return pages;
     }
 
-    /** One page's content stream. Tm sets an absolute position, so no state carries between lines. */
+    /**
+     * One page's content stream. Tm sets an absolute position, so no text state carries between lines.
+     *
+     * COLOUR IS DIFFERENT, and this is the one piece of graphics state that does persist: an `rg` set
+     * for one item stays set for everything after it until something changes it back. So every
+     * coloured item restores black itself rather than trusting the next one to set what it needs -
+     * without that, one teal underline tints the rest of the page and every page after it.
+     */
     function contentStream(items) {
         let out = '';
         for (const item of items) {
+            if (item.rule) {
+                const [r, g, b] = MARK_COLORS[item.rule];
+                out += `${r} ${g} ${b} rg `
+                     + `${item.x.toFixed(2)} ${item.y.toFixed(2)} ${item.width.toFixed(2)} ${RULE_WEIGHT} re f\n`
+                     + `0 0 0 rg\n`;
+                continue;
+            }
             const font = item.bold ? '/F2' : '/F1';
+            const color = item.mark ? MARK_COLORS[item.mark] : null;
+            if (color) out += `${color[0]} ${color[1]} ${color[2]} rg\n`;
             out += `BT ${font} ${item.size} Tf 1 0 0 1 ${item.x.toFixed(2)} ${item.y.toFixed(2)} Tm `
                  + `(${escapeText(toLatin1(item.text))}) Tj ET\n`;
+            if (color) out += `0 0 0 rg\n`;
         }
         return out;
     }
@@ -203,7 +270,9 @@
      */
     function fromText(text, options) {
         const meta = options || {};
-        const lines = String(text == null ? '' : text).split('\n');
+        // An array of {text, mark} is passed straight through - that is the annotated draft. A plain
+        // string is split the way it always was, so every existing caller is unaffected.
+        const lines = Array.isArray(text) ? text : String(text == null ? '' : text).split('\n');
         const pdf = assemble(paginate(lines, meta.title), meta);
         const bytes = new Uint8Array(pdf.length);
         for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
@@ -214,6 +283,6 @@
         fromText,
         // Exported for tests/node/pdf.test.js, which checks the wrapping rule and the xref offsets
         // rather than eyeballing a rendered page.
-        _internals: { wrap, toLatin1, escapeText, paginate, assemble, COLUMNS }
+        _internals: { wrap, toLatin1, escapeText, paginate, assemble, contentStream, COLUMNS, MARK_COLORS }
     };
 })();

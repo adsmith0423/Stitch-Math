@@ -49,7 +49,7 @@ for f in "$TESTS"/test-*.js; do
     esac
     [ -n "$FILTER" ] && [[ "$base" != *"$FILTER"* ]] && continue
 
-    out=$("$JSC" "$TESTS/test-dom.js" "$TESTS/test-stub.js" "$TESTS/test-assert.js" validator.js analytics.js persistence.js app.js "$f" 2>&1)
+    out=$("$JSC" "$TESTS/test-dom.js" "$TESTS/test-stub.js" "$TESTS/test-assert.js" validator.js analytics.js persistence.js pdf.js app.js "$f" 2>&1)
     pass=$(echo "$out" | grep -c "  PASS")
     fail=$(echo "$out" | grep -c "  FAIL")
     exc=$(echo "$out" | grep -c "Exception")
@@ -74,7 +74,7 @@ if [ -z "$FILTER" ] || [[ "corpus" == *"$FILTER"* ]]; then
     echo ""
     echo "  ${DIM}pattern corpora${OFF}"
     for f in test-corpus-pattern.js test-corpus-p2.js test-corpus-suite.js test-corpus-suite2.js test-corpus-garment.js; do
-        line=$("$JSC" "$TESTS/test-dom.js" "$TESTS/test-stub.js" "$TESTS/test-assert.js" validator.js analytics.js persistence.js app.js "$TESTS/$f" 2>&1 | tail -1)
+        line=$("$JSC" "$TESTS/test-dom.js" "$TESTS/test-stub.js" "$TESTS/test-assert.js" validator.js analytics.js persistence.js pdf.js app.js "$TESTS/$f" 2>&1 | tail -1)
         printf "  %-22s %s\n" "${f%.js}" "$line"
     done
 fi

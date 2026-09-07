@@ -352,6 +352,29 @@ window.CrochetMathEngine = (function() {
     const STANDING_CHAIN_HEIGHTS = { sc: 1, hdc: 2, dc: 3, tr: 4, dtr: 5, trtr: 6 };
 
     /**
+     * The same heights read in UK terminology, where the abbreviations name different stitches: a UK
+     * "dc" is a US "sc" and stands on one chain, not three; a UK "tr" is a US "dc" and stands on
+     * three, not four.
+     *
+     * This is the ONE place terminology reaches past the linter into how a row is read, and it can
+     * only ever change a note. turningChainNote and standingChainNotes are advisory by construction -
+     * the row's arithmetic already followed the pattern and stays valid whatever the note says (see
+     * the comment on turningChainNote). So a project set to UK terms gets the right sentence, and no
+     * count anywhere moves.
+     */
+    const UK_CHAIN_HEIGHTS = { dc: 1, htr: 2, tr: 3, dtr: 4, trtr: 5, qtr: 6 };
+
+    /** Which height table a given terminology reads by. Anything but 'uk' - including the 'off'
+     *  default and an unset project - gets the US table, which is what this app has always used. */
+    let chainHeightMode = 'off';
+    function setTerminology(mode) {
+        chainHeightMode = (mode === 'us' || mode === 'uk') ? mode : 'off';
+    }
+    function standingChainHeights() {
+        return chainHeightMode === 'uk' ? UK_CHAIN_HEIGHTS : STANDING_CHAIN_HEIGHTS;
+    }
+
+    /**
      * Rewrites "ch 3 (counts as dc)" to the one stitch it stands for. Runs on the raw instruction,
      * before the prose rules strip the "(counts as ...)" wording and leave a bare "ch 3" to be counted
      * as three.
@@ -431,12 +454,13 @@ window.CrochetMathEngine = (function() {
      * prefix-stripping rule here would start guessing at stitches the table never claimed to cover.
      */
     function tallestStitch(line) {
+        const heights = standingChainHeights();
         let tallest = null;
         let height = 0;
-        Object.keys(STANDING_CHAIN_HEIGHTS).forEach(stitch => {
-            if (STANDING_CHAIN_HEIGHTS[stitch] > height && new RegExp(`\\b${stitch}\\b`, 'i').test(line)) {
+        Object.keys(heights).forEach(stitch => {
+            if (heights[stitch] > height && new RegExp(`\\b${stitch}\\b`, 'i').test(line)) {
                 tallest = stitch;
-                height = STANDING_CHAIN_HEIGHTS[stitch];
+                height = heights[stitch];
             }
         });
         return { tallest, height };
@@ -463,7 +487,7 @@ window.CrochetMathEngine = (function() {
         while ((m = re.exec(String(text || ''))) !== null) {
             const chains = parseInt(m[1], 10);
             const stitch = m[2].toLowerCase();
-            const expected = STANDING_CHAIN_HEIGHTS[stitch];
+            const expected = standingChainHeights()[stitch];
             if (expected && expected !== chains) {
                 notes.push(`A standing chain for ${stitch} is usually ch ${expected}; this pattern writes ch ${chains}. Counted as the one ${stitch} the pattern says it is.`);
             }
@@ -1537,6 +1561,297 @@ window.CrochetMathEngine = (function() {
         if (/^(?:notions?|tools?|supplies|other\s*materials?)$/.test(label)) return { notions: value };
 
         return null;
+    }
+
+    /**
+     * The four things a pattern has to state before anyone else can work it: hook size, yarn weight,
+     * gauge, and a key to the abbreviations it uses.
+     *
+     * WHY THIS IS NOT A HEALTH CHECK. CalculatePatternHealth scores the arithmetic and the notation -
+     * things that are right or wrong about the stitches. These four are not wrong, they are absent,
+     * and a pattern whose every row balances perfectly should not be told it scored 82 because it did
+     * not name a hook. It gates the validation badge instead, where "sound, but not finished" is a
+     * state the reader can act on.
+     *
+     * Each element is satisfied by the metadata form OR by the pattern's own front matter, and which
+     * one is recorded rather than collapsed - a designer who typed the gauge into the calculator and a
+     * designer who wrote "Gauge: 14 hdc x 10 rows = 4in" have both stated it, and being told which was
+     * read is the difference between trusting the tick and re-checking it by hand.
+     *
+     * Nothing here parses a row or touches a count. It reads the same lines classifyPatternLine files
+     * as notes, using the readers that already exist for them.
+     */
+    const REQUIRED_ELEMENTS = [
+        { key: 'hook', label: 'Hook Size',
+          hint: 'Add it under Pattern Metadata, or write "Hook: 4.0mm (G)" near the top of the pattern.' },
+        { key: 'yarnWeight', label: 'Yarn Weight',
+          hint: 'Choose a weight under Pattern Metadata, or write "Yarn: Worsted Weight (Category 4)".' },
+        { key: 'gauge', label: 'Gauge',
+          hint: 'Measure a swatch on the Gauge tab, or state it: "Gauge: 14 hdc x 10 rows = 4 in."' },
+        { key: 'abbreviations', label: 'Abbreviations Key',
+          hint: 'Add an "Abbreviations" heading followed by your terms, one per line: "hdc = half double crochet".' }
+    ];
+
+    /**
+     * An abbreviations key needs at least two entries to be a key at all - one line under the heading
+     * is as likely to be a stray sentence as a definition, and a pattern that defines a single term
+     * has not told the reader what the rest of its vocabulary means.
+     *
+     * The block ends where the work starts, which is the same boundary documentationHeading's callers
+     * already use: startsWorkSection, or another documentation heading.
+     */
+    function countAbbreviationEntries(lines, from) {
+        let entries = 0;
+        for (let i = from + 1; i < lines.length; i++) {
+            const line = String(lines[i] || '').trim();
+            if (!line) continue;
+            if (startsWorkSection(line) || documentationHeading(line)) break;
+            if (parseAbbreviationEntry(line)) entries++;
+        }
+        return entries;
+    }
+
+    function requiredElements({ sourceText = '', metadata = {}, gauge = {} } = {}) {
+        const lines = String(sourceText || '').split('\n');
+        // 'form' beats 'pattern' only in the sense that it is checked first; both are equally valid
+        // ways to have stated the thing, and `source` reports whichever answered.
+        const found = {};
+        const see = (key, source) => { if (key && !found[key]) found[key] = source; };
+
+        if (String(metadata.hook || '').trim()) see('hook', 'form');
+        if (String(metadata.yarnWeight || '').trim()) see('yarnWeight', 'form');
+        // Both halves, because a swatch with stitches and no rows cannot produce a row gauge and is
+        // not a measurement anyone can work from.
+        if (gauge.stitches > 0 && gauge.rows > 0) see('gauge', 'form');
+
+        lines.forEach((line, i) => {
+            const stated = parseMetadataStatement(line);
+            if (stated) {
+                if (stated.hook) see('hook', 'pattern');
+                if (stated.yarnWeight) see('yarnWeight', 'pattern');
+                // parseMetadataStatement hands the gauge back whole rather than parsed, so the line is
+                // put to the one reader that knows a swatch from a sentence. "Gauge: work evenly" is a
+                // gauge label with nothing measurable under it and must not count.
+                if (stated.gauge && (parseGaugeStatement(line) || {}).stitches > 0) see('gauge', 'pattern');
+            } else if ((parseGaugeStatement(line) || {}).stitches > 0) {
+                // A gauge stated without its label - "14 hdc x 10 rows = 4 in." on a line of its own,
+                // which is how a Gauge block writes it once the heading above has said what it is.
+                see('gauge', 'pattern');
+            }
+
+            if (documentationHeading(line) === 'stitches' && countAbbreviationEntries(lines, i) >= 2) {
+                see('abbreviations', 'pattern');
+            }
+        });
+
+        const items = REQUIRED_ELEMENTS.map(element => ({
+            key: element.key,
+            label: element.label,
+            hint: element.hint,
+            present: Boolean(found[element.key]),
+            source: found[element.key] || null
+        }));
+
+        return {
+            items,
+            missing: items.filter(item => !item.present).map(item => item.key),
+            complete: items.every(item => item.present)
+        };
+    }
+
+    /**
+     * US and UK terminology, and the one question worth asking about it.
+     *
+     * The two systems name the same stitches differently and, worse, reuse each other's
+     * abbreviations for different heights: a UK "dc" is a US "sc", and a UK "tr" is a US "dc". A
+     * student who learned from one video and one blog post mixes them without noticing, and the
+     * result is a pattern nobody can work, because "dc" now means two things in one document.
+     *
+     * WHY THIS IS A TERMINOLOGY CHECK AND NOT AN ARITHMETIC ONE. Every basic in stitchDictionary is
+     * cost 1 / yield 1, so the counts come out the same whichever system a row is read in. The
+     * ambiguity is real for a human and invisible to the arithmetic, which is exactly why it needs
+     * saying out loud rather than being caught by a row that fails to add up. It never will.
+     *
+     * WHAT IS DELIBERATELY ABSENT: dc, tr, dtr. Those are the colliding terms - valid in BOTH
+     * systems, merely naming different stitches in each - so a pattern using them is not thereby
+     * wrong, and flagging them would put an underline on essentially every pattern ever written.
+     * Same reasoning as the note on htr in the dictionary above: what gets flagged is a genuinely
+     * impossible mixture, not an ambiguity. A "sc" in a pattern declared UK cannot be anything but a
+     * US term, because UK terminology has no such stitch.
+     */
+    const DIALECT_EXCLUSIVE = {
+        // Terms that exist only in US terminology, with the UK name for the same stitch.
+        // "skip" is deliberately not here. UK patterns traditionally write "miss", but "skip" is used
+        // throughout modern UK publishing too, so it is not exclusive and flagging it would be noise.
+        us: {
+            'sc': 'dc', 'single crochet': 'double crochet',
+            'hdc': 'htr', 'half double crochet': 'half treble',
+            'sc2tog': 'dc2tog', 'sc3tog': 'dc3tog',
+            'fpsc': 'fpdc', 'bpsc': 'bpdc'
+        },
+        // Terms that exist only in UK terminology, with the US name for the same stitch.
+        uk: {
+            'htr': 'hdc', 'half treble': 'half double crochet',
+            'half treble crochet': 'half double crochet',
+            'trtr': 'dtr', 'triple treble': 'double treble',
+            'qtr': 'trtr', 'quadruple treble': 'triple treble',
+            'miss': 'sk'
+        }
+    };
+
+    /** The full name of each system, for the sentence the finding writes. */
+    const DIALECT_NAMES = { us: 'US', uk: 'UK' };
+
+    /**
+     * Terms in this row that cannot belong to the terminology the project declares.
+     *
+     * `mode` is the system the pattern says it is written in, so the terms LOOKED FOR are the other
+     * one's. Anything but 'us' or 'uk' - including the 'off' default - finds nothing at all.
+     *
+     * Matched whole-word and longest-first, so "half double crochet" is reported once as itself
+     * rather than three times over as its parts, and "sc" never fires inside "fpsc".
+     *
+     * The boundary is checked against the surrounding characters rather than written into the regex
+     * as a lookbehind: a hyphen has to count as part of the word here ("sc-inc" is one term, not an
+     * "sc" beside something else) and \b does not treat it that way. Doing it by hand also keeps the
+     * expression to what every engine this runs under has always supported.
+     */
+    const DIALECT_WORD = /[a-z0-9-]/i;
+
+    function dialectFaults(instructionText, mode) {
+        const text = String(instructionText || '');
+        const other = mode === 'us' ? 'uk' : mode === 'uk' ? 'us' : null;
+        if (!other || !text) return [];
+
+        const table = DIALECT_EXCLUSIVE[other];
+        const out = [];
+        const claimed = [];
+        Object.keys(table)
+            .sort((a, b) => b.length - a.length)
+            .forEach(term => {
+                const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                let match;
+                while ((match = re.exec(text)) !== null) {
+                    const start = match.index;
+                    const end = start + match[0].length;
+                    const before = start > 0 ? text[start - 1] : '';
+                    const after = end < text.length ? text[end] : '';
+                    if (DIALECT_WORD.test(before) || DIALECT_WORD.test(after)) continue;
+                    // A longer term already covering this position has been reported; its parts are
+                    // not separate faults.
+                    if (claimed.some(span => start < span.end && end > span.start)) continue;
+                    claimed.push({ start, end });
+                    out.push({ term: match[0], belongsTo: other, equivalent: table[term], at: start });
+                }
+            });
+
+        return out.sort((a, b) => a.at - b.at);
+    }
+
+    /**
+     * One dialect fault as something the linter can underline.
+     *
+     * `edit: null`, deliberately and permanently. Rewriting "sc" to "dc" in a pattern the student
+     * believes is US would silently change what every one of those stitches means, and a button that
+     * does that on the strength of a dropdown nobody may have set correctly is worse than the
+     * underline it would replace. Same call buildFixes already makes for an unknown token.
+     */
+    function buildTerminologyFix(fault, mode) {
+        const declared = DIALECT_NAMES[mode] || 'the chosen';
+        const found = DIALECT_NAMES[fault.belongsTo];
+        return {
+            id: `dialect-${fault.term.toLowerCase().replace(/\s+/g, '-')}`,
+            severity: 'style',
+            title: `"${fault.term}" is a ${found} term, but this pattern is set to ${declared} terms`,
+            detail: `The ${declared} equivalent is "${fault.equivalent}". Stitch Math will not change `
+                + `it for you — if this pattern really is ${found}, change the Terminology setting `
+                + `instead of the stitch.`,
+            lesson: 'US and UK crochet reuse each other\'s abbreviations for different stitches — a UK '
+                + '"dc" is a US "sc". Naming which system a pattern uses, and then staying inside it, '
+                + 'is what stops a reader working the wrong stitch all the way through.',
+            edit: null
+        };
+    }
+
+    /**
+     * Longhand a beginner writes, and the abbreviation the industry prints.
+     *
+     * "chain 3" and "make an increase" are perfectly clear and completely correct - the engine reads
+     * both without complaint. They are also not how a published pattern is written, and a student who
+     * never sees the difference pointed out submits work that reads as unfinished for a reason nobody
+     * ever told them. That is the whole content of this table: nomenclature, taught in place.
+     *
+     * `dialect` restricts an entry to one terminology. "single crochet" only abbreviates to "sc" in a
+     * US pattern, because UK terminology has no such stitch - suggesting it in a UK document would be
+     * teaching the error the check above exists to catch. Entries with no `dialect` are the ones that
+     * abbreviate the same way in both.
+     *
+     * ORDER MATTERS, and ordering alone is not enough. Longest first, so "half double crochet" is
+     * matched before the "double crochet" rule below it - but a longer rule that is SKIPPED for
+     * belonging to the other dialect would otherwise leave its text open to the shorter one, and
+     * "half double crochet" in a UK pattern came back as a suggestion to write "half dc". So a longer
+     * form claims the span it matched whether or not it was offered, and shorter rules cannot reach
+     * inside it. Same span-claiming rule dialectFaults uses, for the same reason.
+     */
+    const SHORTHAND_FORMS = [
+        { name: 'half-double-crochet', re: /\bhalf\s+double\s+crochets?\b/i, to: 'hdc', dialect: 'us' },
+        { name: 'half-treble',         re: /\bhalf\s+trebles?(?:\s+crochets?)?\b/i, to: 'htr', dialect: 'uk' },
+        { name: 'single-crochet',      re: /\bsingle\s+crochets?\b/i, to: 'sc', dialect: 'us' },
+        { name: 'double-crochet',      re: /\bdouble\s+crochets?\b/i, to: 'dc' },
+        { name: 'treble-crochet',      re: /\btreble\s+crochets?\b/i, to: 'tr' },
+        { name: 'slip-stitch',         re: /\bslip\s+stitch(?:es)?\b/i, to: 'sl st' },
+        { name: 'chain-count',         re: /\bchain\s+(\d+)\b/i, to: 'ch $1' },
+        { name: 'increase',            re: /\bmake\s+an?\s+increase\b/i, to: 'inc' },
+        { name: 'decrease',            re: /\bmake\s+an?\s+decrease\b/i, to: 'dec' }
+    ];
+
+    /**
+     * The first longhand term on this row, as something the linter can offer a button for.
+     *
+     * One per row rather than all of them: each carries a distinct id, so a row with two long forms
+     * raises two findings and the sidebar shows both - but the same term twice on one line is one
+     * lesson, and collectFindings already folds it to a single card.
+     *
+     * The `edit` uses the repeatPhrasing target, which is a literal indexOf replace against the raw
+     * line. That works because the matched text is taken from the row's own instruction, which is the
+     * line minus its label - so the same substring is present in the line verbatim. On a graded row
+     * where a size has been substituted it will not be, indexOf misses, and the suggestion degrades
+     * to advice rather than rewriting the wrong thing.
+     */
+    function buildShorthandFixes(instructionText, mode) {
+        const text = String(instructionText || '');
+        if (!text) return [];
+
+        const out = [];
+        const claimed = [];
+        SHORTHAND_FORMS.forEach(form => {
+            const match = text.match(form.re);
+            if (!match) return;
+            const start = match.index;
+            const end = start + match[0].length;
+            // Claimed before the dialect test, not after: a longer form that is not offered here must
+            // still keep a shorter one out of the text it covers.
+            if (claimed.some(span => start < span.end && end > span.start)) return;
+            claimed.push({ start, end });
+
+            // 'off' still standardizes everything that abbreviates the same way in both systems; only
+            // the dialect-specific entries wait to be told which one this is.
+            if (form.dialect && form.dialect !== mode) return;
+            const replacement = match[0].replace(form.re, form.to);
+            if (replacement === match[0]) return;
+
+            out.push({
+                id: `shorthand-${form.name}`, severity: 'style',
+                title: `"${match[0]}" is usually written "${replacement}"`,
+                detail: `Both are read the same way by Stitch Math. "${replacement}" is the form a `
+                    + `published pattern prints, and the one your abbreviations key should define.`,
+                lesson: 'Standard abbreviations are what make a pattern short enough to follow a row at '
+                    + 'a time, and what let a reader who does not share your language work it from the '
+                    + 'key alone. Writing the long form is not wrong — it is just not the convention.',
+                edit: { target: 'repeatPhrasing', from: match[0], to: replacement }
+            });
+        });
+        return out;
     }
 
     /**
@@ -3520,6 +3835,15 @@ window.CrochetMathEngine = (function() {
         parseGaugeStatement,
         parseMetadataStatement,
         parseAbbreviationEntry,
+        requiredElements,
+        REQUIRED_ELEMENTS,
+        dialectFaults,
+        buildTerminologyFix,
+        buildShorthandFixes,
+        setTerminology,
+        standingChainHeights,
+        DIALECT_EXCLUSIVE,
+        SHORTHAND_FORMS,
         looksLikeRowLabel,
         stripRowLabel,
         rowLabelNumbers,

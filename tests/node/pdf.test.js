@@ -134,3 +134,110 @@ test('an empty document still produces a valid file', () => {
     const file = decode(PDF.fromText('', { title: 'Empty' }));
     assert.ok(file.startsWith('%PDF-1.4') && file.trimEnd().endsWith('%%EOF'));
 });
+
+/* === MARKED LINES ==============================================================================
+ * The annotated draft. Colour was one of this file's stated omissions until the export that needed
+ * it arrived, so what is asserted here is that adding it did not break the two things that silently
+ * go wrong - and that the graphics state it introduces is always put back.
+ */
+
+test('a marked line is drawn with a coloured rule under it', () => {
+    const stream = PDF._internals.contentStream(
+        PDF._internals.paginate([{ text: 'Row 3: sc in each st across (12)', mark: 'math' }], null)[0]
+    );
+    const coral = PDF._internals.MARK_COLORS.math;
+    assert.ok(stream.includes(`${coral[0]} ${coral[1]} ${coral[2]} rg`), 'the coral fill is set');
+    assert.ok(/\d+\.\d\d \d+\.\d\d \d+\.\d\d 0\.7 re f/.test(stream), 'and a rectangle is filled');
+});
+
+test('the rule is exactly as wide as the text above it', () => {
+    // Arithmetic rather than measurement, which is only possible because every Courier glyph is
+    // 0.6em. A rule that does not match its text is the tell that this assumption has been broken.
+    const text = 'Row 3: sc (12)';
+    const items = PDF._internals.paginate([{ text, mark: 'style' }], null)[0];
+    const rule = items.find(i => i.rule);
+    assert.ok(rule, 'a rule was emitted');
+    assert.strictEqual(Number(rule.width.toFixed(4)), Number((text.length * 9 * 0.6).toFixed(4)));
+});
+
+test('an indented line starts its rule at the first character, not in the margin', () => {
+    const items = PDF._internals.paginate([{ text: '   indented note', mark: 'style' }], null)[0];
+    const rule = items.find(i => i.rule);
+    const body = items.find(i => !i.rule);
+    assert.ok(rule.x > body.x, 'the rule is inset past the leading spaces');
+    assert.strictEqual(Number(rule.width.toFixed(4)), Number(('indented note'.length * 9 * 0.6).toFixed(4)));
+});
+
+test('colour is always put back to black', () => {
+    // The one piece of graphics state that persists between items. Without the reset, one teal
+    // underline tints every page after it - and nothing about the file would look wrong.
+    const stream = PDF._internals.contentStream(
+        PDF._internals.paginate([
+            { text: 'flagged row', mark: 'style' },
+            'an ordinary row'
+        ], null)[0]
+    );
+    const setColour = [...stream.matchAll(/^([\d.]+ [\d.]+ [\d.]+) rg$/gm)].map(m => m[1]);
+    assert.ok(setColour.length > 0, 'colour was set at all');
+    assert.strictEqual(setColour[setColour.length - 1], '0 0 0',
+        'the last colour operator in the stream returns to black');
+});
+
+test('an unmarked line emits no colour operator at all', () => {
+    const stream = PDF._internals.contentStream(PDF._internals.paginate(['plain row'], null)[0]);
+    assert.ok(!/ rg/.test(stream), 'nothing sets a fill colour');
+});
+
+test('a mark survives wrapping onto continuation lines', () => {
+    // A flagged row that wraps is still one row, and underlining only its first line would point at
+    // half a fault.
+    const long = 'Row 9: ' + 'sc in next st, '.repeat(12) + '(48)';
+    const items = PDF._internals.paginate([{ text: long, mark: 'math' }], null)[0];
+    const texts = items.filter(i => !i.rule);
+    const rules = items.filter(i => i.rule);
+    assert.ok(texts.length > 1, 'the line really did wrap');
+    assert.strictEqual(rules.length, texts.length, 'every wrapped piece carries its own rule');
+});
+
+test('an unknown mark name is ignored rather than crashing', () => {
+    const items = PDF._internals.paginate([{ text: 'row', mark: 'nonsense' }], null)[0];
+    assert.strictEqual(items.filter(i => i.rule).length, 0, 'no rule');
+    assert.strictEqual(items[0].mark, null, 'and the text is not coloured');
+});
+
+test('the xref offsets are still exact with rules in the stream', () => {
+    // The load-bearing assertion of this whole file, repeated for the annotated path: colour adds
+    // bytes to the content stream, and an offset table counted a second way is how a PDF ends up
+    // opening in one reader and not another.
+    const lines = [];
+    for (let i = 1; i <= 60; i++) {
+        lines.push(i % 3 === 0 ? { text: `Row ${i}: sc in each st across (${i})`, mark: 'math' }
+                               : `Row ${i}: sc in each st across (${i})`);
+    }
+    const file = decode(PDF.fromText(lines, { title: 'Annotated' }));
+    const xrefAt = Number(file.slice(file.lastIndexOf('startxref')).match(/startxref\n(\d+)/)[1]);
+    assert.ok(file.slice(xrefAt).startsWith('xref'), 'startxref points at the table');
+
+    const offsets = [...file.slice(xrefAt).matchAll(/^(\d{10}) 00000 n $/gm)].map(m => Number(m[1]));
+    assert.ok(offsets.length > 4, 'there are objects to check');
+    offsets.forEach((offset, i) => {
+        assert.ok(file.slice(offset).startsWith(`${i + 1} 0 obj`),
+                  `xref entry ${i + 1} points at offset ${offset}, which is not "${i + 1} 0 obj"`);
+    });
+
+    const re = /<< \/Length (\d+) >>\nstream\n([\s\S]*?)endstream/g;
+    let match, checked = 0;
+    while ((match = re.exec(file))) {
+        assert.strictEqual(match[2].length, Number(match[1]), 'stream length matches its declaration');
+        checked++;
+    }
+    assert.ok(checked > 1, 'the document ran to more than one page');
+});
+
+test('an array of plain strings behaves exactly like the string form', () => {
+    // Every existing caller passes a string. The array form must not be a second document format.
+    const text = 'Row 1: ch 13 (12)\nRow 2: sc in each ch across (12)';
+    const fromString = decode(PDF.fromText(text, { title: 'Same' }));
+    const fromArray = decode(PDF.fromText(text.split('\n'), { title: 'Same' }));
+    assert.strictEqual(fromArray, fromString);
+});

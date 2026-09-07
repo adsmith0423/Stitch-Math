@@ -992,6 +992,81 @@ mark.unknown-token {
 }
 
 /* ===================================================== */
+/* 5c-i. VALIDATION BADGE & GEOMETRIC OUTLINE            */
+/* ===================================================== */
+/* One verdict for the whole document. Colour carries the state, but never alone: the glyph and the
+   headline both say it too, so it survives a monochrome printout and a red-green colour deficiency. */
+.validation-badge {
+    margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border); border-left-width: 5px; border-radius: var(--radius);
+    background: var(--bg-main);
+}
+.validation-badge:empty { display: none; }
+.badge-head { display: flex; align-items: center; gap: var(--space-2); }
+.badge-icon { font-size: 20px; line-height: 1; }
+.badge-headline { font-size: 17px; font-weight: 700; }
+.badge-detail { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: 13px; }
+
+.badge-valid      { border-left-color: var(--brand-teal); }
+.badge-valid      .badge-icon, .badge-valid .badge-headline { color: var(--brand-teal); }
+.badge-incomplete { border-left-color: var(--brand-gold); }
+.badge-incomplete .badge-icon, .badge-incomplete .badge-headline { color: var(--brand-gold); }
+.badge-invalid    { border-left-color: var(--brand-coral); }
+.badge-invalid    .badge-icon, .badge-invalid .badge-headline { color: var(--brand-coral); }
+.badge-empty      { border-left-color: var(--border); }
+.badge-empty      .badge-icon, .badge-empty .badge-headline { color: var(--text-muted); }
+
+/* The four required elements, listed whatever the verdict: a designer whose pattern is valid benefits
+   from seeing why, and one whose pattern is not needs to know the front matter is not the problem. */
+.badge-elements {
+    list-style: none; margin: var(--space-3) 0 0; padding: var(--space-3) 0 0;
+    border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-2);
+}
+.badge-el { display: flex; align-items: baseline; gap: var(--space-2); font-size: 13px; }
+.badge-el-icon { flex: none; font-weight: 700; }
+.badge-el.is-present .badge-el-icon { color: var(--brand-teal); }
+.badge-el.is-missing .badge-el-icon { color: var(--text-muted); }
+.badge-el.is-missing .badge-el-name { font-weight: 600; }
+.badge-el-name { flex: none; }
+.badge-source, .badge-hint { color: var(--text-muted); font-size: 12px; }
+
+/* The outline strips the table to three columns, so the view options and the wide matrix header would
+   both be describing something that is no longer there. */
+.is-outline .matrix-table thead { display: none; }
+.outline-label { font-weight: 600; white-space: nowrap; }
+.outline-count { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; text-align: right; }
+.outline-delta { font-variant-numeric: tabular-nums; color: var(--text-muted); text-align: right; width: 5em; }
+.outline-delta.is-up   { color: var(--brand-teal); }
+.outline-delta.is-down { color: var(--brand-coral); }
+
+/* ===================================================== */
+/* 5c-ii. PATTERN SKELETONS                              */
+/* ===================================================== */
+/* The template picker, above the editor. A closed <details> by default: a designer who already knows
+   what they are writing should see one line, not four cards competing with the box they came here to
+   type in. */
+.template-picker {
+    margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg-main);
+}
+.template-picker > summary { cursor: pointer; font-weight: 600; }
+.template-list { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+.template-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-3); align-items: center;
+    padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--panel-bg);
+}
+.template-text strong { display: block; }
+.template-blurb { margin: 2px 0 0; color: var(--text-muted); font-size: 12px; }
+
+@media (max-width: 600px) {
+    .template-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ===================================================== */
 /* 5d. PATTERN LINTER                                    */
 /* ===================================================== */
 /* The cues are drawn on a COPY of the text (#lint-mirror) lying behind a transparent textarea, so the

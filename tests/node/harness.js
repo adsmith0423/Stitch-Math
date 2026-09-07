@@ -65,7 +65,14 @@ function runSuite(scripts, trailing) {
     };
 }
 
-/** The scripts every assertion suite is loaded on top of, in index.html's order. */
+/**
+ * The scripts every assertion suite is loaded on top of, in index.html's order.
+ *
+ * pdf.js is here because index.html loads it, and app.js checks for window.StitchPdf before offering
+ * a PDF at all - without it both PDF exports took their "the writer did not load" fallback under
+ * test and neither could be exercised. It defines one global and does nothing on load, so no other
+ * suite is affected. Keep in step with the same list in run-tests.sh.
+ */
 const APP_STACK = [
     'tests/test-dom.js',
     'tests/test-stub.js',
@@ -73,6 +80,7 @@ const APP_STACK = [
     'validator.js',
     'analytics.js',
     'persistence.js',
+    'pdf.js',
     'app.js'
 ];
 

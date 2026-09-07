@@ -109,7 +109,7 @@ source files did not have to change to run under Node.
 `./run-tests.sh` is kept as the macOS fallback and takes a filter argument, which the Node
 runner does not. Both exit non-zero on any failure, so either can gate a commit.
 
-The baseline is **3719 assertions, 0 failed** across 86 node:test cases, and the two runners report identical per-suite
+The baseline is **3944 assertions, 0 failed** across 105 node:test cases, and the two runners report identical per-suite
 counts. If a previously passing count drops, that is a regression; if one rises, check that
 an assertion was not simply loosened.
 
@@ -152,7 +152,9 @@ against the real markup via `readFile('index.html')`. That is why `run-tests.sh`
 paths instead of changing directory.
 
 **Baseline that must hold.** Engine 177/177, parser 8/8, feedback 5/5, analytics 16/16;
-3647 suite assertions with 0 failures; `test-corpus-pattern` and `test-corpus-p2` at 0 failing
+**3944 assertions, 0 failed** as `./run-tests.sh` reports it on its closing line, which is the
+grand total across every suite including the engine ones named above;
+`test-corpus-pattern` and `test-corpus-p2` at 0 failing
 rows; `test-corpus-suite` at 12 of 12 and `test-corpus-suite2` at 10 of 10;
 `test-corpus-garment` at 3 of 3 read the same from OCR and PDF, 234 work rows, 16 failing —
 that last one is **expected** to be short of perfect and the OCR/PDF agreement is the

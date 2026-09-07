@@ -58,3 +58,34 @@
       a polite update fired after a download lands while the browser is already speaking. Confirmations
       now go out before the click. aria-busy stays silent in VoiceOver and that is accepted - the
       result sentence is the load-bearing half. Export confirmation is being re-checked by ear.
+
+### Phase 7: Teaching — *COMPLETE*
+The pivot from a tool for working designers to one that also serves educators and beginners. Nothing
+here changes what the engine counts: every rule added is advisory, and none of them can fail a row.
+
+- [x] **Pattern skeletons.** Four one-click templates — Amigurumi Sphere, Top-Down Beanie, Flat Scarf,
+      Granny Square — each opening with the front matter a pattern is required to state, so the
+      structure is learned by having it in front of you. `tests/test-templates.js` is the real
+      specification: every skeleton must validate clean AND state all four required elements, loaded
+      through the same button a user presses.
+- [x] **Required elements.** Hook, yarn, gauge and an abbreviations key, each satisfied by the
+      metadata form *or* the pattern's own text, reusing the readers that already existed for both.
+      Deliberately NOT a health check — the score measures how well a pattern is written, and one
+      whose every row balances should not score 82 for not naming a hook.
+- [x] **The validation badge.** One verdict for the whole document: Valid / Math sound — not finished
+      / Not valid, gated on the checklist above. What a teacher reads before deciding whether the
+      arithmetic needs checking by hand.
+- [x] **US/UK strict mode.** A project-level terminology setting that flags terms which cannot belong
+      to the declared dialect. `dc`, `tr` and `dtr` are deliberately absent from the table: they are
+      valid in both systems and merely name different stitches, so flagging them would underline
+      every pattern ever written. Never rewrites a stitch — the linter teaches, it does not guess.
+- [x] **Shorthand standardizer.** "chain 3" → "ch 3", "make an increase" → "inc", with the dialect-
+      specific names waiting to be told which system the pattern is in. Cannot reach an abbreviations
+      block, where the long form is the whole point.
+- [x] **Geometric outline.** The pattern stripped to `R1: 6 / R2: 12 +6 / R3: 18 +6`, so a shape going
+      off track is visible without reading forty characters of prose per row.
+- [x] **Annotated draft export.** `pdf.js` gained colour and rectangle fills — the first time this
+      file has drawn anything but text, and the annotated draft is what bought it. Coral, gold and
+      teal rules under the flagged rows, matching the screen exactly because both read
+      `state.linter.byLine`, plus a numbered appendix carrying each finding's lesson. `buildExportText`
+      is now defined in terms of `buildExportLines` so there is still exactly one builder.

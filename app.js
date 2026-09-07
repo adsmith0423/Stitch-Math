@@ -55,7 +55,13 @@
         // Neither of these lived here before - both silently reverted to their default on every
         // project load, which is why setting them never seemed to "stick".
         { id: "meta-row-numbering", key: "rowNumbering", label: "Row Numbering", onLoad: "restart" },
-        { id: "meta-chain-space-convention", key: "chainSpaceConvention", label: "Chain-Sp Counts As", onLoad: "count" }
+        { id: "meta-chain-space-convention", key: "chainSpaceConvention", label: "Chain-Sp Counts As", onLoad: "count" },
+        // Which terminology the pattern is written in, so a US term in a UK pattern can be flagged.
+        // Blank IS off, spelled the way `difficulty` above spells "not set": it keeps every project
+        // saved before this existed opening unchanged - the check is something you turn on, not
+        // something that arrives switched on and starts underlining a finished pattern - and it keeps
+        // "Terminology: off" out of every printout, since metadataForPrint drops empty fields.
+        { id: "meta-terminology", key: "terminology", label: "Terminology", onLoad: "" }
     ];
     const META_FIELD_IDS = META_FIELDS.map(field => field.id);
 
@@ -66,6 +72,11 @@
      */
     const inferredConstruction = () => state.inferred?.construction || 'Rows (Flat)';
     const hasInferred = () => state.inferred !== null;
+
+    /** Which terminology this project declares. Read off the control rather than off state.metadata so
+     *  it is current mid-edit, the way applyMetadataChange's other readers are; 'off' whenever the
+     *  field is absent, which is every project saved before it existed. */
+    const terminologyMode = () => UI['meta-terminology']?.value || 'off';
 
     /** How many foundation chains a row skips when it never says. Read off the row's own opening
      *  stitch by the engine; 0 where nothing on the row settles it. */
@@ -157,7 +168,7 @@
         // read yet" - several callers need to tell those apart rather than defaulting to a guess.
         // Shape is CrochetMathEngine.inferPatternSettings's return value; see validator.js section 8.
         inferred: null,
-        viewPrefs: { showTrendMarkers: true, collapseRepeats: false },
+        viewPrefs: { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false },
         viewPrefsKey: "stitchmath_view_prefs",
         savedProjectsKey: "stitchmath_saves",
         
@@ -249,7 +260,7 @@
             "custom-stitch-form", "custom-st-name", "custom-st-def", "custom-st-cost", "custom-st-yield",
             "custom-stitch-table", "custom-stitch-body", "stitch-feedback", "custom-stitch-list",
             "color-form", "color-code", "color-name", "color-table", "color-body", "color-feedback",
-            "delete-last-btn", "clear-all-btn", "export-txt-btn", "export-pdf-btn",
+            "delete-last-btn", "clear-all-btn", "export-txt-btn", "export-pdf-btn", "export-markup-btn",
             "save-status", "export-project-btn", "import-project-btn", "import-stitches-btn", "import-file",
             "recover-btn", "recover-panel",
             ...META_FIELD_IDS,
@@ -263,7 +274,8 @@
             "gauge-hook-size", "gauge-notes", "gauge-convert-size", "gauge-convert-unit", "gauge-conversion-output",
             "swatch-weight", "swatch-weight-unit",
             "sizing-category", "sizing-piece", "finished-size-content",
-            "complexity-content", "toggle-trend-markers", "toggle-collapse-repeats", "toggle-beginner-phrasing", "meta-size", "size-picker-group", "meta-row-numbering", "meta-chain-space-convention",
+            "complexity-content", "toggle-trend-markers", "toggle-collapse-repeats", "toggle-beginner-phrasing", "toggle-outline-view", "meta-size", "size-picker-group", "meta-row-numbering", "meta-chain-space-convention",
+            "validation-badge", "matrix-section",
             "density-stitches", "density-rows", "active-swatch-content", "swatch-history-body", "quick-density-output",
             "btn-export-history",
             // Newly added for strict DOM cache compliance:
@@ -285,6 +297,8 @@
             // is built at run time, so none of it is a field New File has to clear.
             "lint-mirror", "lint-gutter", "lint-tip", "lint-side", "lint-side-toggle",
             "lint-side-tally", "lint-side-badge", "lint-side-body",
+            // Pattern skeletons. The host only; the buttons inside are built from PATTERN_TEMPLATES.
+            "template-picker", "template-list",
             // The off-screen line a validation result is announced through (section 8e).
             "validation-announce",
             // App shell (section 12): navigation, the summary dashboard and the progress readouts.
@@ -294,7 +308,7 @@
             "settings-panel", "settings-list", "help-panel", "publish-panel", "color-panel",
             "stitch-usage-panel", "stitch-usage-content",
             "print-area", "pdf-preview", "pub-refresh-preview",
-            "pub-export-txt", "pub-export-pdf", "pub-export-history", "pub-export-package",
+            "pub-export-txt", "pub-export-pdf", "pub-export-markup", "pub-export-history", "pub-export-package",
             "nav-dashboard", "nav-patterns", "nav-sizer", "nav-studio", "nav-locker",
             "nav-testers", "nav-analytics", "nav-library", "nav-gauge",
             "nav-publish", "nav-settings", "nav-construction", "nav-toggle", "nav-scrim",
@@ -350,6 +364,8 @@
         // in storage for the export and print views to read back.
         clearCustomStitchDictionary();
         loadColorCodes();
+        // Built once: the table is a constant, so nothing here has to be redrawn on a later pass.
+        renderTemplatePicker();
         setupEventListeners();
         updateLoadDropdown();
         renderUI();
@@ -452,6 +468,7 @@
         UI["import-file"]?.addEventListener("change", handleImportFile);
         UI["export-txt-btn"].addEventListener("click", handleExportText);
         UI["export-pdf-btn"].addEventListener("click", handleExportPdf);
+        UI["export-markup-btn"]?.addEventListener("click", handleExportMarkup);
 
         UI["custom-stitch-form"].addEventListener("submit", handleCustomStitchSubmit);
         UI["color-form"]?.addEventListener("submit", handleColorSubmit);
@@ -494,6 +511,7 @@
         UI["meta-size"]?.addEventListener("change", applySizeChange);
         UI["toggle-trend-markers"]?.addEventListener("change", applyTrendMarkerPref);
         UI["toggle-collapse-repeats"]?.addEventListener("change", applyCollapseRepeatPref);
+        UI["toggle-outline-view"]?.addEventListener("change", applyOutlineViewPref);
         UI["toggle-beginner-phrasing"]?.addEventListener("change", applyRepeatPhrasingMode);
         UI["gauge-convert-unit"]?.addEventListener("change", applyConvertUnitOverride);
         UI["sizing-category"]?.addEventListener("change", edits(refreshGaugeOutputs));
@@ -515,6 +533,14 @@
 
     function applyTrendMarkerPref() {
         state.viewPrefs.showTrendMarkers = !!UI["toggle-trend-markers"].checked;
+        saveViewPrefs();
+        renderUI();
+    }
+
+    /** The outline is a way of LOOKING at the pattern, so it is remembered the way the other two view
+     *  options are - a teacher who works in it should not have to switch it on for every file. */
+    function applyOutlineViewPref() {
+        state.viewPrefs.outlineOnly = !!UI["toggle-outline-view"].checked;
         saveViewPrefs();
         renderUI();
     }
@@ -570,6 +596,11 @@
         // A user-chosen difficulty overrides the calculated one until they reselect the blank option.
         if (id === "meta-difficulty") state.difficultyManuallySet = !!UI[id].value;
         syncMetadataToGauge();
+        // Terminology is the one metadata field that changes what is DRAWN OVER THE PATTERN rather
+        // than what is printed beside it: the linter's findings and the turning-chain notes are both
+        // read against it. refreshPatternUI does not re-run either, so this takes the full render.
+        // No re-parse, though - the text has not changed and no count depends on this.
+        if (id === "meta-terminology") { renderUI(); return; }
         refreshPatternUI();
     }
 
@@ -598,9 +629,11 @@
         const saved = getLocalStorage(state.viewPrefsKey);
         if (typeof saved.showTrendMarkers === "boolean") state.viewPrefs.showTrendMarkers = saved.showTrendMarkers;
         if (typeof saved.collapseRepeats === "boolean") state.viewPrefs.collapseRepeats = saved.collapseRepeats;
+        if (typeof saved.outlineOnly === "boolean") state.viewPrefs.outlineOnly = saved.outlineOnly;
 
         if (UI["toggle-trend-markers"]) UI["toggle-trend-markers"].checked = state.viewPrefs.showTrendMarkers;
         if (UI["toggle-collapse-repeats"]) UI["toggle-collapse-repeats"].checked = state.viewPrefs.collapseRepeats;
+        if (UI["toggle-outline-view"]) UI["toggle-outline-view"].checked = state.viewPrefs.outlineOnly;
     }
 
     function saveViewPrefs() {
@@ -1696,7 +1729,7 @@
             state.sizingPieceManuallySet = false;
             // View preferences are restored too: trend markers are on by default, and leaving them off
             // forever because they were once switched off is not a default.
-            state.viewPrefs = { showTrendMarkers: true, collapseRepeats: false };
+            state.viewPrefs = { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false };
             saveViewPrefs();
             if (UI["toggle-trend-markers"]) UI["toggle-trend-markers"].checked = true;
             if (UI["toggle-collapse-repeats"]) UI["toggle-collapse-repeats"].checked = false;
@@ -3031,6 +3064,157 @@
         else finish();
     }
 
+    /**
+     * The blank canvas, answered.
+     *
+     * A beginner opening Stitch Math gets an empty textarea and no indication that a pattern is
+     * expected to state a hook, a yarn, a gauge and a key to its abbreviations before anybody else can
+     * work it. These four skeletons are the shortest honest example of each common shape, and each one
+     * OPENS WITH THAT FRONT MATTER - the skeleton demonstrates what requiredElements asks for rather
+     * than merely satisfying it, so the structure is learned by having it in front of you rather than
+     * by being told off for its absence.
+     *
+     * Every one of these is checked by tests/test-templates.js: loaded through the same button the
+     * user presses, each must produce zero failing rows AND a complete required-elements set. A
+     * skeleton that does not validate would teach the wrong lesson twice over - once about the shape
+     * and once about whether the checker can be trusted - so that suite is the real specification for
+     * this table and the numbers below are not to be edited without running it.
+     */
+    const PATTERN_TEMPLATES = [
+        {
+            id: 'sphere',
+            name: 'Basic Amigurumi Sphere',
+            blurb: 'Worked in continuous rounds from a magic ring: increase to the middle, straight sides, then decrease away.',
+            text: [
+                'Hook: 3.5mm (E/4), or size needed to obtain gauge',
+                'Yarn: Worsted Weight (Category 4), approx. 100 yards',
+                'Gauge: 16 sc x 18 rows = 4 in.',
+                '',
+                'Abbreviations',
+                'ch = chain',
+                'sc = single crochet',
+                'inc = increase (2 sc in the same stitch)',
+                'dec = decrease (2 sc worked together)',
+                '',
+                'Sphere',
+                'Rnd 1: 6 sc in magic ring (6)',
+                'Rnd 2: inc in each st around (12)',
+                'Rnd 3: [sc, inc] x 6 (18)',
+                'Rnd 4: [2 sc, inc] x 6 (24)',
+                'Rnd 5-8: sc in each st around (24)',
+                'Rnd 9: [2 sc, dec] x 6 (18)',
+                'Rnd 10: [sc, dec] x 6 (12)',
+                'Rnd 11: dec x 6 (6)'
+            ].join('\n')
+        },
+        {
+            id: 'beanie',
+            name: 'Top-Down Beanie',
+            blurb: 'A flat circle crown increased to size, then worked straight down the sides. Joined rounds.',
+            // The "does not count as a stitch" convention rather than a ch-3 that stands in for the
+            // first dc: both are correct and published, but only one of them leaves a beginner's
+            // arithmetic doing what it looks like it does.
+            text: [
+                'Hook: 5.5mm (I/9), or size needed to obtain gauge',
+                'Yarn: Worsted Weight (Category 4), approx. 220 yards',
+                'Gauge: 12 dc x 7 rows = 4 in.',
+                '',
+                'Abbreviations',
+                'ch = chain',
+                'dc = double crochet',
+                'sl st = slip stitch',
+                '',
+                'Crown',
+                'Rnd 1: ch 2 (does not count as a stitch), 12 dc in magic ring, sl st to first dc (12)',
+                'Rnd 2: ch 2 (does not count as a stitch), dc-inc in each st around, sl st to first dc (24)',
+                'Rnd 3: ch 2 (does not count as a stitch), [dc, dc-inc] x 12, sl st to first dc (36)',
+                'Rnd 4: ch 2 (does not count as a stitch), [2 dc, dc-inc] x 12, sl st to first dc (48)',
+                'Rnd 5-12: ch 2 (does not count as a stitch), dc in each st around, sl st to first dc (48)'
+            ].join('\n')
+        },
+        {
+            id: 'scarf',
+            name: 'Flat Scarf',
+            blurb: 'Rows worked back and forth on a foundation chain. The simplest shape there is, and the one that teaches turning chains.',
+            text: [
+                'Hook: 5.0mm (H/8), or size needed to obtain gauge',
+                'Yarn: Worsted Weight (Category 4), approx. 350 yards',
+                'Gauge: 13 hdc x 10 rows = 4 in.',
+                '',
+                'Abbreviations',
+                'ch = chain',
+                'hdc = half double crochet',
+                '',
+                'Scarf',
+                'Row 1: ch 26',
+                'Row 2: hdc in 3rd ch from hook, hdc in each ch across (24)',
+                'Row 3-80: ch 2, turn, hdc in each st across (24)'
+            ].join('\n')
+        },
+        {
+            id: 'granny',
+            name: 'Granny Square',
+            blurb: 'Clusters worked into chain spaces rather than into stitches - the shape that teaches why a round can leave stitches unworked.',
+            text: [
+                'Hook: 4.0mm (G/6), or size needed to obtain gauge',
+                'Yarn: Worsted Weight (Category 4), approx. 60 yards',
+                'Gauge: 14 dc x 7 rows = 4 in.',
+                '',
+                'Abbreviations',
+                'ch = chain',
+                'dc = double crochet',
+                'sl st = slip stitch',
+                '',
+                'Granny Square',
+                'Rnd 1: ch 4, sl st to form ring. ch 3, 2 dc in ring, [ch 2, 3 dc in ring] x 3, ch 2, sl st to top of ch-3 (12)',
+                'Rnd 2: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, sl st to top of ch-3 (24)'
+            ].join('\n')
+        }
+    ];
+
+    /**
+     * Drops a skeleton into the editor and validates it, so the first thing a beginner sees is a green
+     * badge over a pattern that is structured correctly rather than an empty box.
+     *
+     * Existing work is confirmed first, through the confirm the rest of the app already uses. This is
+     * the one control in the Studio that destroys text outright, and a template picker that silently
+     * ate forty rows would be the worst button in the application.
+     */
+    function insertTemplate(id) {
+        const template = PATTERN_TEMPLATES.find(t => t.id === id);
+        const box = UI['bulk-input'];
+        if (!template || !box) return;
+
+        const apply = () => {
+            box.value = template.text;
+            handleBulkSubmit();
+            notify(`Inserted the ${template.name} template.`, 'success');
+        };
+
+        if (String(box.value || '').trim()) {
+            askConfirm(`Replace the pattern in the editor with the ${template.name} template? `
+                + `What is there now will be lost.`, apply);
+            return;
+        }
+        apply();
+    }
+
+    /** One button per skeleton, built rather than written as markup so the blurb and the handler come
+     *  from the same table the tests read. */
+    function renderTemplatePicker() {
+        const host = UI['template-list'];
+        if (!host) return;
+        host.replaceChildren();
+        PATTERN_TEMPLATES.forEach(template => {
+            const row = elem('div', 'template-row');
+            const text = elem('div', 'template-text');
+            text.append(elem('strong', null, template.name), elem('p', 'template-blurb', template.blurb));
+            row.append(text, button('row-button is-primary is-small', 'Insert',
+                `template-insert-${template.id}`, () => insertTemplate(template.id)));
+            host.appendChild(row);
+        });
+    }
+
     function handleBulkSubmit() {
         const rawText = UI['bulk-input'].value.trim();
         state.patternSteps.length = 0;
@@ -3625,10 +3809,17 @@
      * separately. Two builders would drift - a section added to one and forgotten in the other - and
      * the difference would only surface in whichever file the designer happened not to check.
      */
-    function buildExportText() {
+    /**
+     * Everything above the pattern itself, as one string.
+     *
+     * Split out of buildExportText when the annotated draft needed the ROWS as separate, individually
+     * markable lines. This half never carries a mark - a finding belongs to a row, not to the gauge
+     * section - so it stays the string it always was and is broken into lines only at the very end.
+     */
+    function buildExportPrelude(pass) {
         const title = UI['project-name'].value || "Untitled Pattern";
         let fileContent = `${title.toUpperCase()}${EXPORT_RULE}`;
-        
+
         const metadata = metadataForPrint();
 
         if (metadata.some(m => m.val)) {
@@ -3637,7 +3828,6 @@
             fileContent += EXPORT_RULE;
         }
 
-        const pass = evaluatePatternRows();
         fileContent += buildGaugeSection();
         fileContent += buildSizingSection(pass);
         fileContent += buildValidationSection(pass);
@@ -3674,17 +3864,122 @@
         if (!pass.validation.allStepsValid) {
             fileContent += `Note: this file has been updated to show correct final stitch count.\n\n`;
         }
+
+        return fileContent;
+    }
+
+    /**
+     * The pattern itself, one entry per output line, each able to carry a linter mark.
+     *
+     * `marks` is optional and is only passed by the annotated draft: with it, a row whose line the
+     * linter flagged is tagged with that line's severity, which is the SAME grouping the on-screen
+     * gutter reads (state.linter.byLine). That is what makes the coral in the PDF land on exactly the
+     * rows the coral on screen did, rather than on a second opinion computed here.
+     */
+    function buildExportRows(pass, marks) {
+        const out = [];
         // row.label, not index + 1: the evaluator is the only thing that knows where the sections fall
         // and whether numbering restarts at each one.
         pass.validation.rows.forEach(({ step, label, status, evaluation }) => {
-            if (status === 'section') { fileContent += `\n--- ${label} ---\n`; return; }
+            if (status === 'section') {
+                out.push({ text: '' }, { text: `--- ${label} ---` });
+                return;
+            }
             // Verbatim, and with no count appended: a note never had one, and writing it back as it
             // arrived is what lets the exported file be pasted in again.
-            if (status === 'note') { fileContent += `${step.noteText}\n`; return; }
-            fileContent += `${label}: ${exportRowText(step)} (${evaluation.calculatedYield})\n`;
+            if (status === 'note') { out.push({ text: step.noteText }); return; }
+
+            const group = marks && typeof step.lineIndex === 'number' ? marks[step.lineIndex] : null;
+            out.push({
+                text: `${label}: ${exportRowText(step)} (${evaluation.calculatedYield})`,
+                mark: group ? group.severity : undefined
+            });
         });
-        
-        return fileContent;
+        return out;
+    }
+
+    /**
+     * The exported document as lines, which is the form the annotated PDF needs.
+     *
+     * buildExportText is defined in terms of this rather than beside it, so there is still exactly one
+     * builder and the two exports cannot describe different documents - the concern the original doc
+     * comment was written about. The join reproduces the old concatenation exactly: every row used to
+     * contribute `text + '\n'`, which is what joining on '\n' and adding one at the end comes to.
+     */
+    function buildExportLines(marks) {
+        const pass = evaluatePatternRows();
+        const prelude = buildExportPrelude(pass).split('\n').map(text => ({ text }));
+        // split() on a string ending in '\n' leaves a trailing empty entry that the join puts back.
+        prelude.pop();
+        return prelude.concat(buildExportRows(pass, marks));
+    }
+
+    function buildExportText() {
+        return buildExportLines().map(line => line.text).join('\n') + '\n';
+    }
+
+    /** What each severity is called in a document nobody can hover over. */
+    const MARK_NAMES = { math: 'arithmetic', syntax: 'notation', style: 'style' };
+
+    /**
+     * The annotated draft: the pattern with the linter's cues still on it, and a numbered list of what
+     * every one of them says.
+     *
+     * WHAT THIS IS FOR. A student fixes their mistakes and hands in the corrected file, and the
+     * recurring misunderstanding that produced them - every round short by exactly one because the
+     * turning chain was counted, say - is invisible by the time anyone reads it. This exports the
+     * working rather than the answer. The squiggles show a teacher WHERE; the appendix, which is the
+     * half a printed page can actually be graded from, tells them WHAT.
+     *
+     * Read from state.linter.findings rather than recomputed, so the file says exactly what the
+     * screen said - including the findings the writer chose to ignore staying ignored.
+     */
+    function buildMarkupLines() {
+        const byLine = state.linter.byLine || {};
+        const lines = buildExportLines(byLine);
+        const findings = state.linter.findings || [];
+        if (!findings.length) return lines;
+
+        lines.push({ text: '' }, { text: EXPORT_RULE.trim() }, { text: '' });
+        lines.push({ text: `MARKUP NOTES (${findings.length}):` });
+        lines.push({ text: 'Every underline in this file, and what it says. Coral is arithmetic, gold' });
+        lines.push({ text: 'is notation, teal is a style note. Nothing here has been corrected.' });
+        lines.push({ text: '' });
+
+        findings.forEach((finding, i) => {
+            const where = finding.label || `Line ${finding.lineIndex + 1}`;
+            lines.push({
+                text: `${i + 1}. [${MARK_NAMES[finding.severity] || finding.severity}] ${where}: ${finding.title}`,
+                mark: finding.severity
+            });
+            if (finding.detail) lines.push({ text: `   ${finding.detail}` });
+            if (finding.lesson) lines.push({ text: `   Why: ${finding.lesson}` });
+            lines.push({ text: '' });
+        });
+
+        return lines;
+    }
+
+    /**
+     * Generates the annotated draft. Same file format as the ordinary PDF export and the same one
+     * builder underneath it - the only difference is that the lines carry their severities, and that
+     * the appendix is on the end.
+     */
+    function handleExportMarkup() {
+        if (state.patternSteps.length === 0) {
+            notify('There is no pattern to export.', 'warn');
+            return;
+        }
+        if (!window.StitchPdf) {
+            notify('The PDF writer did not load, so an annotated draft cannot be made. '
+                + 'Use Export PDF, which can fall back to printing.', 'warn');
+            return;
+        }
+        const title = UI['project-name'].value || 'Untitled Pattern';
+        downloadFile(`${projectSlug('my-pattern')}-draft.pdf`,
+                     window.StitchPdf.fromText(buildMarkupLines(), { title: `${title} — annotated draft` }),
+                     'application/pdf',
+                     'Annotated draft saved.');
     }
 
     function handleExportText() {
@@ -3840,6 +4135,10 @@
     function evaluatePatternRows(options = {}) {
         const construction = inferredConstruction();
         const labelPrefix = labelPrefixFor(construction);
+        // Told once, here, because this is the single walk everything on screen reads. The engine uses
+        // it for one thing only - which height table a turning-chain NOTE is written against - and no
+        // count anywhere depends on it. See UK_CHAIN_HEIGHTS in validator.js section 2.
+        window.CrochetMathEngine.setTerminology(terminologyMode());
 
         // Sections are separate pieces, worked one after another and assembled later, so each starts
         // from nothing and keeps its own troubles to itself.
@@ -3956,6 +4255,33 @@
                 if (repeatFix) {
                     evaluation.fixes = (evaluation.fixes || []).concat(repeatFix);
                     repeatFixPlaced = true;
+                }
+            }
+
+            // Terminology and nomenclature, per row rather than once for the document: each names a
+            // specific term in a specific line, and a student who mixed dialects twice needs telling
+            // twice. Both are style findings and neither can fail a row - the counts above were
+            // already settled by evaluateStep and nothing here is consulted by them.
+            //
+            // A documentation line never reaches this branch, which is what keeps the standardizer
+            // off an abbreviations key: "hdc = half double crochet" is the long form written on
+            // purpose, and correcting it would be correcting the one place it belongs.
+            //
+            // Read against stepInstructionText, not instructionString: preprocessTurningChain takes
+            // the opening chain OUT of the evaluated form, so "chain 1, dc in each st around" reaches
+            // the engine as "dc in each st around" and the longhand chain - the single most common
+            // thing a beginner writes - was invisible to the standardizer. Both of these findings are
+            // shown to a person and their edits resolve against the line as typed, so both want the
+            // row as the reader wrote it, which is exactly what that helper is for.
+            const asTyped = stepInstructionText(step);
+            if (asTyped) {
+                const mode = terminologyMode();
+                const engine = window.CrochetMathEngine;
+                const dialect = engine.dialectFaults(asTyped, mode)
+                    .map(fault => engine.buildTerminologyFix(fault, mode));
+                const shorthand = engine.buildShorthandFixes(asTyped, mode);
+                if (dialect.length || shorthand.length) {
+                    evaluation.fixes = (evaluation.fixes || []).concat(dialect, shorthand);
                 }
             }
 
@@ -4326,6 +4652,158 @@
 
     const CHECK_ICONS = { pass: '✓', warn: '⚠', fail: '✗' };
 
+    /**
+     * The whole document's verdict, in one line.
+     *
+     * WHY THIS IS NOT THE HEALTH SCORE. The score answers "how well is this written" - it weighs
+     * notation, repeat consistency, formatting, and gives partial credit. This answers a different and
+     * blunter question: can the arithmetic be trusted, and is anything still missing? A teacher with
+     * thirty patterns to grade needs the second one before they can spend their attention on
+     * creativity, clarity and aesthetics, and a number out of a hundred does not answer it.
+     *
+     * Three states, in the order a reader cares about them. A failing row outranks a missing hook
+     * size: no amount of front matter makes a pattern that does not add up ready to publish.
+     */
+    function computeValidationBadge(pass) {
+        const elements = window.CrochetMathEngine.requiredElements({
+            sourceText: UI['bulk-input']?.value || '',
+            metadata: state.metadata,
+            gauge: state.gauge
+        });
+        const rows = pass.validation.rows.filter(r => r.status !== 'note' && r.status !== 'section');
+
+        if (!rows.length) {
+            return { state: 'empty', elements, headline: 'Nothing to check yet',
+                     detail: 'Write a pattern, or start from a template above.' };
+        }
+        // An unrecognised stitch needs no branch of its own: evaluateStep sets a reason for one, which
+        // fails the row, so a pattern containing one always arrives here. Worth stating because the
+        // opposite would be a green tick over totals computed without one of the stitches.
+        if (!pass.validation.allStepsValid) {
+            const failed = pass.analytics.failedRowsCount;
+            const blocked = pass.analytics.blockedRowsCount;
+            return {
+                state: 'invalid', elements,
+                headline: 'Not valid',
+                detail: `${failed} ${pass.validation.labelPrefix.toLowerCase()}${failed === 1 ? '' : 's'} `
+                    + `${failed === 1 ? 'does' : 'do'} not add up`
+                    + (blocked ? `, and ${blocked} below ${blocked === 1 ? 'is' : 'are'} waiting on `
+                        + `${pass.validation.blockedByLabel}` : '') + '.'
+            };
+        }
+        if (!elements.complete) {
+            const missing = elements.items.filter(item => !item.present).map(item => item.label);
+            return {
+                state: 'incomplete', elements,
+                headline: 'Math sound — not finished',
+                detail: `Every ${pass.validation.labelPrefix.toLowerCase()} adds up. Still missing: `
+                    + `${missing.join(', ')}.`
+            };
+        }
+        return {
+            state: 'valid', elements,
+            headline: 'Valid',
+            detail: `All ${rows.length} ${pass.validation.labelPrefix.toLowerCase()}s add up, and the `
+                + `pattern states its hook, yarn, gauge and abbreviations.`
+        };
+    }
+
+    const BADGE_ICONS = { valid: '✓', incomplete: '◐', invalid: '✗', empty: '·' };
+
+    /**
+     * The badge, and the checklist under it.
+     *
+     * The four elements are listed whatever the verdict - a designer whose pattern is valid still
+     * benefits from seeing WHY, and one whose pattern is not needs to know the front matter is fine
+     * so they do not go looking there. Each present item says where it was read from, on the same
+     * principle renderInferenceNotices follows: a tick whose provenance is hidden is a tick that has
+     * to be re-checked by hand.
+     */
+    function renderValidationBadge(pass) {
+        const host = UI['validation-badge'];
+        if (!host) return;
+
+        const badge = computeValidationBadge(pass);
+        if (badge.state === 'empty') {
+            host.className = 'validation-badge badge-empty';
+            host.innerHTML = `<div class="badge-head"><span class="badge-icon">${BADGE_ICONS.empty}</span>`
+                + `<span class="badge-headline">${escapeHtml(badge.headline)}</span></div>`
+                + `<p class="badge-detail">${escapeHtml(badge.detail)}</p>`;
+            return;
+        }
+
+        const items = badge.elements.items.map(item => {
+            const where = item.present
+                ? `<span class="badge-source">from ${item.source === 'form' ? 'your project details' : 'the pattern'}</span>`
+                : `<span class="badge-hint">${escapeHtml(item.hint)}</span>`;
+            return `<li class="badge-el ${item.present ? 'is-present' : 'is-missing'}">`
+                + `<span class="badge-el-icon">${item.present ? '✓' : '○'}</span>`
+                + `<span class="badge-el-name">${escapeHtml(item.label)}</span>${where}</li>`;
+        }).join('');
+
+        host.className = `validation-badge badge-${badge.state}`;
+        host.innerHTML = `
+            <div class="badge-head">
+                <span class="badge-icon">${BADGE_ICONS[badge.state]}</span>
+                <span class="badge-headline">${escapeHtml(badge.headline)}</span>
+            </div>
+            <p class="badge-detail">${escapeHtml(badge.detail)}</p>
+            <ul class="badge-elements">${items}</ul>`;
+    }
+
+    /**
+     * The pattern as pure geometry: every row's stitch count, and what it did to the one above.
+     *
+     * Prose is what makes a shape error hard to see. "Rnd 4: [2 sc, inc] x 6 (24)" is forty characters
+     * in which the only number that decides whether the sphere closes is the 24, and a teacher reading
+     * thirty of these is reading the same forty characters thirty times. Stripped to "R4: 24 +6" the
+     * run reads as a curve, and a round that increases when it should hold is visible without
+     * arithmetic.
+     *
+     * A view concern only, the same call groupRepeatedRows makes: nothing here re-evaluates anything,
+     * and the export, the printout and the PDF still emit every row in full.
+     */
+    function renderOutline(pass, body, matrixLabelOverrides) {
+        let previous = null;
+        pass.validation.rows.forEach(({ step, index, evaluation, status, label }) => {
+            // Prose is exactly what this view exists to remove.
+            if (status === 'note') return;
+
+            const tr = elem('tr');
+            if (status === 'section') {
+                tr.className = 'section-row';
+                const td = elem('td');
+                td.colSpan = 3;
+                td.textContent = `--- ${label} ---`;
+                tr.appendChild(td);
+                body.appendChild(tr);
+                previous = null;         // a new piece starts its own curve
+                return;
+            }
+
+            tr.className = status === 'valid' ? 'row-passed' : (status === 'blocked' ? 'row-blocked' : 'row-failed');
+
+            const tdRow = elem('td', 'outline-label',
+                (matrixLabelOverrides && matrixLabelOverrides.get(index)) || label);
+            const count = evaluation.calculatedYield ?? 0;
+            const tdCount = elem('td', 'outline-count', String(count));
+
+            const tdDelta = elem('td', 'outline-delta');
+            if (status === 'valid') {
+                if (previous === null) tdDelta.textContent = 'base';
+                else {
+                    const diff = count - previous;
+                    tdDelta.textContent = diff > 0 ? `+${diff}` : diff < 0 ? String(diff) : '—';
+                    tdDelta.className = `outline-delta ${diff > 0 ? 'is-up' : diff < 0 ? 'is-down' : 'is-flat'}`;
+                }
+                previous = count;
+            } else tdDelta.textContent = status === 'blocked' ? 'blocked' : 'fails';
+
+            tr.append(tdRow, tdCount, tdDelta);
+            body.appendChild(tr);
+        });
+    }
+
     function renderHealthPanel(pass, health) {
         const prefix = pass.validation.labelPrefix;
         const total = pass.validation.rows.length;
@@ -4468,6 +4946,24 @@
         const { passedRowsCount, failedRowsCount, blockedRowsCount, totalStitchesAllRounds } = pass.analytics;
         const matrixLabelOverrides = matrixFoundationLabelOverride(pass.validation.rows, labelPrefix);
 
+        // The badge is drawn by refreshPatternUI, which finishRenderUI reaches on both paths below -
+        // one call site rather than two, because it is also what redraws the badge when only the
+        // metadata changed. state.analytics.lastPass is this pass by the time it runs.
+        //
+        // The outline replaces the matrix rather than sitting beside it: the point is to have nothing
+        // else on screen. Everything below - the health panel, the print area, the linter - is
+        // untouched, because this decides nothing and only chooses what the table shows.
+        const outlineOnly = !!UI['toggle-outline-view']?.checked;
+        UI['matrix-section']?.classList.toggle('is-outline', outlineOnly);
+        if (outlineOnly) {
+            renderOutline(pass, UI['step-sequence-body'], matrixLabelOverrides);
+            if (UI['jump-error-btn']) {
+                UI['jump-error-btn'].style.display = allStepsValid ? 'none' : 'inline-block';
+            }
+            finishRenderUI(pass);
+            return;
+        }
+
         let renderedAWorkRow = false;
         groupRepeatedRows(pass.validation.rows).forEach(({ step, index, evaluation: engineEvaluation, status: rowStatus, span, label, lastLabel, blockedBy }) => {
             const tr = elem('tr');
@@ -4559,7 +5055,20 @@
         if (renderedAWorkRow && UI['jump-error-btn']) {
             UI['jump-error-btn'].style.display = allStepsValid ? 'none' : 'inline-block';
         }
-        
+
+        finishRenderUI(pass);
+    }
+
+    /**
+     * Everything renderUI does once the table is drawn, whichever table that was.
+     *
+     * Split out when the geometric outline gave the matrix a second shape: the health panel, the
+     * printout, the linter and the announcement are all read off the SAME pass and must run for both,
+     * and two copies of this tail is one copy free to be forgotten. The outline path returns through
+     * here rather than duplicating five calls.
+     */
+    function finishRenderUI(pass) {
+        const labelPrefix = pass.validation.labelPrefix;
         const totalSteps = state.patternSteps.length;
         if (totalSteps === 0) {
             UI['cumulative-status'].innerHTML = `<p class="placeholder-text">No pattern steps configured.<br>Add a ${labelPrefix.toLowerCase()} to begin validation.</p>`;
@@ -5169,6 +5678,12 @@
         if (typeof renderGaugeHistory === "function") {
             renderGaugeHistory();
         }
+        // Two of the badge's four required elements can be satisfied from the metadata form and the
+        // gauge calculator, neither of which re-validates the pattern - so typing a hook size left the
+        // badge saying it was still missing until the next Validate. Redrawn from the last pass rather
+        // than a new one: nothing about the metadata changes what the rows count, and re-walking the
+        // pattern on every keystroke in another panel would be a parse per character.
+        if (state.analytics.lastPass) renderValidationBadge(state.analytics.lastPass);
     }
     
     function calculatePatternStats(stepObjects) {
@@ -7704,11 +8219,17 @@
           apply: () => { window.CrochetMathEngine.setChainSpaceConvention(UI['meta-chain-space-convention'].value); renderUI(); } },
         { id: 'meta-difficulty', kind: 'select', group: 'Reading the pattern', label: 'Difficulty',
           note: 'Left blank, Stitch Math works it out from the stitches you used.', apply: () => applyMetadataChange('meta-difficulty') },
+        { id: 'meta-terminology', kind: 'select', group: 'Reading the pattern', label: 'Terminology',
+          note: 'Flags US terms in a UK pattern and UK terms in a US one. Never rewrites a stitch, and never changes a count.',
+          apply: () => applyMetadataChange('meta-terminology') },
 
         { id: 'toggle-trend-markers', kind: 'checkbox', group: 'Validation matrix', label: 'Show trend markers',
           note: 'Mark whether each row grew, shrank or held its stitch count.', apply: applyTrendMarkerPref },
         { id: 'toggle-collapse-repeats', kind: 'checkbox', group: 'Validation matrix', label: 'Collapse repeated rows',
           note: 'Fold runs of identical rows into a single line with a count.', apply: applyCollapseRepeatPref },
+        { id: 'toggle-outline-view', kind: 'checkbox', group: 'Validation matrix', label: 'Geometric outline only',
+          note: 'Strip the prose and show only the stitch count each row produces, and what it did to the row above.',
+          apply: applyOutlineViewPref },
 
         { id: 'toggle-beginner-phrasing', kind: 'checkbox', group: 'Pattern Linter', label: 'Beginner-friendly repeat phrasing',
           note: 'Spell every repeat out in full instead of bracket shorthand - switching back off folds them back to brackets.',
@@ -8087,6 +8608,7 @@
 
         UI['pub-export-txt']?.addEventListener('click', handleExportText);
         UI['pub-export-pdf']?.addEventListener('click', handleExportPdf);
+        UI['pub-export-markup']?.addEventListener('click', handleExportMarkup);
         UI['pub-export-history']?.addEventListener('click', exportGaugeHistory);
         UI['pub-refresh-preview']?.addEventListener('click', renderPdfPreview);
         // The multi-size package is built by the grader, so this goes to it.
