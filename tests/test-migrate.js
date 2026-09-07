@@ -1,0 +1,192 @@
+// The migration dispatcher: forward only, one version at a time, and a hard stop at anything newer
+// than this build understands.
+//
+// The first section is the load-bearing one. A file from a future Stitch Math must be refused whole -
+// not read for the fields this build happens to recognise, and above all not written back out having
+// silently dropped the rest, which is how a designer loses work they cannot see and cannot undo.
+
+var P = window.StitchPersistence;
+
+function envAt(version, patch) {
+    var e = P.buildEnvelope({
+        projectName: 'Kingbird Cardigan',
+        savedAt: 1755900000000,
+        body: { rawText: 'Ch 6\nRow 1: sc in each ch across. (6)', metadata: {}, gauge: {}, gaugeHistory: [], grading: {} }
+    });
+    e.fileVersion = version;
+    Object.keys(patch || {}).forEach(function (k) { e[k] = patch[k]; });
+    return e;
+}
+
+print('\n1. A newer file is refused, and nothing else happens');
+var future = P.migrate(envAt(3));
+no('a fileVersion 3 file is not opened', future.ok);
+ck('refused as unsupported-version', future.error.code, 'unsupported-version');
+// Distinct from the other three codes so the message can be specific, and so a future downgrade path
+// has somewhere to hook in.
+no('not reported as malformed', future.error.code === 'malformed');
+no('not reported as a failed migration', future.error.code === 'migration-failed');
+ck('it carries the version it found', future.error.from, 3);
+ck('and the ceiling this build has', future.error.to, 1);
+
+print('\n2. The refusal message, word for word');
+ck('the sentence a designer sees', future.error.message,
+   'This Stitch Math project was created with a newer version of Stitch Math and cannot be opened by '
+   + 'this version. (File version 3; this version reads up to 1.) Your current project has not been changed.');
+// Both numbers, because "a newer version" alone tells the user nothing they can act on.
+ok('it names the file version', future.error.message.indexOf('File version 3') >= 0);
+ok('and this build\'s ceiling', future.error.message.indexOf('reads up to 1') >= 0);
+ok('and says the open project was left alone', future.error.message.indexOf('has not been changed') >= 0);
+var far = P.migrate(envAt(99));
+ok('a much newer file reads the same way', far.error.message.indexOf('File version 99') >= 0);
+
+print('\n3. The version check runs before anything is touched');
+// Nothing is cloned, converted or handed back for a newer file: the refusal is the whole outcome.
+ok('no value comes back with the refusal', future.value === undefined);
+var untouched = envAt(3);
+P.migrate(untouched);
+ck('and the caller\'s object is not modified', untouched.fileVersion, 3);
+ck('nor its body', untouched.body.rawText.indexOf('Ch 6'), 0);
+
+print('\n4. V1 ships no migrations at all');
+// Rather than a fake step invented to prove the machinery works. The machinery is proved below
+// against a real one, installed and removed by this suite.
+ck('the table is empty', Object.keys(P.MIGRATIONS).length, 0);
+var current = P.migrate(envAt(1));
+ok('a current file passes straight through', current.ok);
+ck('still at version 1', current.value.fileVersion, 1);
+ck('with its text intact', current.value.body.rawText.indexOf('Ch 6'), 0);
+
+print('\n5. A current file that is broken inside is invalid-schema');
+// Not migration-failed: nothing was migrated. The two are separate codes precisely so this case can
+// say "this file is damaged" rather than "the update went wrong".
+var broken = envAt(1);
+broken.body.rawText = 42;
+var brokenResult = P.migrate(broken);
+no('a broken current file is refused', brokenResult.ok);
+ck('as invalid-schema', brokenResult.error.code, 'invalid-schema');
+ck('naming the field', brokenResult.error.field, 'body.rawText');
+
+print('\n6. A missing step is a failure, not a silent pass');
+// The ceiling argument is the test seam: it lets the dispatcher be driven with a real migration
+// before this build has one. No production caller passes it.
+var missing = P.migrate(envAt(1), 2);
+no('version 1 cannot reach version 2 with no step installed', missing.ok);
+ck('refused as migration-failed', missing.error.code, 'migration-failed');
+ck('naming the step that is absent', missing.error.from, 1);
+ck('and where it was going', missing.error.to, 2);
+
+print('\n7. A step that works');
+P.MIGRATIONS[1] = function (env) {
+    var next = JSON.parse(JSON.stringify(env));
+    next.fileVersion = 2;
+    next.body.metadata.migrated = 'once';
+    return next;
+};
+var stepped = P.migrate(envAt(1), 2);
+ok('version 1 now reaches version 2', stepped.ok);
+ck('the envelope says so', stepped.value.fileVersion, 2);
+ck('the step\'s change is present', stepped.value.body.metadata.migrated, 'once');
+ck('and the original text survived it', stepped.value.body.rawText.indexOf('Ch 6'), 0);
+
+print('\n8. The input is cloned, so a migration cannot reach back into it');
+var source = envAt(1);
+P.migrate(source, 2);
+ck('the caller\'s envelope is still version 1', source.fileVersion, 1);
+no('and did not gain the step\'s field', 'migrated' in source.body.metadata);
+
+print('\n9. Two steps run in order');
+P.MIGRATIONS[2] = function (env) {
+    var next = JSON.parse(JSON.stringify(env));
+    next.fileVersion = 3;
+    next.body.metadata.migrated = next.body.metadata.migrated + ' then twice';
+    return next;
+};
+var twice = P.migrate(envAt(1), 3);
+ok('version 1 reaches version 3', twice.ok);
+ck('by way of version 2', twice.value.body.metadata.migrated, 'once then twice');
+ck('arriving at the right version', twice.value.fileVersion, 3);
+var fromMiddle = P.migrate(envAt(2), 3);
+ok('starting halfway runs only the remaining step', fromMiddle.ok);
+ck('and does not re-run the first', fromMiddle.value.body.metadata.migrated, 'undefined then twice');
+delete P.MIGRATIONS[2];
+
+print('\n10. A step that throws');
+P.MIGRATIONS[1] = function () { throw new Error('boom'); };
+var threw = P.migrate(envAt(1), 2);
+no('the file is not opened', threw.ok);
+ck('reported as migration-failed', threw.error.code, 'migration-failed');
+ok('the message says the open project is safe', threw.error.message.indexOf('has not been changed') >= 0);
+// The exception itself is not shown: "boom" means nothing to a designer.
+no('and does not leak the exception text', threw.error.message.indexOf('boom') >= 0);
+
+print('\n11. A step that forgets to bump the version');
+// The classic one, and an infinite loop without this check: the walk would call the same step forever
+// against a file that never advances.
+P.MIGRATIONS[1] = function (env) { return env; };
+var unbumped = P.migrate(envAt(1), 2);
+no('refused rather than looped', unbumped.ok);
+ck('as migration-failed', unbumped.error.code, 'migration-failed');
+ok('the message names the version mismatch', unbumped.error.message.indexOf('wrong version') >= 0);
+
+print('\n12. A step that skips a version, or returns nothing at all');
+P.MIGRATIONS[1] = function (env) { var n = JSON.parse(JSON.stringify(env)); n.fileVersion = 3; return n; };
+ck('jumping two versions is refused', P.migrate(envAt(1), 3).error.code, 'migration-failed');
+P.MIGRATIONS[1] = function () { return null; };
+ck('returning null is refused', P.migrate(envAt(1), 2).error.code, 'migration-failed');
+P.MIGRATIONS[1] = function () { return 'a string'; };
+ck('returning junk is refused', P.migrate(envAt(1), 2).error.code, 'migration-failed');
+
+print('\n13. A step that produces something unreadable');
+// Reached the target version, so it is not a version problem - but what came out does not validate.
+// migration-failed rather than invalid-schema, because the file that arrived was fine.
+P.MIGRATIONS[1] = function (env) {
+    var n = JSON.parse(JSON.stringify(env));
+    n.fileVersion = 2;
+    n.body.gaugeHistory = { not: 'a list' };
+    return n;
+};
+var spoiled = P.migrate(envAt(1), 2);
+no('the result is refused', spoiled.ok);
+ck('as migration-failed, not invalid-schema', spoiled.error.code, 'migration-failed');
+ck('reporting the whole journey', spoiled.error.from + '->' + spoiled.error.to, '1->2');
+delete P.MIGRATIONS[1];
+ck('the table is empty again', Object.keys(P.MIGRATIONS).length, 0);
+
+print('\n14. Everything checkHeader rejects, migrate rejects the same way');
+function code(input) { var r = P.migrate(input); return r.ok ? 'accepted' : r.error.code; }
+ck('null', code(null), 'malformed');
+ck('an array', code([envAt(1)]), 'malformed');
+ck('another export of ours', code({ kind: 'stitch-math-grading', fileVersion: 1 }), 'malformed');
+ck('no version', code(envAt(undefined)), 'malformed');
+ck('a text version', code(envAt('1')), 'malformed');
+
+print('\n15. parsePortable: text off disk to a decision');
+var fileText = JSON.stringify(P.buildEnvelope({
+    projectName: 'Kingbird Cardigan',
+    body: { rawText: 'Ch 6\nRow 1: sc in each ch across. (6)', metadata: { designer: 'Jane' }, gauge: {}, gaugeHistory: [], grading: {} }
+}), null, 2);
+var read = P.parsePortable(fileText);
+ok('a real exported file reads back', read.ok);
+ck('with its designer', read.value.body.metadata.designer, 'Jane');
+ck('and its text', read.value.body.rawText.indexOf('Ch 6'), 0);
+
+print('\n16. parsePortable refuses everything it should');
+ck('not JSON at all', P.parsePortable('this is not json').error.code, 'malformed');
+ck('a truncated file', P.parsePortable('{"kind":"stitch-math-project"').error.code, 'malformed');
+ck('an empty file', P.parsePortable('').error.code, 'malformed');
+ck('nothing at all', P.parsePortable(null).error.code, 'malformed');
+ck('valid JSON that is not a project', P.parsePortable('{"hello":"world"}').error.code, 'malformed');
+ck('valid JSON that is a list', P.parsePortable('[1,2,3]').error.code, 'malformed');
+ck('the literal null', P.parsePortable('null').error.code, 'malformed');
+ok('the JSON refusal says what is wrong with the file',
+   P.parsePortable('nope').error.message.indexOf('JSON') >= 0);
+
+print('\n17. parsePortable and the newer file');
+// The same refusal, reached through the path an import actually takes.
+var futureText = JSON.stringify(envAt(3));
+var futureRead = P.parsePortable(futureText);
+ck('refused as unsupported-version', futureRead.error.code, 'unsupported-version');
+ck('with the same sentence, word for word', futureRead.error.message, future.error.message);
+
+endSuite();

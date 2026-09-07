@@ -1,0 +1,171 @@
+// Snapshots: what takes one, what is refused one, and the interval that keeps the ring useful.
+//
+// A snapshot is a short-lived safety copy, not version history. Five per project, oldest evicted, and
+// the whole ring lives in a store the browser may clear at any time. The durable copy a designer owns
+// is the exported file - nothing here is a substitute for it.
+
+// Both runners have to report the same counts, and they disagree about timers: the Node context has
+// no setTimeout at all, so test-stub.js supplies a synchronous one, while JavaScriptCore's shell has a
+// real asynchronous one and the debounce would never fire before the suite ended. Pin it here rather
+// than in the shared stub, which would change how the other suites behave under jsc.
+//
+// Firing inline is also the harshest reading of the design: every keystroke below runs a whole flush.
+setTimeout = function (fn) { fn(); return 0; };
+clearTimeout = function () {};
+
+var P = window.StitchPersistence;
+var adapter = P.memoryAdapter();
+window.STITCH_ADAPTER = adapter;
+boot();
+
+function ringOf(name) {
+    var rows = [];
+    adapter.query('snapshots', 'byProjectTime', { projectId: P.projectIdFor(name) }, 'prev',
+        function (r) { rows = r.value; });
+    return rows;
+}
+function reasons(name) {
+    return ringOf(name).map(function (s) { return s.reason; }).join(',');
+}
+function typePattern(text) { $('bulk-input').value = text; $('bulk-input').fire('input'); }
+
+print('\n1. The first autosave of a session takes a snapshot');
+$('project-name').value = 'Ringed';
+typePattern('Ch 6\nRow 1: sc in each ch across. (6)');
+ck('one snapshot', ringOf('Ringed').length, 1);
+ck('marked as an autosave', ringOf('Ringed')[0].reason, 'auto-save');
+ck('carrying the pattern', ringOf('Ringed')[0].envelope.body.rawText.indexOf('Ch 6'), 0);
+
+print('\n2. Typing does not churn the ring');
+// The load-bearing rule. Five bursts of typing that each took a snapshot would evict the pre-import
+// copy taken ten seconds before the import being regretted, which defeats the whole feature.
+for (var i = 0; i < 8; i++) typePattern('Ch 6\nRow 1: sc in each ch across. (6)\n// edit ' + i);
+ck('eight further edits, still one snapshot', ringOf('Ringed').length, 1);
+ck('but the current record followed every one of them', /edit 7/.test(JSON.stringify(
+    (function () { var v = null; adapter.get('current', P.projectIdFor('Ringed'), function (r) { v = r.value; }); return v; })()
+)), true);
+ok('the interval is a named constant, not a bare number',
+   /SNAPSHOT_MIN_INTERVAL_MS/.test(readFile('app.js')));
+ck('and it is five minutes', P.SNAPSHOT_MIN_INTERVAL_MS, 5 * 60 * 1000);
+
+print('\n3. An explicit save is not subject to the timer');
+$('save-btn').fire('click');
+ck('Save File adds one', ringOf('Ringed').length, 2);
+ck('marked as the deliberate act it was', ringOf('Ringed')[0].reason, 'manual-save');
+// The record written by the button and the one autosave writes are built the same way, from
+// readProjectBody, so they cannot disagree about what the project is.
+ck('and it holds the same body as the file it wrote',
+   ringOf('Ringed')[0].envelope.body.rawText,
+   JSON.parse(localStorage.getItem('tropicheck_saves')).Ringed.rawText);
+
+print('\n4. New File takes a safety copy first');
+var beforeNewFile = $('bulk-input').value;
+$('new-file-btn').fire('click');
+ck('a third snapshot', ringOf('Ringed').length, 3);
+ck('marked as pre-destructive', ringOf('Ringed')[0].reason, 'pre-destructive-operation');
+ck('holding the work as it stood', ringOf('Ringed')[0].envelope.body.rawText, beforeNewFile);
+ck('and the page really was cleared', $('bulk-input').value, '');
+
+print('\n5. The copy is taken before anything is emptied');
+// Captured synchronously, written afterwards. That ordering is what makes the guarantee hold even
+// though the record lands after the page has already gone.
+ok('the grader went with it', typeof ringOf('Ringed')[0].envelope.body.grading === 'object');
+ok('so did the gauge', typeof ringOf('Ringed')[0].envelope.body.gauge === 'object');
+
+print('\n6. Clear All takes one too');
+$('project-name').value = 'Cleared';
+typePattern('Ch 9\nRow 1: sc in each ch across. (9)');
+$('bulk-parse-btn').fire('click');
+var beforeClear = $('bulk-input').value;
+$('clear-all-btn').fire('click');
+ok('a pre-destructive snapshot exists', reasons('Cleared').indexOf('pre-destructive-operation') >= 0);
+ck('holding what was on the page', ringOf('Cleared')[0].envelope.body.rawText, beforeClear);
+
+print('\n7. Nothing to lose, nothing to snapshot');
+// An empty page destroyed is not an accident anyone needs undone, and a ring of five blanks is a ring
+// that has thrown away the copies that mattered.
+$('project-name').value = 'Empty';
+$('bulk-input').value = '';
+$('new-file-btn').fire('click');
+ck('no snapshot for an empty page', ringOf('Empty').length, 0);
+
+print('\n8. Five per project, oldest out');
+var many = P.memoryAdapter();
+window.STITCH_ADAPTER = many;
+boot();
+var store = P.createStore(many);
+for (var n = 0; n < 7; n++) {
+    store.snapshot(P.buildEnvelope({ projectName: 'Deep', savedAt: 1000 + n, body: { rawText: 'row ' + n } }),
+                   'manual-save', function () {});
+}
+var deep = [];
+store.listSnapshots(P.projectIdFor('Deep'), function (r) { deep = r.value; });
+ck('five kept', deep.length, 5);
+ck('the newest first', deep[0].savedAt, 1006);
+ck('the two oldest gone', deep[4].savedAt, 1002);
+
+print('\n9. One project churning does not cost another its ring');
+store.snapshot(P.buildEnvelope({ projectName: 'Quiet', savedAt: 50, body: { rawText: 'kept' } }),
+               'pre-destructive-operation', function () {});
+for (var b = 0; b < 6; b++) {
+    store.snapshot(P.buildEnvelope({ projectName: 'Deep', savedAt: 2000 + b, body: { rawText: 'more' } }),
+                   'auto-save', function () {});
+}
+var quiet = [];
+store.listSnapshots(P.projectIdFor('Quiet'), function (r) { quiet = r.value; });
+ck('the quiet project still has its copy', quiet.length, 1);
+ck('and it is the one it took', quiet[0].reason, 'pre-destructive-operation');
+
+print('\n10. With no store, the destructive buttons behave exactly as before');
+window.STITCH_ADAPTER = null;
+boot();
+var raised = '';
+try {
+    $('project-name').value = 'No Store';
+    typePattern('Ch 6\nRow 1: sc in each ch across. (6)');
+    $('bulk-parse-btn').fire('click');
+    $('clear-all-btn').fire('click');
+    $('new-file-btn').fire('click');
+} catch (e) { raised = String(e); }
+ck('nothing raised', raised, '');
+ck('and the page was cleared', $('bulk-input').value, '');
+
+print('\n11. A store that throws on snapshot does not block the button');
+var throwing = P.memoryAdapter();
+throwing.appendPruned = function () { throw new Error('gone'); };
+window.STITCH_ADAPTER = throwing;
+boot();
+var alsoRaised = '';
+try {
+    $('project-name').value = 'Throwing';
+    typePattern('Ch 6\nRow 1: sc in each ch across. (6)');
+    $('new-file-btn').fire('click');
+} catch (e) { alsoRaised = String(e); }
+ck('New File raises nothing', alsoRaised, '');
+ck('and still clears the page', $('bulk-input').value, '');
+
+print('\n12. The ring is recovery infrastructure, not version history');
+// Five per project in storage a browser may clear at any time, that does not travel between devices
+// and survives no cleared profile. The durable copy a designer owns is the exported file, and nothing
+// in the code may imply otherwise - see PERSISTENCE.md, whose wording test-recovery.js pins.
+var src = readFile('app.js');
+var section = src.slice(src.indexOf('5b. AUTOSAVE'), src.indexOf('6. PATTERN PARSING ENGINE'));
+// Read off the strings the section can put on screen, not its comments - the comments have to be free
+// to explain why the words are forbidden.
+var spoken = (section.match(/'[^'\n]{12,}'/g) || []).join(' ');
+no('nothing it can say calls the ring a history', /\bhistor(y|ies)\b/i.test(spoken));
+// The panel itself is headed for what it holds. The Recover button is allowed to say "version" -
+// that is what a designer is looking for - but the list it opens must not claim to be one.
+ok('the panel is headed as recovery points', spoken.indexOf('Recent recovery points (last 5)') >= 0);
+no('and not as versions', /recovery points[^']*version/i.test(spoken));
+ck('every reason a snapshot can carry is in the closed set', P.SNAPSHOT_REASONS.length, 5);
+// A reason spelled wrong stores fine and surfaces much later as a blank row in the recover panel.
+// Every reason-shaped string this section hands the store has to be one the store will accept.
+var spelled = (section.match(/'(auto|manual|pre)-[a-z-]+'/g) || [])
+    .map(function (q) { return q.slice(1, -1); });
+ok('the section names at least one reason', spelled.length > 0);
+spelled.forEach(function (reason) {
+    ok('"' + reason + '" is a reason the store accepts', P.SNAPSHOT_REASONS.indexOf(reason) >= 0);
+});
+
+endSuite();

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 324 154" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <path id="mouth" d="M0.005,21.034C0.002,20.69 0,20.345 0,20L0.049,20C0.784,8.833 9.667,0 20.5,0C31.814,0 41,9.634 41,21.5C41,22.818 40.887,24.108 40.67,25.36C44.038,78.373 97.071,120.5 162,120.5C226.929,120.5 279.962,78.373 283.33,25.36C283.113,24.108 283,22.818 283,21.5C283,9.634 292.186,0 303.5,0C314.333,0 323.216,8.832 323.951,20L324,20C324,20.345 323.998,20.69 323.995,21.034C323.998,21.189 324,21.344 324,21.5C324,21.912 323.989,22.321 323.967,22.727C322.212,95.474 250.369,154 162,154C73.631,154 1.788,95.474 0.033,22.727C0.011,22.321 0,21.912 0,21.5C0,21.344 0.002,21.189 0.005,21.034Z" style="fill:rgb(37,28,21);"/>
+</svg>

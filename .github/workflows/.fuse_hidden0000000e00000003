@@ -1,0 +1,93 @@
+# Publishes dist/ to GitHub Pages, which is what turns Stitch Math from something one person can
+# open into something a designer can be sent a link to.
+#
+# It builds rather than serving the repository, and that distinction matters here. The source tree
+# is the development entry point: index.html loads the five plain scripts, comments and all, and
+# nothing in it is content-hashed. dist/ is the shipped thing - one bundle, one stylesheet, both
+# named from a hash of their own bytes. Serving the repo directly would publish 930 KB of source
+# and re-introduce the cache bug the hashing exists to prevent.
+#
+# dist/ stays out of git deliberately: a build output committed alongside its sources is a second
+# copy that goes stale the moment someone edits without rebuilding. The build runs here instead,
+# every time, from the same command you run locally.
+#
+# Two things this deployment gives the app that a laptop web server never could. Pages is https, so
+# the service worker registers - which is what makes the offline claim real, and what makes "Add to
+# Home Screen" behave like an installed app on a phone or tablet. And every asset is versioned by
+# content, so a returning browser cannot serve yesterday's bundle beside today's stylesheet.
+#
+# It publishes to a subpath - adsmith0423.github.io/Stitch-Math/ - and that works only because every
+# path in the app is relative: no leading slashes in index.html, "./" in the manifest's start_url
+# and scope, and a relative register('sw.js') that scopes the worker to the same folder. If an
+# absolute path is ever introduced, this is where it will break, and it will break only in
+# production. There is a test for it below.
+name: pages
+
+on:
+  # Only main. A branch that has not been merged is not the thing anyone should be sent a link to.
+  push:
+    branches: [main]
+  # And by hand, for a redeploy that does not need a commit to justify it.
+  workflow_dispatch:
+
+# Set by GitHub for the Pages deployment to authenticate itself. Nothing here reads them.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one that is already running: a cancelled deploy can
+# leave the site mid-swap. A newer commit waits its turn rather than interrupting.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # No install step, here or anywhere: the project has no dependencies.
+
+      # The gate. test.yml already runs the full matrix - three operating systems, three Node
+      # versions - on every push to every branch, and duplicating that here would double the CI
+      # bill to learn nothing. This single run exists for one reason: to make it impossible to
+      # publish a build whose tests do not pass.
+      - name: Tests must pass before anything is published
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Guards the relative-path rule the subpath deployment depends on. A leading slash works
+      # perfectly on localhost and 404s on Pages, which is the worst kind of bug: invisible until
+      # it is in front of someone else.
+      - name: No absolute paths, or the subpath deployment breaks
+        run: |
+          if grep -nE '(href|src)="/[^/]' dist/index.html; then
+            echo "::error::dist/index.html contains an absolute path. Pages serves this app from"
+            echo "::error::/stitch-math/, so a leading slash resolves to the wrong origin root."
+            exit 1
+          fi
+          echo "All paths relative."
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      # No .nojekyll needed: the artifact path skips Jekyll entirely, unlike a branch deployment,
+      # which would quietly drop anything whose name starts with an underscore.
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

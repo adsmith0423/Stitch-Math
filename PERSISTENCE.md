@@ -1,0 +1,459 @@
+# Stitch Math — Persistence, Versioning & Recovery
+
+How a designer's work is kept, what is temporary, what is permanent, and the two rules that
+everything else here bends around.
+
+---
+
+## 1. Three different things, and the difference matters
+
+| | What it is | Where it lives | How long it lasts |
+|---|---|---|---|
+| **The current project** | What is on the page right now, plus one recovery copy of it | IndexedDB, one record per project | Until the next autosave replaces it |
+| **A recovery point** | A short-lived safety copy taken before or around something risky | IndexedDB, five per project, oldest evicted | Minutes to days. **Not a backup.** |
+| **An exported project file** | A `.json` file the designer downloads | Their disk | **Permanent. The only thing here that is.** |
+
+**IndexedDB is not permanent user-owned storage.** A browser may clear it at any time — storage
+pressure, a privacy setting, "clear site data", a profile reset. It does not travel between
+machines or between browsers on one machine, and it does not survive a reinstall. A designer with
+work they cannot afford to lose has exactly one durable option, and it is **Export Project**.
+
+Everything in the UI is worded to keep that straight. The panel is headed *"Recent recovery
+points (last 5)"* and never *history* or *versions*; its footer says *"Recovery points are
+temporary. Use Export Project to keep a copy you own."* on every render. `tests/test-snapshots.js`
+and `tests/test-recovery.js` both pin that wording, because this is the one place the app could
+imply it is a version-control system, and it is not one.
+
+### What this is deliberately not
+
+No branching, merging, diffing, cloud sync, unlimited history, named snapshots or history
+dashboard. The persistence layer serves the validation workflow; it is not the thing the app is
+about, and it must never make the validator feel slow.
+
+---
+
+## 2. A newer file is never guessed at
+
+Migration runs forward only: V1 → V2 → V3 → V4. There is no route back, and the code must never
+invent one.
+
+If a file's `fileVersion` is higher than this build understands, the import **stops**. It does not
+read the fields it happens to recognise, does not partially populate the page, and above all does
+not then write the file back out having silently dropped everything it did not understand — which
+is how a designer loses work in a way they can neither see nor undo.
+
+The designer sees, verbatim:
+
+> This Stitch Math project was created with a newer version of Stitch Math and cannot be opened by
+> this version. (File version 3; this version reads up to 1.) Your current project has not been
+> changed.
+
+Three properties, each asserted separately in `tests/test-migrate.js` and `tests/test-portable.js`:
+
+1. The error code is **`unsupported-version`** — distinct from `malformed`, `migration-failed` and
+   `invalid-schema`, so the message can be specific and so a future downgrade path has a hook.
+2. **No safety snapshot is taken**, because nothing was going to be replaced. A rejected import must
+   not spend a slot in the five-snapshot ring; five bad drag-and-drops would otherwise evict every
+   copy worth having.
+3. `#bulk-input` is **byte-identical** afterwards.
+
+The same rule now covers the browser's own saves: a `stitchmath_saves` record whose `version`
+exceeds 2 is refused by `handleLoadProject` rather than read for the parts it recognises.
+
+**Downgrade support is a deliberate future project**, with its own tests. Its absence is a decision
+recorded here, not an oversight.
+
+---
+
+## 3. The envelope
+
+```json
+{
+  "fileVersion": 1,
+  "kind": "stitch-math-project",
+  "projectId": "project_kingbird-cardigan",
+  "projectName": "Kingbird Cardigan",
+  "savedAt": 1755900000000,
+  "app": { "name": "Stitch Math", "schema": 1 },
+  "body": {
+    "rawText": "Ch 6\nRow 1: sc in each ch across. (6)",
+    "metadata": { "designer": "", "difficulty": "", "hook": "", "yarnWeight": "",
+                  "rowNumbering": "restart", "chainSpaceConvention": "count" },
+    "gauge": { "width": 4, "height": 4, "stitches": 0, "rows": 0, "unit": "in", "…": "…" },
+    "gaugeHistory": [],
+    "grading": { "sections": {}, "overrides": {}, "modes": {},
+                 "fields": {}, "testers": [], "customChart": null }
+  }
+}
+```
+
+* **`body` is the existing saved record minus `version`/`savedAt`** — the same five keys
+  `handleSaveProject` has always written, so it can be handed straight to `applyProjectRecord`. A
+  translation layer here would be a second copy of that function's per-field defaulting, free to
+  drift from it.
+* **`kind` exists to reject the app's own other exports.** The grading package has a `gauge` and a
+  `grading` and would otherwise half-load into a project with no pattern text. With `kind`, it is
+  `malformed`, and the message names what the file actually is.
+* **`projectId` is synthetic but derived, not random**: `project_<slug of the name>`, so reopening
+  the same file finds its own recovery record with no rename plumbing. Untitled work uses the
+  reserved `__current__`; the `project_` prefix means no real name can collide with it. The id is
+  mirrored into `stitchmath_current_project` so start-up knows what to recover without scanning
+  IndexedDB. `projectName` carries the display name separately — identity and label are different
+  things.
+* **`fileVersion` is the document schema. `app.schema` is reserved** for a future purely-additive
+  change to `body` that should not force a `fileVersion` bump and should not make older builds
+  refuse the file. Written, never read, in V1.
+
+### Deliberately absent
+
+`patternSteps`, `inferred`, `analytics`, `linter`, `sizeIndex`, `sizeCount`. Every one is
+re-derived from `rawText`, and storing them would be a second answer about the pattern, free to
+disagree with the parser.
+
+### Two version numbers, two axes
+
+`version: 2` is the shape of a **record** in the `stitchmath_saves` map in localStorage.
+`fileVersion: 1` is the shape of an **envelope** — the thing that travels in an exported file. They
+are unrelated, and confusing them is the mistake a future reader is most likely to make.
+`fromLegacySave` is the bridge, and it is the one real migration V1 ships: it runs against every
+save already sitting in every user's browser, the first time each is opened.
+
+---
+
+## 4. Files and layers
+
+`persistence.js` → `window.StitchPersistence`, loaded after `analytics.js`. It must be registered in
+**four** places, and a missing one fails in a way that is hard to read:
+
+| Where | What breaks if it is missed |
+|---|---|
+| `index.html` | The app, immediately |
+| `APP_STACK` in `tests/node/harness.js` | Every suite, immediately |
+| `run-tests.sh` line ~52 | Every suite under JavaScriptCore |
+| `run-tests.sh` line ~77 | Only the corpora — surfaces as a pinned-count mismatch |
+
+**Layer A is pure.** `CURRENT_FILE_VERSION`, `ERRORS`, `SNAPSHOT_REASONS`, `SNAPSHOT_LIMIT`,
+`buildEnvelope`, `validate`, `migrate`, `MIGRATIONS`, `fromLegacySave`, `parsePortable`,
+`prunePlan`. No DOM, no storage, no timers.
+
+**Layer B is I/O and holds no decisions.** `memoryAdapter()`, `idbAdapter(factory, keyRange)`,
+`createStore(adapter)`. It must never name `indexedDB`, `IDBKeyRange` or `Blob` as a bare
+identifier — the test context has none of them and a reference at load time would throw before a
+single suite ran. `tests/test-store.js` asserts that, scanning the source for unguarded uses.
+
+`app.js` gains one banner section, **5b. AUTOSAVE, SNAPSHOTS & RECOVERY**, holding the store
+instance, dirty tracking, status rendering, import/export, the panel and recovery — and zero
+schema knowledge.
+
+### The result convention
+
+```js
+{ ok: true,  value: … }
+{ ok: false, error: { code, message, field?, from?, to? } }
+```
+
+`ok` first and boolean-shaped rather than node-style `(err, value)`, because `if (!result.ok)`
+reads like the `if (!stored)` this codebase already uses, and there is no callback-error idiom here
+to match.
+
+| code | meaning |
+|---|---|
+| `malformed` | not an object, not JSON, or `kind` unrecognised |
+| `unsupported-version` | `fileVersion` exceeds this build — see §2 |
+| `migration-failed` | a step threw, was missing, or produced something invalid |
+| `invalid-schema` | already current, but a field has the wrong type |
+| `store-unavailable` | IndexedDB absent or refused to open; running on the memory fallback |
+| `store-refused` | a transaction failed (quota, private mode) |
+
+### Callbacks, not promises
+
+There is no `async`, `await` or `Promise` anywhere in this app. The test context has no microtask
+queue of its own, and the stubs fire `setTimeout` immediately and synchronously — a `.then()` would
+resolve after the suite had printed its totals, so a promise-based store would be untestable.
+
+Three contract rules, all asserted in `tests/test-store.js`:
+
+* the callback fires **exactly once**, whatever the adapter does;
+* callers must **not assume when** — the memory adapter calls back inside the call, IndexedDB later;
+* the callback is **optional**, because autosave has nowhere to report but the status line.
+
+### The adapters
+
+```
+adapter = { name, get(store, key, cb), put(store, record, cb), delete(store, key, cb),
+            query(store, index, range, dir, cb),
+            appendPruned(store, index, range, record, plan, cb) }
+```
+
+`range` is a plain `{ projectId }` descriptor, not an `IDBKeyRange`: a caller that built a real one
+could not run outside a browser. `plan` is the retention decision, handed in as a function so
+`appendPruned` can apply it inside its own transaction without knowing the rule.
+
+`createStore(null)` probes with a **real write-and-delete round trip**, not just an open: Safari in
+private mode opens the database successfully and throws on the first transaction, so an open alone
+would report a working store that silently records nothing. A failed probe degrades to
+`memoryAdapter()`, which is production code — it is what a browser with storage disabled actually
+runs on, and losing everything on reload is exactly right there, matching what localStorage already
+offers. The status line then reads *"Autosave unavailable — use Save File"*.
+
+**The IndexedDB adapter body is executed by no test**, because there is no `indexedDB` in the test
+context. That is why it holds no policy: validation, migration and retention all live above it, in
+code the memory adapter exercises identically. `prunePlan` being pure is exactly this — the
+retention rule is covered even though the cursor enacting it is not. Verify that path by hand in a
+browser after changing it.
+
+### Database layout
+
+```
+db "stitch-math", version 1
+  current    keyPath 'projectId'                        // one record per project, overwritten
+  snapshots  keyPath 'id', autoIncrement: true
+             index 'byProjectTime' on ['projectId','savedAt']
+```
+
+`IDBKeyRange.bound([projectId], [projectId, []])` walked `'prev'` gives newest-first: an array sorts
+after every number in IndexedDB key ordering, so it is a clean upper bound with no sentinel
+timestamp to be wrong about.
+
+**`fileVersion` migrates documents; `db.version` migrates containers.** Keep them apart. The stores
+are designed generously now — `snapshots.envelope` is an opaque blob the database never looks
+inside — so no future `fileVersion` drags an `onupgradeneeded` behind it.
+
+---
+
+## 5. Autosave
+
+**What marks the project dirty is a rule, not a list.** Every `bind` whose control appears in
+`GAUGE_FIELDS`, `META_FIELDS` or `GRADER_FIELDS` is wrapped in `edits(...)`; nothing else is. That
+adds no listeners. Excluded on purpose: `meta-size`, the three matrix view toggles and
+`gauge-convert-unit` — they change what is on screen, not what the file holds, and
+`tests/test-newfile.js` already draws that line for the toggles.
+
+`syncBulkInput` marks dirty too, *after* it rewrites the box. It is the one place the pattern text
+changes with no keystroke behind it — Delete Last Row, Clear All and the single-row form all reach
+it — and marking before the write recorded the row that had just been deleted.
+
+`renderGrader` is deliberately **not** hooked. It is a renderer called from five places for four
+reasons, including the load path; hooking a renderer to signal a data change is a category error
+that produces spurious dirty marks the first time someone adds a sixth caller.
+
+**Both redundancy guards, because neither is enough alone.** The dirty flag stops the timer arming
+at all. The full-body string compare at flush time kills the real redundancy —
+`refreshGaugeOutputs` fires on keystrokes that move no value, and a grader control fires both
+`input` and `change` for one edit. The comparison uses the serialized string, not a digest: the
+write needs the string anyway so it is free, and a hand-rolled hash has collisions, where a
+collision here would silently lose a save.
+
+**Debounced at 1500 ms**, mirroring `scheduleLint`'s structure but deliberately not its 400 ms. Two
+timers of equal length armed by one keystroke run back to back in a single frame — a full lint pass
+immediately followed by a full envelope serialise. Staggering lands autosave in the gap after the
+lint settles.
+
+**Autosave never re-parses.** It does not call `runLint`, `handleBulkSubmit` or `renderUI`. It reads
+`bulk-input.value` as a string and calls the same three sync functions the Save button calls,
+through `readProjectBody`. A save that re-parses is a second opinion about what the pattern is,
+arriving 1500 ms after the first.
+
+**An empty page does not replace a real record.** The copy about to be overwritten is precisely the
+one a designer wants back after clearing the box by accident.
+
+### The status line
+
+`#save-status`, one line, `textContent` only:
+
+`Autosave on` · `Saving…` · `Saved 14:32` · `Unsaved changes` ·
+`Autosave unavailable — use Save File` · `Recovery record unreadable`
+
+A failure is **sticky** until a write actually succeeds. `status` is transient — the next keystroke
+sets it to *Unsaved changes* — so without a flag of its own a failure was washed away by the next
+edit that happened to change nothing, leaving the line claiming autosave was fine.
+
+The unavailable message names the manual escape route, for the reason the quota alert gives: *a
+refused write is the one case where saying nothing is worse than saying the wrong thing*. A recovery
+layer that is silently not recording is that case exactly.
+
+### Flush on the way out
+
+`visibilitychange`, not `beforeunload`: the latter does not fire reliably on mobile or on tab
+discard and cannot complete an IndexedDB write synchronously in any case. The handler checks for
+"not visible" rather than "hidden", because the headless stub has no `visibilityState` at all and
+testing for `'hidden'` would make the path unreachable outside a browser. `beforeunload` is still
+used, but only to clear the session token — which is a localStorage write, and reliable enough.
+
+Rejected: mirroring the body into a seventh localStorage key as a last-gasp copy. That is duplicate
+state with its own staleness problem; the debounce plus the visibility flush is the right coverage.
+
+---
+
+## 6. Snapshots
+
+Five per project, oldest evicted, one ring per `projectId`. The reasons are a frozen set and are
+checked on the way in — a typo'd reason stores fine and surfaces much later as a blank row nobody
+can explain:
+
+| reason | shown as | taken when |
+|---|---|---|
+| `auto-save` | autosaved | an autosave lands, at most once per 5 min |
+| `manual-save` | saved | Save File, or Cmd/Ctrl+S |
+| `pre-import` | before an import | after the import is confirmed, before the page changes |
+| `pre-restore` | before a restore | before restoring a recovery point |
+| `pre-destructive-operation` | before the page was cleared | New File, Clear All |
+
+**`SNAPSHOT_MIN_INTERVAL_MS` is five minutes, and it is load-bearing.** A ring that churns every few
+seconds cannot serve its one purpose: five bursts of typing would evict the `pre-import` copy taken
+ten seconds before the import being regretted. Safety snapshots ignore the interval, because they
+are the snapshots the ring exists for. An explicit save ignores it too — an explicit act is not
+subject to a timer.
+
+**Retention is `prunePlan(existing, limit)`, pure and separately tested.** Sort `savedAt`
+descending, tie-broken by `id` descending. The tie-break is not a nicety: under the stub `setTimeout`
+fires instantly, so several snapshots written in one test tick share a millisecond, and a
+`savedAt`-only sort would let the two runners CONTRIBUTING requires to agree disagree about which
+five survived.
+
+`appendPruned` writes and prunes in **one** transaction. Two could interleave with a concurrent
+snapshot and leave six behind, or delete the record just written.
+
+### Safety snapshots and ordering
+
+Before New File and Clear All mutate anything — after their existing `confirm()` — the body is
+captured **synchronously** and handed to an asynchronous `pre-destructive-operation` write.
+Capturing synchronously is what makes the guarantee hold even though the write lands later. An empty
+page takes no snapshot: an empty page destroyed is not an accident anyone needs undone, and a ring
+of five blanks has thrown away the copies that mattered.
+
+Import ordering is the design, and it is where §2 and §1 meet:
+
+```
+JSON.parse                       -> malformed, alert, STOP
+migrate(parsed)                  -> any error, alert, STOP     <- nothing written, no snapshot
+confirm("Import …? This replaces …")   -> false, STOP
+store.snapshot(current, 'pre-import')  -> and only in that callback:
+    applyProjectRecord(env.projectName, env.body)
+```
+
+Nothing on the page changes until the last step, and **validation precedes snapshotting**.
+
+Restore is `confirm → pre-restore snapshot → getSnapshot → migrate → apply`. The safety is
+structural: the copy of what is on screen is durably written before the snapshot is even read, so a
+restore that goes wrong halfway is itself recoverable.
+
+---
+
+## 7. Export and import
+
+Export goes through `downloadFile`, the app's one download path — that is also where an export is
+counted, so a hand-rolled `Blob` here would silently score no point. The filename is
+`<slug>-project.json`, distinct from the existing `<slug>-grading.json` and `gauge-history.json`.
+
+`awardProgress('export')` fires inside `downloadFile`, so exporting a project scores like any other
+export. Consistent with every other export, and intended.
+
+Import is split in two so the decision is testable without a `FileReader`: a four-line
+`handleImportFile(event)` doing the read, and `handleImportText(text)` holding the whole flow above.
+`tests/test-portable.js` supplies its own `FileReader` and drives the real file input, so the button
+is what is tested rather than the function behind it.
+
+The file input is `type="file"` **deliberately**: `tests/test-newfile.js` harvests every id'd
+`<input|select|textarea>` from `index.html` and asserts none holds data after New File, and its
+filter passes over a file input. A text input there would be swept into that reset. The reason is
+written beside it in the markup, and asserted.
+
+---
+
+## 8. Start-up recovery
+
+**Recovery never blocks, never reorders and never auto-applies.** `init()` gains exactly one line at
+the very end, `beginPersistence()`. Nothing above it moves, so a slow or absent IndexedDB leaves
+boot byte-identical to what it was.
+
+The probe resolves the adapter, then `loadCurrent`. No record, or an empty `rawText` → set the
+status line and stop; that is the path every existing suite takes. A record that fails `migrate` →
+report on the status line and stop: **a damaged recovery record costs the recovery record, not the
+page**, the direct analogue of `getLocalStorage` degrading to `{}`. Every callback body is wrapped
+and never rethrows — an exception in an async callback is counted as a suite failure by both
+runners.
+
+**Staleness guard:** if the project is already dirty, or `bulk-input` is non-empty by the time the
+callback runs, no offer is made. The recovered copy is older than what is on screen. The ring is
+still one button away, and restoring from it snapshots first anyway.
+
+**Crash detection** is a bare string in `stitchmath_session`, following the `stitchmath_view`
+precedent: read-then-write on arrival, cleared on `beforeunload`. Still set at the next boot means
+the last session never ended cleanly. It changes only the offer's wording — *"Stitch Math closed
+unexpectedly…"* — never its behaviour, so a false positive costs nothing.
+
+The panel is built with `createElement`, never assigned markup: a control written into `innerHTML`
+cannot be found by `getElementById`, so it would work in a browser and silently do nothing under
+test.
+
+**The one test seam:** `app.js` reads `window.STITCH_ADAPTER || null` when creating the store. Every
+suite gets the memory fallback automatically, since there is no `indexedDB` in the test context; the
+seam exists only so a suite can seed a store it can read back.
+
+---
+
+## 9. Storage keys
+
+| Key | Contents | Cleared by New File |
+|---|---|---|
+| `stitchmath_saves` | map of name → project record (`version: 2`) | no |
+| `stitchmath_view_prefs` | display toggles — explicitly not project data | no (restored to defaults) |
+| `stitchmath_progress` | Stitch Points ledger | **no, deliberately** |
+| `stitchmath_custom_stitches` | stitch dictionary, wiped on every `init()` | yes |
+| `stitchmath_colors` | colour dictionary | yes |
+| `stitchmath_view` | last nav tab, a bare string | no |
+| `stitchmath_current_project` | the `projectId` start-up should look for | no |
+| `stitchmath_session` | `"open"` while a session is running | no |
+
+---
+
+## 10. Known warts, recorded rather than fixed
+
+* **Derived data already leaks into saves.** `structuredClone(state.grading)` carries
+  `grading.lastGarment` and `grading.generated`, neither declared in the state initializer nor reset
+  by New File. Autosave writes these repeatedly and they can be large. Not changed in V1 — that
+  would change existing save behaviour — and the body string compare keeps the cost down. A V2
+  candidate.
+* **Two tabs, one project.** Both autosave to `current[projectId]`. V1 accepts last-write-wins,
+  mitigated by the snapshot ring. Accepted, not overlooked.
+* **The IndexedDB adapter is untested by machine.** See §4. Verify by hand after touching it.
+* **Envelopes must stay JSON-round-trippable.** The test stubs polyfill `structuredClone` with
+  `JSON.parse(JSON.stringify(…))`, so no `Date` objects and no `undefined`: `savedAt` is a number,
+  and every timestamp in a portable file is a number.
+
+---
+
+## 11. Adding a V1 → V2 migration
+
+Two lines and a test. Nothing else changes.
+
+```js
+// persistence.js
+const CURRENT_FILE_VERSION = 2;                 // was 1
+
+MIGRATIONS[1] = (env) => ({                     // keyed by the version being migrated FROM
+    ...env,
+    fileVersion: 2,                             // bumping is mandatory; the dispatcher checks it
+    body: { ...env.body, newField: defaultFor(env.body) }
+});
+```
+
+Rules the dispatcher enforces, each with a test in `tests/test-migrate.js`:
+
+* the step is **pure** — the input is `structuredClone`d once, up front, so a broken step cannot
+  leave the caller's object half-converted;
+* it **must** return `fileVersion: from + 1`. Returning the input unchanged would be an infinite
+  loop; jumping two versions would skip a conversion nothing will redo. Both are
+  `migration-failed`;
+* a step that throws is `migration-failed`, and the exception text is not shown to the designer;
+* what it produces is **re-validated**. If a step produced it, a failure is `migration-failed`; if
+  the file arrived already current and broken, it is `invalid-schema`.
+
+`MIGRATIONS` is exported mutable so the dispatcher can be exercised against a real step before this
+build has one. `migrate(env, ceiling)` and `validate(env, ceiling)` take an optional version ceiling
+for the same reason. **No production caller passes it.**
+
+Also update: the ceiling in the §2 message is derived, so it needs no edit; the baseline assertion
+count in `CONTRIBUTING.md` will move; and if the new field cannot be defaulted from an older file,
+say so here.

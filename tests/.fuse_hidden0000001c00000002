@@ -1,0 +1,86 @@
+// The Cmd+S / Ctrl+S save shortcut.
+//
+// The point of the shortcut is that it does not care which view is open, so most of what follows is the
+// same save fired from a different tab. The rest pins the two things a global key handler can get wrong:
+// swallowing keys it has no business in, and letting the browser's own save dialog through when it acts.
+boot();
+
+function keyS(props) {
+    var e = { key: 's' };
+    for (var k in (props || {})) e[k] = props[k];
+    return fireDocument('keydown', e);
+}
+function saves() { return JSON.parse(localStorage.getItem('tropicheck_saves') || '{}'); }
+function nav(id) { $(id).fire('click'); }
+
+$('bulk-input').value = 'Row 1: ch 13, sc in 2nd ch from hook and in each ch across (12)';
+$('bulk-parse-btn').fire('click');
+
+print('\n1. The combination itself');
+$('project-name').value = 'cmd project';
+var ev = keyS({ metaKey: true });
+ok('Cmd+S saves', !!saves()['cmd project']);
+ok('and stops the browser save dialog', ev.defaultPrevented);
+
+$('project-name').value = 'ctrl project';
+ev = keyS({ ctrlKey: true });
+ok('Ctrl+S saves', !!saves()['ctrl project']);
+ok('and stops the browser save dialog', ev.defaultPrevented);
+
+$('project-name').value = 'shifted project';
+keyS({ key: 'S', metaKey: true });
+ok('a shifted S counts too', !!saves()['shifted project']);
+
+print('\n2. Keys it must keep its hands off');
+$('project-name').value = 'bare project';
+ev = keyS({});
+no('a bare S does not save', saves()['bare project']);
+no('and is not swallowed', ev.defaultPrevented);
+
+$('project-name').value = 'alt project';
+ev = keyS({ metaKey: true, altKey: true });
+no('Cmd+Alt+S does not save', saves()['alt project']);
+no('and is not swallowed', ev.defaultPrevented);
+
+$('project-name').value = 'other key project';
+ev = fireDocument('keydown', { key: 'p', metaKey: true });
+no('Cmd+P does not save', saves()['other key project']);
+no('and is left to the browser to print', ev.defaultPrevented);
+
+print('\n3. From any view');
+var VIEWS = ['nav-dashboard', 'nav-patterns', 'nav-library', 'nav-studio', 'nav-sizer', 'nav-testers',
+    'nav-analytics', 'nav-gauge', 'nav-publish',
+    'nav-settings'];
+VIEWS.forEach(function (id) {
+    var name = 'saved from ' + id;
+    nav(id);
+    $('project-name').value = name;
+    keyS({ metaKey: true });
+    ok(id.replace('nav-', '') + ' saves', !!saves()[name]);
+});
+
+print('\n4. What it saves is what the button saves');
+// Same fields, same shape - the shortcut is a second way in, not a second saver.
+nav('nav-patterns');
+$('project-name').value = 'by shortcut';
+$('meta-designer').value = 'Someone';
+keyS({ metaKey: true });
+$('project-name').value = 'by button';
+$('save-btn').fire('click');
+
+var a = saves()['by shortcut'], b = saves()['by button'];
+ok('both exist', a && b);
+ck('same raw text', a.rawText, b.rawText);
+ck('same designer', a.metadata.designer, b.metadata.designer);
+ck('same version', a.version, b.version);
+
+print('\n5. It refuses on the same terms as the button');
+$('project-name').value = '';
+$('load-select').value = '';
+var before = Object.keys(saves()).length;
+ev = keyS({ metaKey: true });
+ck('an unnamed project saves nothing', Object.keys(saves()).length, before);
+ok('but the browser dialog is still suppressed', ev.defaultPrevented);
+ok('and the user is told why', ALERTS[ALERTS.length - 1].indexOf('project name') >= 0);
+
+endSuite();

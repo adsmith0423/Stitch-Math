@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="description" content="Crochet pattern validation, grading and yardage. Your work never leaves this device.">
+    <meta name="theme-color" content="#56766a">
+    <title>Stitch Math | Pattern Validator</title>
+    <link rel="stylesheet" href="style.css?v=1.0.0">
+    <!-- Installable, and genuinely offline once served from a URL. See sw.js for the two caching
+         strategies and why the page itself is the one thing fetched network-first. -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<!-- ========================================================= -->
+<!-- ICON SET                                                  -->
+<!-- One stroked symbol set, drawn on a 24px box at a uniform  -->
+<!-- 1.6 weight with round caps, inheriting currentColor. It   -->
+<!-- replaces the emoji the shell used to sit on: emoji are    -->
+<!-- multicolored, and each one is drawn by a different hand   -->
+<!-- at a different weight, so a row of them never reads as    -->
+<!-- one set no matter how they are sized.                     -->
+<!-- ========================================================= -->
+<svg class="icon-sprite" aria-hidden="true" focusable="false"><defs>
+    <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3.6 11.2 12 3.8l8.4 7.4M6.2 9.8v9.6h11.6V9.8M9.6 19.4v-5.2h4.8v5.2"/></symbol>
+    <symbol id="ic-yarn" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.8"/><path d="M6.5 6.5c3.4 2 6.1 5.4 7.6 9.6M9.6 4.7c2.2 3.2 3.6 7.1 3.9 11.2M17.4 6.4c-2.7 2.3-4.6 5.4-5.4 8.9"/></symbol>
+    <symbol id="ic-pencil" viewBox="0 0 24 24"><path d="m4 20 1.1-4.2L16.6 4.3a2.1 2.1 0 0 1 3 3L8.2 18.9zM14.6 6.3l3.1 3.1"/></symbol>
+    <symbol id="ic-ruler" viewBox="0 0 24 24"><path d="M3.2 15.4 15.4 3.2l5.4 5.4L8.6 20.8zM7.6 8.2l2 2M10.6 5.2l2 2M4.6 11.2l2 2"/></symbol>
+    <symbol id="ic-people" viewBox="0 0 24 24"><circle cx="9.2" cy="8" r="3.3"/><path d="M2.8 19.6c0-3.4 2.9-5.6 6.4-5.6s6.4 2.2 6.4 5.6M15.8 5.2a3.3 3.3 0 0 1 0 5.9M17.4 14.4c2.2.7 3.8 2.5 3.8 5.2"/></symbol>
+    <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4.2 3.8v16.4h16M8 20.2v-6.4M12.4 20.2V8.6M16.8 20.2v-4"/></symbol>
+    <symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 6.8C10.4 5.4 8.3 4.8 5.4 4.8v13c2.9 0 5 .6 6.6 2 1.6-1.4 3.7-2 6.6-2v-13c-2.9 0-5 .6-6.6 2zM12 6.8v13"/></symbol>
+    <symbol id="ic-swatch" viewBox="0 0 24 24"><path d="M4.4 4.4h15.2v15.2H4.4zM4.4 9.5h15.2M4.4 14.6h15.2M9.5 4.4v15.2M14.6 4.4v15.2"/></symbol>
+    <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 15.4V3.6M8.2 7.4 12 3.6l3.8 3.8M4.4 14.8v3.6a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-3.6"/></symbol>
+    <!-- Sliders rather than a cog: eight teeth at this weight turns into a sun at 18px. -->
+    <symbol id="ic-gear" viewBox="0 0 24 24"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.2"/><circle cx="9" cy="16" r="2.2"/></symbol>
+    <symbol id="ic-scan" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="m16.2 16.2 4.4 4.4M7.6 10.9l2.4 2.4 4-4.4"/></symbol>
+    <symbol id="ic-spark" viewBox="0 0 24 24"><path d="m12 3 2.1 5.6L19.8 11l-5.7 2.4L12 19l-2.1-5.6L4.2 11l5.7-2.4z"/></symbol>
+    <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 20.8c3.6 0 6.1-2.3 6.1-5.7 0-3.9-3.5-5.7-4.4-9.6-2 1.3-2.7 3.4-2.2 5.4-1-.6-1.7-1.5-1.9-2.7-1.7 1.7-3.7 3.6-3.7 6.9 0 3.4 2.5 5.7 6.1 5.7z"/></symbol>
+    <symbol id="ic-gift" viewBox="0 0 24 24"><path d="M4.4 10.6h15.2v9.6H4.4zM3.6 7.6h16.8v3H3.6zM12 7.6v12.6M12 7.6S10.8 4 8.7 4a1.9 1.9 0 1 0 0 3.8M12 7.6S13.2 4 15.3 4a1.9 1.9 0 1 1 0 3.8"/></symbol>
+    <symbol id="ic-doc" viewBox="0 0 24 24"><path d="M6.2 3.6h7.4l4.2 4.2v12.6H6.2zM13.6 3.6v4.2h4.2M9 12.6h6M9 16h4.4"/></symbol>
+    <symbol id="ic-print" viewBox="0 0 24 24"><path d="M7.4 9V3.6h9.2V9M7.4 18.4H5.8a1.6 1.6 0 0 1-1.6-1.6v-5.2A1.6 1.6 0 0 1 5.8 9.6h12.4a1.6 1.6 0 0 1 1.6 1.6v5.2a1.6 1.6 0 0 1-1.6 1.6h-1.6M7.4 14.6h9.2v5.8H7.4z"/></symbol>
+    <symbol id="ic-trend" viewBox="0 0 24 24"><path d="m4 16.6 5.2-5.2 3.4 3.4 6.8-6.8M15.2 8h4.2v4.2"/></symbol>
+    <symbol id="ic-package" viewBox="0 0 24 24"><path d="M12 3.2 20 7.4v9.2L12 20.8 4 16.6V7.4zM4 7.4l8 4.2 8-4.2M12 11.6v9.2"/></symbol>
+    <symbol id="ic-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M12 3.8 21 19.6H3zM12 9.6v4.6M12 16.8v.1"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24"><path d="m4.8 12.4 4.6 4.6 9.8-9.8"/></symbol>
+    <!-- A face, for the locker. Stroked like the rest of the set: the avatars are full-color
+         drawings, but the nav entry pointing at them is another icon and has to read as one. -->
+    <symbol id="ic-face" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M9 10.4v.1M15 10.4v.1M8.9 14.6c1.8 1.8 4.4 1.8 6.2 0"/></symbol>
+    <!-- Four corner brackets round a plus, for Construction. The frame is open on all four sides: the
+         thing inside it is finished, the way in is not. -->
+    <symbol id="ic-frame" viewBox="0 0 24 24"><path d="M4.4 9.6V4.4h5.2M14.4 4.4h5.2v5.2M19.6 14.4v5.2h-5.2M9.6 19.6H4.4v-5.2M9.2 12h5.6M12 9.2v5.6"/></symbol>
+</defs></svg>
+
+<!-- ========================================================= -->
+<!-- APP SHELL: persistent sidebar + workspace                 -->
+<!-- The whole original document lives inside #app-main below, -->
+<!-- unchanged. Nothing here participates in validation; it is -->
+<!-- navigation and summary only.                              -->
+<!-- ========================================================= -->
+<!-- Shown only by reportFatal(), and deliberately outside every view: a throw that stops a render is
+     exactly the case where the panel meant to carry the message may itself be the thing that failed. -->
+<p id="fatal-error" class="fatal-error hidden" role="alert"></p>
+
+<!-- Where messages land instead of alert(). Outside the shell for the same reason the banner is: a
+     message about something going wrong must not live inside the panel that went wrong.
+
+     The host is aria-hidden and the two regions below do the talking, and that split is the fix to a
+     real finding. A toast used to carry its own role and be appended already full of text - but a live
+     region is watched for CHANGES, and a region that arrives complete has not changed, it has appeared.
+     VoiceOver said nothing at all. A permanent region that is empty until a message is written into it
+     is a change, every time. -->
+<div id="toast-host" class="toast-host" aria-hidden="true"></div>
+<!-- Polite waits its turn; assertive interrupts. Getting that backwards is worse than the silence this
+     replaces, so tone picks the region rather than the region being picked once for everything. -->
+<p id="toast-say" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+<p id="toast-alert" class="visually-hidden" role="alert" aria-live="assertive" aria-atomic="true"></p>
+
+<!-- The replacement for confirm(). Empty until askConfirm fills it; built here rather than at run time
+     so it is real markup with real ids, which is the one way the headless stub can see a control. -->
+<div id="modal-scrim" class="modal-scrim hidden">
+    <div class="modal-card" id="modal-card" role="alertdialog" aria-labelledby="modal-text">
+        <p id="modal-text" class="modal-text"></p>
+        <div class="modal-actions">
+            <button type="button" id="modal-cancel" class="btn-secondary">Cancel</button>
+            <button type="button" id="modal-confirm" class="btn-dark">Continue</button>
+        </div>
+    </div>
+</div>
+
+<!-- Where a validation result gets said out loud. Off-screen rather than hidden: display:none is not
+     announced at all. It carries ONE sentence, not the health panel - a live region wrapped round the
+     panel itself would re-read every figure on every keystroke, which is worse than the silence it
+     replaces. aria-atomic so the whole sentence is read, not just the words that changed. -->
+<p id="validation-announce" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+
+<div id="app-shell">
+
+    <!-- === SIDEBAR ====================================== -->
+    <aside id="app-sidebar">
+        <div class="sidebar-brand">
+            <!-- A ball of yarn. Colors come from the stylesheet, not fill/stroke attributes: a var()
+                 in a presentation attribute is not reliably resolved and falls back to black. -->
+            <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+                <circle class="mark-ball" cx="20" cy="20" r="15"></circle>
+                <path class="mark-strand" d="M8 14c8 2 16 2 24 0M6 20c9 3 19 3 28 0M8 26c8 2 16 2 24 0"></path>
+                <path class="mark-strand" d="M20 5c-6 6-6 24 0 30M20 5c6 6 6 24 0 30"></path>
+            </svg>
+            <div class="brand-words">
+                <strong>Stitch Math</strong>
+                <span>Crochet Pattern Compiler<br>&amp; Designer Suite</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Sections">
+            <button type="button" id="nav-dashboard" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-home"></use></svg><span class="nav-label">Dashboard</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-patterns"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-yarn"></use></svg><span class="nav-label">Patterns</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-library"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg><span class="nav-label">Stitch Library</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <!-- Studio is where a pattern is written AND compiled. These were two entries onto the
+                 same panels until they were merged. -->
+            <button type="button" id="nav-studio"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-pencil"></use></svg><span class="nav-label">Studio</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-sizer"     class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-ruler"></use></svg><span class="nav-label">Sizer / Grader</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-testers"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg><span class="nav-label">Testers &amp; Feedback</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-analytics" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-chart"></use></svg><span class="nav-label">Analytics</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-gauge"     class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-swatch"></use></svg><span class="nav-label">Gauge Profile</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-publish"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-upload"></use></svg><span class="nav-label">Publish / Export</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-locker"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-face"></use></svg><span class="nav-label">Studio Locker</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <!-- Engines built, tested and documented that nothing else in the app calls. See the
+                 panels near the end of this file. -->
+            <button type="button" id="nav-construction"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-frame"></use></svg><span class="nav-label">Construction</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+            <button type="button" id="nav-settings"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-gear"></use></svg><span class="nav-label">Settings</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+        </nav>
+
+        <!-- Points, level and streak are computed from what actually happened in this browser -
+             projects saved, clean compiles, swatches logged. Progress store, app.js section 12. -->
+        <div class="sidebar-points">
+            <div class="points-head">
+                <span id="av-sidebar" class="av-mount av-mount-rail"></span>
+                <span class="points-title">Stitch Points</span>
+                <strong id="points-total">0</strong>
+            </div>
+            <div class="points-track"><span id="points-bar" class="points-bar"></span></div>
+            <p id="points-next" class="points-next">Next reward at 100 pts</p>
+            <p id="points-note" class="points-note">Write, export or save a pattern to start earning.</p>
+        </div>
+    </aside>
+
+    <button type="button" id="nav-scrim" class="nav-scrim" aria-label="Close navigation" tabindex="-1"></button>
+
+    <!-- === WORKSPACE ==================================== -->
+    <div id="app-main">
+
+        <!-- Deliberately a div rather than a header element: the brand header further down owns the
+             only one on the page, and the layout tests key off where it closes. -->
+        <div class="topbar">
+            <button type="button" id="nav-toggle" class="nav-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="app-sidebar"><svg class="ic toggle-ic" aria-hidden="true" focusable="false"><use href="#ic-menu"></use></svg></button>
+            <div class="topbar-title">
+                <h2 id="view-title">Dashboard</h2>
+                <p id="view-subtitle">Your creative command center</p>
+            </div>
+            <div class="topbar-meters">
+                <!-- Filled by renderProgress. A span rather than a button: the sidebar and topbar
+                     show what is worn, and the place to change it is the Locker view. -->
+                <div class="meter-card meter-avatar">
+                    <span id="av-topbar" class="av-mount"></span>
+                </div>
+                <div class="meter-card meter-xp">
+                    <svg class="ic meter-icon" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg>
+                    <div class="meter-body">
+                        <strong id="xp-title">Pattern Explorer</strong>
+                        <span id="xp-level" class="meter-sub">Level 1</span>
+                        <div class="meter-track"><span id="xp-bar" class="meter-bar"></span></div>
+                    </div>
+                    <span id="xp-count" class="meter-count">0 / 100 XP</span>
+                </div>
+                <div class="meter-card meter-streak">
+                    <svg class="ic meter-icon" aria-hidden="true" focusable="false"><use href="#ic-flame"></use></svg>
+                    <div class="meter-body">
+                        <strong id="streak-count">No streak yet</strong>
+                        <span id="streak-note" class="meter-sub">Write daily</span>
+                    </div>
+                </div>
+                <button type="button" id="btn-new-project" class="btn-new-project">
+                    <svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-plus"></use></svg> New Project
+                </button>
+            </div>
+        </div>
+
+        <!-- === DASHBOARD VIEW ===============================
+             A read-only summary. Every figure is rendered from state the app already computes;
+             nothing here holds data of its own or accepts pattern input. -->
+        <div id="dashboard-view">
+
+            <div class="dash-tiles">
+                <button type="button" id="tile-patterns" class="dash-tile tile-patterns">
+                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-yarn"></use></svg>
+                    <span class="tile-name">Patterns</span>
+                    <strong id="tile-patterns-value" class="tile-value">0</strong>
+                    <span class="tile-note">Saved projects</span>
+                    <span class="tile-link">View all →</span>
+                </button>
+                <button type="button" id="tile-compiler" class="dash-tile tile-compiler">
+                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
+                    <span class="tile-name">Compiler</span>
+                    <strong id="tile-compiler-value" class="tile-value">0</strong>
+                    <span class="tile-note">Needs attention</span>
+                    <span class="tile-link">Check now →</span>
+                </button>
+                <button type="button" id="tile-sizer" class="dash-tile tile-sizer">
+                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-ruler"></use></svg>
+                    <span class="tile-name">Sizer / Grader</span>
+                    <strong id="tile-sizer-value" class="tile-value">0</strong>
+                    <span class="tile-note">Sizes graded</span>
+                    <span class="tile-link">Grade now →</span>
+                </button>
+                <button type="button" id="tile-studio" class="dash-tile tile-studio">
+                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-pencil"></use></svg>
+                    <span class="tile-name">Studio</span>
+                    <strong id="tile-studio-value" class="tile-value">0</strong>
+                    <span class="tile-note">Rows in progress</span>
+                    <span class="tile-link">Continue →</span>
+                </button>
+                <button type="button" id="tile-testers" class="dash-tile tile-testers">
+                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg>
+                    <span class="tile-name">Testers</span>
+                    <strong id="tile-testers-value" class="tile-value">0</strong>
+                    <span class="tile-note">Recorded testers</span>
+                    <span class="tile-link">See feedback →</span>
+                </button>
+                <button type="button" id="tile-analytics" class="dash-tile tile-analytics">
+                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-chart"></use></svg>
+                    <span class="tile-name">Analytics</span>
+                    <strong id="tile-analytics-value" class="tile-value">—</strong>
+                    <span class="tile-note">Overall score</span>
+                    <span class="tile-link">View insights →</span>
+                </button>
+            </div>
+
+            <div class="dash-grid">
+
+                <!-- The compiler card is the tall one, so it leads and stands two rows deep; the four
+                     short cards beside it stack two-by-two in the space it makes. Ordered by height,
+                     because a short card next to a tall one is a hole in the grid. -->
+                <section class="dash-card card-compiler">
+                    <div class="dash-card-head">
+                        <h3>Compiler Overview</h3>
+                        <button type="button" id="link-compiler" class="dash-link">Open compiler</button>
+                    </div>
+                    <div class="compiler-split">
+                        <div id="dash-findings" class="dash-findings"></div>
+                        <div class="dash-graph">
+                            <p class="graph-title">Stitch Count Graph</p>
+                            <div id="dash-graph" class="graph-frame"></div>
+                        </div>
+                    </div>
+                    <div class="compiler-foot">
+                        <div class="count-chip chip-error"><strong id="dash-errors">0</strong><span>Errors</span></div>
+                        <div class="count-chip chip-warn"><strong id="dash-warnings">0</strong><span>Warnings</span></div>
+                        <div class="count-chip chip-pass"><strong id="dash-passed">0</strong><span>Passed</span></div>
+                        <div class="dash-health">
+                            <p class="health-caption">Overall Health Score</p>
+                            <p class="health-figure"><strong id="dash-health">—</strong><span> / 100</span></p>
+                            <div class="meter-track"><span id="dash-health-bar" class="meter-bar"></span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dash-card card-recent">
+                    <div class="dash-card-head">
+                        <h3>Recent Projects</h3>
+                        <button type="button" id="link-recent" class="dash-link">View all</button>
+                    </div>
+                    <div id="dash-recent" class="dash-recent-list"></div>
+                </section>
+
+                <!-- The stitch roll and the daily quest, in that order and paid separately. The roll is
+                     the gamble - a stitch drawn at random, worth more the rarer it is - and the quest
+                     beneath it is the floor, so a stitch nobody wants to work costs a bonus rather than
+                     the day. Both are settled in app.js section 12. -->
+                <section class="dash-card card-quest">
+                    <div class="dash-card-head">
+                        <h3>Daily Stitch Roll</h3>
+                        <span id="roll-tier" class="roll-tier tier-1">Common</span>
+                    </div>
+                    <div id="roll-reel" class="roll-reel">
+                        <strong id="roll-stitch" class="roll-stitch">sc</strong>
+                    </div>
+                    <p id="roll-term" class="roll-term">single crochet</p>
+                    <p class="quest-reward"><svg class="ic quest-spark" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg> <span id="roll-reward">+40 Stitch Points</span></p>
+                    <p id="roll-note" class="roll-note">Work it into a pattern that compiles clean.</p>
+                    <button type="button" id="roll-again" class="roll-again">Re-roll · 40 pts</button>
+                    <p id="quest-text" class="quest-text">Compile a pattern without any errors</p>
+                    <div class="quest-foot">
+                        <div class="meter-track"><span id="quest-bar" class="meter-bar"></span></div>
+                        <span id="quest-count" class="quest-count">0 / 1</span>
+                        <svg class="ic quest-chest" aria-hidden="true" focusable="false"><use href="#ic-gift"></use></svg>
+                    </div>
+                </section>
+
+                <!-- Everything this browser has ever written, which is what the points are a score of.
+                     Lifetime figures only: the tiles at the top report the file that is open, this
+                     reports the designer. -->
+                <section class="dash-card card-record">
+                    <div class="dash-card-head">
+                        <h3>Studio Record</h3>
+                        <span class="record-caption">Everything written in this browser</span>
+                    </div>
+                    <div class="record-figures">
+                        <div class="record-figure"><strong id="rec-patterns">0</strong><span>Patterns saved</span></div>
+                        <div class="record-figure"><strong id="rec-exports">0</strong><span>Exports shipped</span></div>
+                        <div class="record-figure"><strong id="rec-stitches">0</strong><span>Stitches worked</span></div>
+                        <div class="record-figure"><strong id="rec-compiles">0</strong><span>Clean compiles</span></div>
+                        <div class="record-figure"><strong id="rec-best">0</strong><span>Best streak</span></div>
+                        <div class="record-figure record-collection">
+                            <strong id="rec-collected">0 / 27</strong><span>Stitches collected</span>
+                            <div class="meter-track"><span id="rec-collection-bar" class="meter-bar"></span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dash-card card-testers">
+                    <div class="dash-card-head">
+                        <h3>Tester Feedback</h3>
+                        <button type="button" id="link-testers" class="dash-link">View all</button>
+                    </div>
+                    <div id="dash-testers" class="dash-testers-list"></div>
+                </section>
+
+                <section class="dash-card card-analytics">
+                    <div class="dash-card-head">
+                        <h3>Analytics</h3>
+                        <button type="button" id="link-analytics" class="dash-link">Full report</button>
+                    </div>
+                    <div id="dash-analytics" class="dash-analytics-body"></div>
+                </section>
+
+                <section class="dash-card card-sizes">
+                    <div class="dash-card-head">
+                        <h3>Size Charts</h3>
+                        <button type="button" id="link-sizes" class="dash-link">Edit chart</button>
+                    </div>
+                    <div id="dash-sizes" class="dash-sizes-body"></div>
+                </section>
+
+                <section class="dash-card card-schematics">
+                    <div class="dash-card-head">
+                        <h3>Schematics</h3>
+                    </div>
+                    <div id="dash-schematics" class="dash-schematics-body"></div>
+                </section>
+
+                <section class="dash-card card-gauges">
+                    <div class="dash-card-head">
+                        <h3>Gauge Profile</h3>
+                        <button type="button" id="link-gauges" class="dash-link">Add gauge</button>
+                    </div>
+                    <div id="dash-gauges" class="dash-gauges-body"></div>
+                </section>
+
+                <!-- Every button here forwards to a real control elsewhere on the page. No export
+                     format is offered that the app cannot actually produce. -->
+                <section class="dash-card card-publish">
+                    <h3>Publish / Export</h3>
+                    <p class="publish-caption">Export options</p>
+                    <div class="publish-grid">
+                        <button type="button" id="dash-export-txt" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-doc"></use></svg> Pattern text</button>
+                        <button type="button" id="dash-export-pdf" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg> Save as PDF</button>
+                        <button type="button" id="dash-export-history" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-trend"></use></svg> Gauge history</button>
+                        <button type="button" id="dash-export-package" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-package"></use></svg> Multi-size pack</button>
+                    </div>
+                    <button type="button" id="dash-export-open" class="publish-cta">Open Publish / Export</button>
+                </section>
+            </div>
+
+            <div class="dash-footer-strip">
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Catch errors before testers do</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Grade with confidence</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Design with precision</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Test smarter</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Publish beautifully</span>
+                <!-- The build. Set from APP_VERSION at start-up rather than written here, so the number
+                     cannot be bumped in one place and left stale in the other. -->
+                <span id="app-version" class="dash-version"></span>
+            </div>
+        </div>
+
+    <!-- === HEADER === -->
+    <header id="intro-header">
+        <h1>Stitch Math</h1>
+        <p>Mathematical Crochet Pattern Validator</p>
+        <p class="usage-note">
+            Paste your pattern into the box on the right. Put one row on each line.
+            Write it the normal way, like <code>[sc, inc] x 6</code>.
+            Stitch Math counts the stitches in every row for you.
+            If a row does not add up, it marks that row and tells you what probably went wrong.
+            Fill in your gauge swatch on the left to find out how much yarn you need.
+            When you are done, click <strong>Save as Text</strong> to save your pattern with the counts fixed.
+        </p>
+    </header>
+
+    <main id="workspace">
+        <!-- ===================================================== -->
+        <!-- LEFT COLUMN: MANAGEMENT & METADATA                    -->
+        <!-- ===================================================== -->
+        <div class="left-column" id="left-column">
+
+            <!-- Stitches Used In This Pattern and the Custom Stitch Dictionary used to lead this column.
+                 They live on Patterns now, under Color Codes - the three of them are the pattern's
+                 vocabulary, and reading them together beats hunting across two tabs. -->
+
+            <!-- === 2. LIVE VALIDATION RESULTS === -->
+            <section class="panel" id="output-section">
+                <h2>Validation Results</h2>
+                <div id="cumulative-status">
+                    <p class="placeholder-text">No pattern steps configured.<br>Add a row to begin mathematical validation.</p>
+                </div>
+            </section>
+
+            <!-- === 3. ANALYTICS SUMMARY DASHBOARD === -->
+            <div id="pattern-analytics-dashboard">
+                <div class="stat-card"><strong>Total Stitches</strong><span id="stat-total-stitches" class="stat-badge">0</span></div>
+                <div class="stat-card"><strong>Difficulty</strong><span id="stat-difficulty" class="stat-badge">Basic</span></div>
+                <div class="stat-card"><strong>Sections</strong><span id="stat-sections" class="stat-badge">0</span></div>
+                <div class="stat-card"><strong>Special Stitches</strong><span id="stat-special" class="stat-badge">0</span></div>
+            </div>
+
+            <!-- === 3b. TECHNICAL COMPLEXITY BREAKDOWN === -->
+            <div id="complexity-panel" class="panel">
+                <h2>Technical Complexity</h2>
+                <div id="complexity-content"><p class="placeholder-text">Add a row to analyze complexity.</p></div>
+            </div>
+
+            <!-- === 4. YARN & GAUGE PROFILE === -->
+            <div id="gauge-profile-panel" class="panel-card">
+                <div class="panel-header">
+                    <h3>Yarn & Gauge Profile</h3>
+                    <p>Record your working swatch. Stitch Math automatically computes stitch density, row density, yarn estimates, and stores each swatch in your project history.</p>
+                </div>
+
+                <div class="gauge-grid">
+                    <!-- GAUGE SWATCH PANEL -->
+                    <fieldset class="input-group">
+                        <legend>Gauge Swatch</legend>
+                        <div class="field-stack">
+                            <div class="field-row">
+                                <div class="field">
+                                    <label for="gauge-height" class="field-label">Gauge Height</label>
+                                    <input type="number" id="gauge-height" step="0.1">
+                                </div>
+                                <div class="field">
+                                    <label for="gauge-rows" class="field-label">Rows / Rounds</label>
+                                    <input type="number" id="gauge-rows">
+                                </div>
+                            </div>
+                            <div class="field-row">
+                                <div class="field">
+                                    <label for="gauge-width" class="field-label">Gauge Width</label>
+                                    <div class="input-pair">
+                                        <input type="number" id="gauge-width" step="0.1">
+                                        <select id="gauge-unit" class="unit-input" title="Unit applies to both gauge width and height" aria-label="Gauge unit, applies to both width and height">
+                                            <option value="in">in</option><option value="cm">cm</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="gauge-stitches" class="field-label">Number of Stitches</label>
+                                    <input type="number" id="gauge-stitches">
+                                </div>
+                            </div>
+                            <small class="field-note">Unit applies to both gauge width and height.</small>
+                            <!-- The same swatch counted again after washing. Washed gauge is the gauge
+                                 the finished garment has, so it wins wherever it is given - per axis,
+                                 so measuring only one of the two does not discard the other. -->
+                            <div class="field-row">
+                                <div class="field">
+                                    <label for="gauge-washed-stitches" class="field-label">Washed Stitches</label>
+                                    <input type="number" id="gauge-washed-stitches" placeholder="optional">
+                                </div>
+                                <div class="field">
+                                    <label for="gauge-washed-rows" class="field-label">Washed Rows</label>
+                                    <input type="number" id="gauge-washed-rows" placeholder="optional">
+                                </div>
+                            </div>
+                            <small class="field-note">Counted over the same swatch after washing or blocking. Whichever you give is used in place of the unwashed figure.</small>
+                            <div class="field-row">
+                                <div class="field">
+                                    <label for="swatch-weight" class="field-label">Swatch Weight</label>
+                                    <div class="input-pair">
+                                        <input type="number" id="swatch-weight" step="0.1" placeholder="15">
+                                        <select id="swatch-weight-unit" class="unit-input">
+                                            <option value="g">g</option><option value="oz">oz</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="gauge-hook-size" class="field-label">Hook / Needle Size</label>
+                                    <input type="text" id="gauge-hook-size" autocomplete="off" placeholder="e.g., 4.0mm (G) / US 6">
+                                </div>
+                            </div>
+                            <div class="field-block">
+                                <label for="gauge-convert-size" class="field-label">Convert Swatch To</label>
+                                <div class="select-with-unit">
+                                    <select id="gauge-convert-size">
+                                        <option value="">-- As measured --</option>
+                                        <option value="2">2 × 2 swatch</option>
+                                        <option value="4">4 × 4 swatch</option>
+                                        <option value="6">6 × 6 swatch</option>
+                                        <option value="8">8 × 8 swatch</option>
+                                        <option value="10">10 × 10 swatch</option>
+                                    </select>
+                                    <select id="gauge-convert-unit" title="Convert the swatch size into these units" aria-label="Convert swatch size to these units">
+                                        <option value="in">in</option><option value="cm">cm</option>
+                                    </select>
+                                </div>
+                                <div id="gauge-conversion-output" class="gauge-output"><em>Enter swatch size, stitches, and rows to convert.</em></div>
+                            </div>
+                            <div class="field-block">
+                                <label for="gauge-notes" class="field-label">Swatch Notes</label>
+                                <textarea id="gauge-notes" class="field-textarea" rows="3" placeholder="e.g., blocked, held double, loosened tension on rows 3-6"></textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- SKEIN INFORMATION PANEL -->
+                    <fieldset class="input-group">
+                        <legend>Skein Information</legend>
+                        <div class="field-row">
+                            <div class="field">
+                                <label for="calc-skein-weight" class="field-label">Skein Weight</label>
+                                <div class="input-pair">
+                                    <input type="number" id="calc-skein-weight" placeholder="100">
+                                    <select id="calc-skein-weight-unit" class="unit-input">
+                                        <option value="g">g</option><option value="oz">oz</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="calc-skein-length" class="field-label">Skein Length</label>
+                                <div class="input-pair">
+                                    <input type="number" id="calc-skein-length" placeholder="220">
+                                    <select id="calc-skein-length-unit" class="unit-input">
+                                        <option value="yd">yd</option><option value="m">m</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- DENSITY -->
+                    <fieldset class="input-group">
+                        <legend>Density Calculator</legend>
+                        <div id="density-summary">
+                            <div class="density-card"><strong>Stitch Density</strong><div id="density-stitches">--</div></div>
+                            <div class="density-card"><strong>Row Density</strong><div id="density-rows">--</div></div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Two actions, because skein information is only needed for the second one.
+                         Gauge stands on its own. -->
+                    <div class="form-controls gauge-actions">
+                        <button id="btn-calculate-gauge" class="btn-dark" type="button">Calculate Gauge</button>
+                        <button id="btn-calculate-yardage" class="btn-info" type="button" title="Needs a validated pattern plus skein weight and length.">Calculate Yardage</button>
+                    </div>
+
+                    <div id="gauge-results" class="hidden">
+                        <h4>Gauge Results</h4>
+                        <div id="gauge-results-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === 4b. GARMENT SIZE COMPARISON ===
+                 The element ids keep the earlier "finished-size" name; only the heading was renamed. -->
+            <section id="finished-size-panel" class="panel">
+                <h2>Garment Size Comparison</h2>
+                <div class="form-container">
+                    <div class="form-group">
+                        <label for="sizing-category">Sized for</label>
+                        <select id="sizing-category" title="Craft Yarn Council body measurement charts. Leave on 'Not a garment' for blankets, doilies and anything that isn't worn.">
+                            <option value="">&mdash; Not a garment &mdash;</option>
+                            <option value="baby">Baby (chest)</option>
+                            <option value="child">Child (chest)</option>
+                            <option value="youth">Youth (chest)</option>
+                            <option value="woman">Woman (bust)</option>
+                            <option value="man">Man (chest)</option>
+                            <option value="head">Head &mdash; hats</option>
+                            <option value="hand">Hand &mdash; mitts</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sizing-piece">Widest row measures</label>
+                        <select id="sizing-piece" title="A body worked flat is usually one of a front/back pair, so the finished circumference is double the measured width.">
+                            <option value="round">The full circumference</option>
+                            <option value="half">Half &mdash; a front or back panel</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="finished-size-content"></div>
+            </section>
+
+            <!-- === 5. GAUGE HISTORY DASHBOARD === -->
+            <section id="gauge-history-dashboard" class="panel">
+                <h2>Gauge & Swatch History</h2>
+                <div>
+                    <h3>Current Swatch</h3>
+                    <div id="active-swatch-content"><em>No swatch recorded.</em></div>
+                </div>
+                <div class="history-table-wrapper">
+                    <table class="matrix-table">
+                        <thead><tr><th></th><th>Yarn</th><th>Hook</th><th>Unit</th><th>Gauge</th><th>Converted</th><th>Notes</th><th>Date</th></tr></thead>
+                        <tbody id="swatch-history-body"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <strong>Density Quick Calc</strong>
+                    <div id="quick-density-output">--</div>
+                </div>
+                <div class="form-controls">
+                    <button id="btn-export-history" type="button">Export History</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- RIGHT COLUMN: WORKSPACE & INPUTS                      -->
+        <!-- ===================================================== -->
+        <div class="right-column" id="right-column">
+    
+            <!-- === 6. PROJECT MANAGEMENT === -->
+            <section class="panel" id="project-panel">
+                <h2>Project Management</h2>
+                <div class="project-controls">
+                    <input type="text" id="project-name" autocomplete="off" aria-label="Project name" placeholder="Project Name">
+                    <button type="button" id="save-btn" class="btn-dark">Save File</button>
+                    <select id="load-select"><option value="">-- Load a project --</option></select>
+                    <button type="button" id="load-btn" class="btn-secondary">Load File</button>
+                    <button type="button" id="new-file-btn" class="btn-info">New File</button>
+                    <button type="button" id="delete-project-btn" class="btn-danger">Delete File</button>
+                    <button type="button" id="export-project-btn" class="btn-secondary">Export Project</button>
+                    <button type="button" id="import-project-btn" class="btn-secondary">Import Project</button>
+                    <!-- Same file, same picker, different question: take this designer's stitch
+                         dictionary without taking their pattern. Its own button rather than a prompt
+                         inside the import flow, because it is a different intention rather than a
+                         setting on the same one - and because the import flow already asks a question. -->
+                    <button type="button" id="import-stitches-btn" class="btn-secondary">Import Stitches Only</button>
+                    <!-- type="file" deliberately: test-newfile.js harvests every id'd input on the page
+                         and asserts none holds data after New File, and its filter passes over a file
+                         input. A text input here would be swept into that reset. -->
+                    <input type="file" id="import-file" accept="application/json,.json" class="hidden">
+                    <button type="button" id="recover-btn" class="btn-secondary">Recover Previous Version</button>
+                </div>
+                <div class="project-status">
+                    <span id="save-status" class="save-status" role="status" aria-live="polite">Autosave on</span>
+                    <!-- Filled in by renderRecoverPanel with createElement, never as assigned markup:
+                         a Restore button written into innerHTML cannot be found by getElementById. -->
+                    <div id="recover-panel" class="recover-panel hidden"></div>
+                </div>
+            </section>
+
+            <!-- === 7. PATTERN METADATA === -->
+            <section class="panel" id="metadata-panel">
+                <h2>Pattern Metadata</h2>
+                <div class="form-container">
+                    <div class="form-group">
+                        <label for="meta-designer">Designer Name</label>
+                        <input type="text" id="meta-designer" autocomplete="name" placeholder="e.g., CrochetByJane">
+                    </div>
+                    <div class="form-group">
+                        <label for="meta-difficulty">Difficulty</label>
+                        <select id="meta-difficulty" title="Craft Yarn Council project levels">
+                            <option value="">-- Select Difficulty --</option>
+                            <option>Basic</option>
+                            <option>Easy</option>
+                            <option>Intermediate</option>
+                            <option>Complex</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="meta-hook">Hook Size</label>
+                        <input type="text" id="meta-hook" autocomplete="off" placeholder="e.g., 4.0mm (G)">
+                    </div>
+                    <div class="form-group">
+                        <label for="meta-yarn-weight">Yarn Weight</label>
+                        <select id="meta-yarn-weight">
+                            <option value="">-- Select Yarn Weight --</option>
+                            <option value="0 - Lace">0 - Lace (Lace, 10 count crochet thread)</option>
+                            <option value="1 - Super Fine">1 - Super Fine (Sock, Fingering, Baby)</option>
+                            <option value="2 - Fine">2 - Fine (Sport, Baby)</option>
+                            <option value="3 - Light">3 - Light (DK, Light Worsted)</option>
+                            <option value="4 - Medium">4 - Medium (Worsted, Aran)</option>
+                            <option value="5 - Bulky">5 - Bulky (Chunky, Craft, Rug)</option>
+                            <option value="6 - Super Bulky">6 - Super Bulky (Bulky, Roving)</option>
+                            <option value="7 - Jumbo">7 - Jumbo (Jumbo, Roving)</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- === 7-ii. COLOR CODES ===
+                 Its own panel. Colorwork patterns write "With A, ch 146" and leave the reader to
+                 remember which yarn A is. Single letters are understood without any of this; entering
+                 the colors is what puts names on them. -->
+            <section class="panel" id="color-panel">
+                <h2>Color Codes</h2>
+                <form id="color-form">
+                    <div class="form-container">
+                        <div class="form-group">
+                            <label for="color-code">Code</label>
+                            <input type="text" id="color-code" placeholder="e.g. A" maxlength="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="color-name">Color</label>
+                            <input type="text" id="color-name" placeholder="e.g. Creamsicle">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-secondary">Add Color</button>
+                </form>
+                <div id="color-feedback" class="feedback-text"></div>
+
+                <div class="table-responsive">
+                    <table class="matrix-table custom-st-table" id="color-table">
+                        <thead><tr><th></th><th>Code</th><th>Color</th></tr></thead>
+                        <tbody id="color-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- === 7-iii. STITCHES USED IN THIS PATTERN ===
+                 Read from the pattern rather than declared. The counts come from the same aggregation
+                 the analytics and yardage figures use, so this and the Dashboard cannot disagree. -->
+            <section class="panel" id="stitch-usage-panel">
+                <h2>Stitches Used In This Pattern</h2>
+                <div id="stitch-usage-content"></div>
+            </section>
+
+            <!-- === 7-iv. CUSTOM STITCH DICTIONARY === -->
+            <section class="panel" id="custom-stitch-section">
+                <h2>Custom Stitch Dictionary</h2>
+                <div id="custom-stitch-list" class="list-container">
+                    <em>No custom stitches added yet.</em>
+                </div>
+                <div id="stitch-feedback" class="feedback-text"></div>
+
+                <form id="custom-stitch-form">
+                    <div class="form-container">
+                        <div class="form-group">
+                            <label for="custom-st-name">Stitch</label>
+                            <input type="text" id="custom-st-name" placeholder="e.g. v-st" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-st-def">Definition</label>
+                            <input type="text" id="custom-st-def" placeholder="e.g. dc, ch1, dc">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-st-cost">Stitches Used</label>
+                            <input type="number" id="custom-st-cost" placeholder="Cost" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-st-yield">Stitches Made</label>
+                            <input type="number" id="custom-st-yield" placeholder="Yield" required min="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-secondary">Add Custom Stitch</button>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="matrix-table custom-st-table" id="custom-stitch-table">
+                        <thead><tr><th></th><th>Stitch</th><th>Definition</th><th>Cost</th><th>Yield</th></tr></thead>
+                        <tbody id="custom-stitch-body"></tbody>
+                    </table>
+                </div>
+
+            </section>
+
+            <!-- === 7b-iii. HELP === -->
+            <section class="panel" id="help-panel">
+                <h2>Help &amp; Getting Started</h2>
+                <p class="helper-text">How Stitch Math reads a pattern, and what to do when it disagrees with you.</p>
+
+                <div class="help-list">
+                    <details class="help-topic" open>
+                        <summary>1. Write or paste your pattern</summary>
+                        <div class="help-body">
+                            <p>Go to <strong>Studio</strong> and paste the whole pattern into the big box, <strong>one row on each line</strong>. Write it the normal way:</p>
+                            <pre class="help-code">Row 1: ch 13, sc in 2nd ch from hook and in each ch across (12)
+Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
+                            <p>End each line with the stitch count in brackets, like <code>(18)</code>. That is the number Stitch Math checks its own arithmetic against.</p>
+                            <p>Press <strong>Validate Entire Pattern</strong> when you are ready.</p>
+                        </div>
+                    </details>
+
+                    <details class="help-topic">
+                        <summary>2. Ways to write a row</summary>
+                        <div class="help-body">
+                            <ul class="help-points">
+                                <li><strong>Repeats.</strong> <code>[sc, inc] x 6</code> works the bracketed group six times.</li>
+                                <li><strong>Several rows at once.</strong> <code>Rows 2-6: sc in each st across</code> counts all five.</li>
+                                <li><strong>New piece.</strong> A line on its own like <code>SLEEVE</code> starts a new section, and row numbers begin again.</li>
+                                <li><strong>Sizes.</strong> <code>ch 41 (45, 49)</code> is read as three sizes. Stitch Math notices and offers a size picker.</li>
+                                <li><strong>Notes.</strong> Lines that make no fabric &mdash; assembly, reminders &mdash; are shown but not counted.</li>
+                            </ul>
+                        </div>
+                    </details>
+
+                    <details class="help-topic">
+                        <summary>3. Read the results</summary>
+                        <div class="help-body">
+                            <p>The <strong>Pattern Validation Matrix</strong> gives every row a line. <strong>Calc Total</strong> is what Stitch Math counted; <strong>User Total</strong> is what you wrote.</p>
+                            <ul class="help-points">
+                                <li><span class="help-swatch swatch-pass"></span> <strong>Green</strong> &mdash; the row adds up.</li>
+                                <li><span class="help-swatch swatch-fail"></span> <strong>Red</strong> &mdash; the row cannot be worked as written. The reason is in the last column.</li>
+                                <li><span class="help-swatch swatch-blocked"></span> <strong>Gray</strong> &mdash; not checked, because an earlier row has to be fixed first.</li>
+                            </ul>
+                            <p>Use <strong>Jump to First Error</strong> to go straight to the first problem. If a count disagrees, Stitch Math treats <em>its own arithmetic</em> as correct and tells you so &mdash; it never edits your pattern.</p>
+                        </div>
+                    </details>
+
+                    <details class="help-topic">
+                        <summary>4. Gauge and how much yarn</summary>
+                        <div class="help-body">
+                            <p>In <strong>Gauge Profile</strong>, enter your swatch: how many stitches and rows, over what size square. Press <strong>Calculate Gauge</strong>.</p>
+                            <p>Add the <strong>skein weight and length</strong> from the yarn label, then <strong>Calculate Yardage</strong> for an estimate of how much you need.</p>
+                            <p>Washed or blocked your swatch? Put those counts in as well &mdash; the finished garment has the washed gauge, so those win.</p>
+                        </div>
+                    </details>
+
+                    <details class="help-topic">
+                        <summary>5. Grade it to other sizes</summary>
+                        <div class="help-body">
+                            <p><strong>Sizer / Grader</strong> turns one size into a range. Give it the size the pattern was written for, pick a size chart, and it works out the rest.</p>
+                            <p>Ease is never assumed. Give any two of <strong>body</strong>, <strong>finished</strong> and <strong>ease</strong>, and the third is worked out and labeled as derived.</p>
+                            <p>Every measurement on the <strong>schematic</strong> is clickable, and shows the full working behind its stitch count.</p>
+                        </div>
+                    </details>
+
+                    <details class="help-topic">
+                        <summary>6. Terms Stitch Math does not know</summary>
+                        <div class="help-body">
+                            <p>If your pattern uses a stitch it cannot count, add it in <strong>Library</strong>: how many stitches it <em>uses</em> and how many it <em>makes</em>.</p>
+                            <p>Colorwork like <code>With A, ch 146</code> works without any setup. Adding the colors just puts names to the letters.</p>
+                            <p>Custom stitches last as long as the page does &mdash; a term defined for one pattern is not carried into the next.</p>
+                        </div>
+                    </details>
+
+                    <details class="help-topic">
+                        <summary>7. Save, print and export</summary>
+                        <div class="help-body">
+                            <ul class="help-points">
+                                <li><strong>Patterns</strong> &mdash; name a project and Save File. It stays in this browser.</li>
+                                <li><strong>Save as Text</strong> &mdash; your pattern with the counts corrected.</li>
+                                <li><strong>Save as PDF</strong> &mdash; the pattern as a PDF file, with the metadata and stitch table.</li>
+                                <li><strong>Publish / Export</strong> &mdash; generated multi-size instructions once a pattern is graded.</li>
+                            </ul>
+                            <p class="help-warning">Everything is stored in this browser only. Clearing your browser data removes your saved projects, so export anything you want to keep.</p>
+                        </div>
+                    </details>
+                </div>
+            </section>
+
+            <!-- === 7b-ii. SETTINGS ===
+                 Every option in the app, one per row. These are MIRRORS: each row drives the original
+                 control on its own panel and runs the very same handler, so the two can never hold
+                 different answers. Built in app.js section 12 from SETTING_SPECS rather than written
+                 out here - a hand-written copy of a dropdown is a second list free to drift. -->
+            <section class="panel" id="settings-panel">
+                <h2>Settings</h2>
+                <p class="helper-text">Every option in Stitch Math, in one place. Changing one here is the same as changing it on its own panel &mdash; they are the same setting.</p>
+                <div id="settings-list" class="settings-list"></div>
+            </section>
+
+            <!-- === 7b-iv. ABOUT ===
+                 The build, where the numbers came from, what the licence says and where the work goes.
+                 The privacy line is first because it is the one a designer actually wants answered, and
+                 because it is the shortest true sentence this app can say about itself. -->
+            <section class="panel" id="about-panel">
+                <h2>About Stitch Math</h2>
+
+                <p class="about-privacy">
+                    <svg class="ic about-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg>
+                    <span><strong>Your work never leaves this device.</strong> Patterns, gauge history, your
+                    stitch dictionary and your testers&rsquo; measurements are stored in this browser and
+                    nowhere else. Stitch Math has no account, no server and makes no network requests. The
+                    only way anything leaves is when you export it yourself.</span>
+                </p>
+
+                <dl class="about-list">
+                    <dt>Version</dt>
+                    <dd><span id="about-version" class="about-version">&mdash;</span> &nbsp;<span class="about-note">Quote this if you report a problem.</span></dd>
+
+                    <dt>Measurements</dt>
+                    <dd>Body measurement charts, yarn weight categories, hook sizing and the abbreviation
+                        list come from the <strong>Craft Yarn Council</strong>&rsquo;s Standards &amp;
+                        Guidelines for Crochet and Knitting. Stitch Math grades from the inch column
+                        throughout. The standards are the Council&rsquo;s work, not ours.</dd>
+
+                    <dt>Licence</dt>
+                    <dd>&copy; 2026 Ashley Smith, trading as TropiCrochet. All rights reserved. The
+                        software is proprietary and may not be copied, modified or redistributed without
+                        written permission. <strong>What you make with it is yours</strong> &mdash; this
+                        licence covers the tool, and claims no interest in your patterns.</dd>
+
+                    <dt>What it does not do</dt>
+                    <dd>Stitch Math checks arithmetic. It does not replace working a gauge swatch, and a
+                        pattern that validates is not thereby guaranteed to fit. It is provided as is,
+                        with no warranty.</dd>
+                </dl>
+            </section>
+
+            <!-- === 7b-iii. STUDIO LOCKER ===
+                 What the points are for. Built in app.js section 12 from the CATALOGUE table - the
+                 avatar is real inline SVG rather than a <use> of a sprite symbol, because external CSS
+                 cannot reach into a <use> shadow tree and a face needs skin, hair and two accessory
+                 colors at once. Buttons only: this view holds no form controls. -->
+            <section class="panel" id="locker-panel">
+                <h2>Studio Locker</h2>
+                <p class="helper-text">Everything here is bought with Stitch Points earned from writing patterns. Buying something never costs you a level &mdash; your rank counts what you have earned, not what you have left.</p>
+                <div class="locker-head">
+                    <div id="av-hero" class="av-mount av-mount-hero"></div>
+                    <div class="locker-purse">
+                        <span class="locker-purse-label">Stitch Points</span>
+                        <strong id="locker-balance">0</strong>
+                        <span id="locker-owned" class="locker-owned">0 of 0 owned</span>
+                    </div>
+                </div>
+                <!-- Free, and outside the catalog on purpose: points are earned by writing patterns,
+                     and nobody should have to write patterns to be depicted as themselves. Buttons
+                     rather than a select, so the skin tones can be the colors they name. -->
+                <div class="locker-choices">
+                    <div class="locker-choice">
+                        <span class="locker-choice-label">Base</span>
+                        <div class="locker-swatches">
+                            <button type="button" id="locker-base-basic" class="locker-pick is-on">Basic</button>
+                            <button type="button" id="locker-base-cutie" class="locker-pick">Cutie</button>
+                        </div>
+                    </div>
+                    <div class="locker-choice">
+                        <span class="locker-choice-label">Skin tone</span>
+                        <div class="locker-swatches">
+                            <button type="button" id="locker-skin-1" class="locker-skin skin-pick-1 is-on" aria-label="Skin tone one"></button>
+                            <button type="button" id="locker-skin-2" class="locker-skin skin-pick-2" aria-label="Skin tone two"></button>
+                            <button type="button" id="locker-skin-3" class="locker-skin skin-pick-3" aria-label="Skin tone three"></button>
+                            <button type="button" id="locker-skin-4" class="locker-skin skin-pick-4" aria-label="Skin tone four"></button>
+                        </div>
+                    </div>
+                    <div class="locker-choice">
+                        <span class="locker-choice-label">Hair color</span>
+                        <div class="locker-swatches">
+                            <button type="button" id="locker-hair-1" class="locker-skin hair-pick-1 is-on" aria-label="Strawberry blonde hair"></button>
+                            <button type="button" id="locker-hair-2" class="locker-skin hair-pick-2" aria-label="Light brown hair"></button>
+                            <button type="button" id="locker-hair-3" class="locker-skin hair-pick-3" aria-label="Black hair"></button>
+                            <button type="button" id="locker-hair-4" class="locker-skin hair-pick-4" aria-label="Red hair"></button>
+                        </div>
+                    </div>
+                    <div class="locker-choice">
+                        <span class="locker-choice-label">Pupil color</span>
+                        <div class="locker-swatches">
+                            <button type="button" id="locker-pupil-1" class="locker-skin pupil-pick-1 is-on" aria-label="White pupils"></button>
+                            <button type="button" id="locker-pupil-2" class="locker-skin pupil-pick-2" aria-label="Sky blue pupils"></button>
+                            <button type="button" id="locker-pupil-3" class="locker-skin pupil-pick-3" aria-label="Jade green pupils"></button>
+                            <button type="button" id="locker-pupil-4" class="locker-skin pupil-pick-4" aria-label="Amber pupils"></button>
+                        </div>
+                    </div>
+                </div>
+                <p id="locker-note" class="locker-note">Tap anything you own to wear it, or tap it again to take it off.</p>
+                <div id="locker-grid" class="locker-grid"></div>
+            </section>
+
+            <!-- === 7b-iii-b. CONSTRUCTION ===
+                 Named UnBUILT until 2026-08-28, for what it was to build rather than for what it does.
+                 The panels are unchanged: the three construction planners, and the measurement
+                 dependency graph walked all the way down.
+
+                 Every number here comes back from the engine. Nothing on this tab recomputes a plan,
+                 restates a warning in its own words, or fills a count in on the designer's behalf. The
+                 frames below are hosts; app.js section 8c builds what goes in them. -->
+            <section class="panel" id="construction-panel">
+                <h2>Construction</h2>
+                <p class="helper-text">How a garment is put together, before you write the rows. Plan a raglan, set-in or circular yoke from the counts it starts at and has to reach &mdash; and see what a change to one measurement disturbs everywhere else.</p>
+                <div id="construction-index" class="construction-index"></div>
+            </section>
+
+            <!-- The three construction planners. The generator dropdown already uses CONSTRUCTIONS to
+                 decide whether a shape can be graded by width; what it never did was ask the planner
+                 behind the shape for the actual seam. -->
+            <section class="panel" id="construction-yoke-panel">
+                <h2>Yoke and sleeve planners</h2>
+                <p class="helper-text">Give a construction the counts it starts from and has to reach, and it returns the shaping rounds &mdash; or says why the numbers cannot meet. Row gauge comes from your swatch, so a depth in inches only appears once you have one.</p>
+                <div class="construction-picks">
+                    <button type="button" id="construction-con-raglan" class="construction-pick is-on">Raglan yoke</button>
+                    <button type="button" id="construction-con-setIn" class="construction-pick">Set-in sleeve</button>
+                    <button type="button" id="construction-con-circular" class="construction-pick">Circular yoke</button>
+                </div>
+                <p id="construction-con-why" class="construction-why"></p>
+                <div id="construction-yoke-fields" class="construction-fields"></div>
+                <p id="construction-yoke-gauge" class="construction-gauge"></p>
+                <div id="construction-yoke-result" class="construction-result"></div>
+            </section>
+
+            <!-- ImpactOfChange, which walks the dependency graph the whole way. The grader's
+                 measurement grid reads the same graph one hop deep, to print what a measurement is
+                 worked out FROM. This is the other direction, and it does not stop at the first step. -->
+            <section class="panel" id="construction-impact-panel">
+                <h2>What a measurement reaches</h2>
+                <p class="helper-text">Pick a measurement to see everything downstream of it, nearest first, and which pieces of your pattern carry it. Nothing is recalculated: changing a measurement should say what it touches, not quietly move numbers.</p>
+                <div id="construction-point-picks" class="construction-picks"></div>
+                <div id="construction-impact-result" class="construction-result"></div>
+            </section>
+
+            <!-- CHART_CM_DISCREPANCIES had a panel here and no longer does: it is back-end only, on
+                 purpose. It records the published standard's own slips, kept so tests/test-grader.js
+                 can assert "these and only these" - a transcription error fails there while a known
+                 source quirk does not. A tripwire for the chart data, not a finding about a pattern. -->
+
+            <!-- === 7b-iv. PUBLISH / EXPORT ===
+                 Saving and exporting on one tab. Every button forwards to the control that already does
+                 the job - one implementation of each export, and no format offered that the app cannot
+                 produce. Project Management is not copied here; the same panel is shown on both tabs. -->
+            <section class="panel" id="publish-panel">
+                <h2>Publish &amp; Export</h2>
+                <p class="helper-text">Save your work, or take it out of Stitch Math. The preview shows the printed pattern as it will come out.</p>
+
+                <div class="publish-actions">
+                    <button type="button" id="pub-export-txt" class="publish-action">
+                        <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-doc"></use></svg>
+                        <span class="pub-text"><strong>Save as Text</strong><span>Your pattern with every stitch count corrected.</span></span>
+                    </button>
+                    <button type="button" id="pub-export-pdf" class="publish-action">
+                        <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg>
+                        <span class="pub-text"><strong>Save as PDF</strong><span>The pattern as a PDF file, with metadata and stitch table.</span></span>
+                    </button>
+                    <button type="button" id="pub-export-history" class="publish-action">
+                        <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-trend"></use></svg>
+                        <span class="pub-text"><strong>Export gauge history</strong><span>Every swatch you have logged, as a file.</span></span>
+                    </button>
+                    <button type="button" id="pub-export-package" class="publish-action">
+                        <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-package"></use></svg>
+                        <span class="pub-text"><strong>Multi-size package</strong><span>Generated instructions for every graded size.</span></span>
+                    </button>
+                </div>
+
+                <!-- A scaled copy of #print-area, which is what actually prints. Taken from that
+                     element rather than rebuilt, so the preview cannot show what the page does not. -->
+                <div class="pdf-preview-head">
+                    <h3>Printed pattern preview</h3>
+                    <button type="button" id="pub-refresh-preview" class="dash-link">Refresh</button>
+                </div>
+                <div class="pdf-preview-frame">
+                    <div id="pdf-preview" class="pdf-preview-page"></div>
+                </div>
+            </section>
+
+            <!-- === 7c. GARMENT GRADER ===
+                 Runs forward: a target size becomes stitch and row counts. The Garment Size Comparison
+                 panel runs the other way, measuring what you wrote. -->
+            <section class="panel" id="grader-section">
+                <h2>Garment Grader</h2>
+                <p class="helper-text">Enter the size this pattern was written for, then grade it to the others. Ease is never assumed &mdash; give any two of body, finished and ease and the third is worked out and labeled. One ease figure applies throughout, and every measurement is graded as one piece of a pair worked flat &mdash; half the finished circumference.</p>
+
+                <div class="form-container">
+                    <div class="form-group">
+                        <label for="grade-base-name">Base Size Name</label>
+                        <input type="text" id="grade-base-name" autocomplete="off" placeholder="e.g. Medium">
+                    </div>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-body">Body Measurement</label>
+                            <input type="number" id="grade-body" step="0.25" min="0" placeholder="38">
+                        </div>
+                        <div class="form-group">
+                            <label for="grade-finished">Finished Measurement</label>
+                            <input type="number" id="grade-finished" step="0.25" min="0" placeholder="42">
+                        </div>
+                    </div>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-ease">Intended Ease</label>
+                            <div class="input-pair">
+                                <input type="number" id="grade-ease" step="0.25" placeholder="4">
+                                <select id="grade-ease-mode" class="unit-input">
+                                    <option value="in">in</option>
+                                    <option value="cm">cm</option>
+                                    <option value="percent">%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="grade-chart">Size Chart</label>
+                            <select id="grade-chart">
+                                <option value="">-- Select One --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="grade-summary" class="grade-summary"><em>Enter a base size to begin.</em></div>
+
+                <details id="grade-options">
+                    <summary>Sizes, ease and rounding</summary>
+                    <div id="grade-size-picker" class="grade-size-picker"></div>
+                    <div id="grade-point-ease"></div>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-rounding">When a count does not fit</label>
+                            <select id="grade-rounding">
+                                <option value="nearest">Nearest valid count</option>
+                                <option value="up">Always round up</option>
+                                <option value="down">Always round down</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <!-- Parity constrains the number of REPEATS, not of stitches. Named for what
+                                 it does: whether centring a motif needs an odd or even count depends on
+                                 whether the piece mirrors about a repeat's middle or about the seam
+                                 between two, which no arithmetic can work out on its own. -->
+                            <label for="grade-parity">Number of repeats</label>
+                            <select id="grade-parity">
+                                <option value="any">Any</option>
+                                <option value="even">Even &mdash; mirrors about a seam</option>
+                                <option value="odd">Odd &mdash; centers a repeat</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- A standard chart is a baseline, not the truth about any one body, so every
+                     measurement in it can be replaced. With the chart set to Custom there is no
+                     baseline at all and these are the measurements. -->
+                <details id="grade-measurements">
+                    <summary>Body measurements</summary>
+                    <div class="form-group">
+                        <label for="grade-custom-sizes">Custom size names</label>
+                        <input type="text" id="grade-custom-sizes" autocomplete="off" placeholder="e.g. Mine, or S, M, L">
+                        <small class="field-note">Used when the size chart is set to Custom / made-to-measure. Separate names with commas.</small>
+                    </div>
+                    <div id="grade-custom-chart"></div>
+                </details>
+
+                <!-- A schematic is how printed patterns communicate finished measurements across sizes.
+                     Every point is clickable, and every number behind it - body, ease, target, count,
+                     rounded, actual - is already worked out by the grader; this shows the working. -->
+                <div id="grade-schematic"></div>
+                <div id="grade-point-detail"></div>
+
+                <div id="grade-tables"></div>
+
+                <!-- The pattern's own sections, and the stitch multiple each repeats over. Kept out of
+                     the graded table above: that table is one chart for the whole garment, and a repeat
+                     belongs to one piece of it. -->
+                <div id="grade-sections"></div>
+
+                <!-- CheckGarmentConstruction, read against the same Construction field the generated
+                     instructions below use - one control, so there is no second picker free to disagree
+                     about which garment is on screen. A row-by-row check cannot see a sweater: every row
+                     of a raglan yoke can consume exactly what the row before it produced, the stitch math
+                     perfect, and the yoke still be impossible, because a raglan gains eight stitches a
+                     round and 63 is not a multiple of eight. This reads the pieces above as shapes instead. -->
+                <p class="helper-text">Held to the construction you pick under Generated instructions and export, below.</p>
+                <div id="grade-construction-pieces"></div>
+                <div id="grade-construction-result"></div>
+
+                <!-- Grading consistency, fit and proportion, and what the compiler makes of every size
+                     the pattern writes. All findings, never corrections. -->
+                <div id="grade-report"></div>
+
+                <!-- Motifs do not grade by stitch count: a granny-square panel grows a square at a
+                     time, so the achievable widths are fixed steps and the target usually falls
+                     between two of them. -->
+                <details id="grade-motif-panel">
+                    <summary>Motif layout</summary>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="motif-size">Motif size</label>
+                            <input type="number" id="motif-size" step="0.25" min="0" placeholder="4">
+                        </div>
+                        <div class="form-group">
+                            <label for="motif-join">Join width</label>
+                            <input type="number" id="motif-join" step="0.125" min="0" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="motif-border">Border width, each side</label>
+                            <input type="number" id="motif-border" step="0.25" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="motif-point">Measured across</label>
+                            <select id="motif-point"></select>
+                        </div>
+                    </div>
+                    <div id="motif-output"></div>
+                </details>
+
+                <!-- Generated multi-size instructions, and the package they export in. -->
+                <details id="grade-output-panel">
+                    <summary>Generated instructions and export</summary>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="gen-notation">Notation</label>
+                            <select id="gen-notation">
+                                <option value="parenthetical">82 (90, 98) — parentheses</option>
+                                <option value="bracket">82 [90, 98] — brackets</option>
+                                <option value="column">One size per line</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="gen-construction">Construction</label>
+                            <select id="gen-construction"></select>
+                        </div>
+                    </div>
+                    <div id="gen-output"></div>
+                    <div id="export-package"></div>
+                </details>
+            </section>
+
+            <!-- === 7c-ii. TESTER FEEDBACK ===
+                 Its own tab now, not a disclosure inside the grader. What a tester actually got, against
+                 what the grader said they would - the only check here with evidence from outside the
+                 engine. -->
+            <section class="panel" id="tester-panel">
+                <h2>Tester Feedback</h2>
+                <p class="helper-text">Record what a tester made against what the grader predicted for their size.</p>
+                <div class="form-pair">
+                    <div class="form-group">
+                        <label for="tester-name">Tester</label>
+                        <input type="text" id="tester-name" autocomplete="off" placeholder="name or initials">
+                    </div>
+                    <div class="form-group">
+                        <label for="tester-size">Size made</label>
+                        <select id="tester-size"></select>
+                    </div>
+                </div>
+                <div class="form-pair">
+                    <div class="form-group">
+                        <label for="tester-finished-bust">Finished bust, measured</label>
+                        <input type="number" id="tester-finished-bust" step="0.25" min="0" placeholder="in">
+                    </div>
+                    <div class="form-group">
+                        <label for="tester-gauge">Their stitch gauge</label>
+                        <input type="number" id="tester-gauge" step="0.1" min="0" placeholder="sts per in">
+                    </div>
+                </div>
+                <div class="form-pair">
+                    <div class="form-group">
+                        <label for="tester-fit-bust">Fit at the bust</label>
+                        <select id="tester-fit-bust">
+                            <option value="">not rated</option>
+                            <option value="good">good</option>
+                            <option value="tight">tight</option>
+                            <option value="loose">loose</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tester-fit-arm">Fit at the upper arm</label>
+                        <select id="tester-fit-arm">
+                            <option value="">not rated</option>
+                            <option value="good">good</option>
+                            <option value="tight">tight</option>
+                            <option value="loose">loose</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="tester-notes">Modifications and problem rows</label>
+                    <input type="text" id="tester-notes" autocomplete="off" placeholder="e.g. added 2 rows to the sleeve">
+                </div>
+                <div id="tester-output"></div>
+            </section>
+
+            <!-- === 7c-iii. TESTER NOTES ===
+                 Anything that does not fit the fields above, in the tester's own words. Record this
+                 tester sits at the bottom of this panel rather than the one above, so it is the last
+                 thing pressed once both the fields and the freeform notes are filled in - and it now
+                 saves both. It used to save only the fields: the box was read by nothing, cleared by
+                 nothing, and its contents were dropped by the button directly beneath it while the
+                 fields around it emptied, so the discard looked exactly like a successful save. -->
+            <section class="panel" id="tester-notes-panel">
+                <h2>Tester Notes</h2>
+                <label class="field-block" for="tester-freeform">
+                    <span class="field-label">Freeform notes</span>
+                    <textarea class="field-textarea" id="tester-freeform" rows="6" placeholder="Anything else a tester said, in their own words."></textarea>
+                </label>
+                <button type="button" id="tester-add-btn" class="btn-secondary">Record this tester</button>
+            </section>
+
+            <!-- === 8. PATTERN INPUT (whole pattern, or one row at a time) === -->
+            <section class="panel" id="input-section">
+                <h2>Pattern Input</h2>
+
+                <p class="helper-text" id="bulk-input-help">Paste the whole pattern, one row per line. End each line with the total stitch count in parentheses, e.g. <strong>[sc, inc] x 3 (9)</strong>. Start a new piece with a title line such as <strong>SLEEVE</strong>. Specifications, abbreviation lists and pattern notes can be left in — they are shown as notes, never validated, and the hook, yarn, gauge and skill level are read from them.</p>
+
+                <details class="heading-rules">
+                    <summary>How to title a new piece</summary>
+                    <p class="helper-text">A title line tells Stitch Math one piece has ended and another has begun. It is the one thing worth getting right by hand, because a title <strong>restarts the stitch count at zero</strong>.</p>
+                    <p class="helper-text"><strong>Write a title one of these four ways.</strong> Anything else is read as an ordinary note, which is usually what you want:</p>
+                    <ul class="helper-text">
+                        <li>All capitals — <strong>SLEEVE</strong></li>
+                        <li>Ending in a colon — <strong>Sleeve:</strong></li>
+                        <li>Between dashes — <strong>--- Sleeve ---</strong></li>
+                        <li>With a make count — <strong>Sleeves (Make 2)</strong></li>
+                    </ul>
+                    <p class="helper-text"><strong>Only title a piece that starts its own fabric.</strong> A sleeve worked separately is a new piece. Ribbing at the hem, or a body carrying on from the yoke, is not — it continues the stitches above it, so leave headings like <em>Sweater Body</em> or <em>Body Bottom Ribbing</em> as plain text and the count carries straight through. Title one of those and its first row will fail for want of stitches that are really there.</p>
+                    <p class="helper-text"><strong>Name the stitches you set aside.</strong> If a piece is worked into stitches an earlier row held back, say so by name — <strong>skip 38 sts (Right Sleeve)</strong>, or a breakdown line such as <strong>(Back = 48 hdc, Right Sleeve = 38 hdc)</strong>. Title the piece <strong>Sleeves</strong> and those 38 stitches are carried across to it instead of the piece starting from nothing.</p>
+                </details>
+                <!-- The linter draws over the editor rather than replacing it. #lint-mirror is a copy of
+                     the text sitting behind a transparent textarea, carrying the underlines; the textarea
+                     itself is untouched, so it stays the one place the pattern lives and every existing
+                     reader of its value keeps working. Everything inside is built at run time. -->
+                <div class="lint-shell">
+                    <div class="lint-editor">
+                        <div class="lint-gutter" id="lint-gutter" aria-hidden="true"></div>
+                        <div class="lint-mirror" id="lint-mirror" aria-hidden="true"></div>
+                        <textarea id="bulk-input" autocomplete="off" rows="14" aria-label="Pattern text, one row per line" aria-describedby="bulk-input-help" placeholder="ch 6 (6)&#10;[sc, inc] x 3 (9)"></textarea>
+                        <div class="lint-tip hidden" id="lint-tip" role="dialog" aria-label="Suggestion"></div>
+                    </div>
+                    <aside class="lint-side is-collapsed" id="lint-side">
+                        <button type="button" class="lint-side-toggle" id="lint-side-toggle" aria-expanded="false" aria-controls="lint-side-body">
+                            <svg class="ic lint-side-icon" aria-hidden="true"><use href="#ic-spark"></use></svg>
+                            <!-- The count, for the collapsed rail. The tally sentence beside it does not fit
+                                 in 52px and is hidden there, which left the rail saying nothing at all. -->
+                            <span class="lint-side-badge" id="lint-side-badge" aria-hidden="true"></span>
+                            <span class="lint-side-tally" id="lint-side-tally">No suggestions</span>
+                        </button>
+                        <div class="lint-side-body" id="lint-side-body"></div>
+                    </aside>
+                </div>
+                <div class="lint-format-toggle">
+                    <label for="toggle-beginner-phrasing" title="Spells every repeat out in full instead of bracket shorthand. Switching it back off folds them back to brackets - both are correct, this just picks which one the pattern is written in.">
+                        <input type="checkbox" id="toggle-beginner-phrasing">
+                        <span>Beginner-friendly repeat phrasing (spelled out, not bracket shorthand)</span>
+                    </label>
+                </div>
+                <button type="button" id="bulk-parse-btn" class="btn-dark">Validate Entire Pattern</button>
+
+                <details id="single-row-entry">
+                    <summary>Add foundation row / single row</summary>
+                    <form id="row-form">
+                        <div class="form-container">
+                            <div class="form-group full-width">
+                                <label for="initial-chain-input"># of Initial Chains (Step 1 only):</label>
+                                <input type="number" id="initial-chain-input" value="0" min="0" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="tokens-input">Row Instructions:</label>
+                                <input type="text" id="tokens-input" placeholder="[sc, inc] x 3, dc">
+                            </div>
+                            <div class="form-group">
+                                <label for="multiplier-input">Sequence Multiplier (Repeats):</label>
+                                <input type="number" id="multiplier-input" value="1" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expected-yield-input">Expected Stitch Count:</label>
+                                <input type="number" id="expected-yield-input" value="0" min="0">
+                            </div>
+                        </div>
+                        <button type="submit">Add &amp; Validate Row</button>
+                    </form>
+                </details>
+
+                <!-- Whole-pattern actions. Outside the collapsible above, because they act on the
+                     pattern as a whole rather than on one row. -->
+                <div class="form-controls pattern-actions">
+                    <button type="button" id="delete-last-btn">Undo Last Row</button>
+                    <button type="button" id="clear-all-btn">Clear All</button>
+                    <button type="button" id="export-txt-btn" class="btn-success">Save as Text</button>
+                    <button type="button" id="export-pdf-btn" class="btn-info">Save as PDF</button>
+                </div>
+            </section>
+
+            <!-- Action controls now live inside the Pattern Input panel above. -->
+
+            <!-- === 7b. PATTERN STRUCTURE ===
+                 Lives under Pattern Input now: how to read the pattern just written, before the matrix
+                 that reads it. -->
+            <section class="panel" id="structure-section">
+                <h2>Pattern Structure</h2>
+                <div class="form-container">
+                    <div class="form-group" id="size-picker-group">
+                        <label for="meta-size">Which Size</label>
+                        <select id="meta-size" title="Which of the graded sizes to validate.">
+                            <option value="0">Size 1</option>
+                        </select>
+                    </div>
+                    <!-- Construction Style stood here beside Row Numbering. It is read off the
+                         pattern now - "Rnd 3" labels and a closing slip stitch say it plainly - so the
+                         pair is gone and Row Numbering stands on its own. -->
+                    <div class="form-group">
+                        <label for="meta-row-numbering">Row Numbering</label>
+                        <select id="meta-row-numbering" title="Patterns worked in pieces (Body, Sleeve, Collar) either number every row straight through, or start again at 1 for each piece.">
+                            <option value="restart">Restart each section</option>
+                            <option value="continue">Continue across sections</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="meta-chain-space-convention">Chain-Sp Counts As</label>
+                        <select id="meta-chain-space-convention" title="Whether a corner or chain space's own chains count toward the round's stitch total, or only the real stitches worked into it do.">
+                            <option value="count">Stitches</option>
+                            <option value="discount">Corner</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- === 11. VALIDATION MATRIX TABLE === -->
+            <section class="panel" id="matrix-section">
+                <div class="panel-title-row">
+                    <h3>Pattern Validation Matrix</h3>
+                    <button type="button" id="jump-error-btn" class="btn-jump-error" onclick="window.jumpToFirstError()"><svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-alert"></use></svg> Jump to First Error</button>
+                </div>
+                <div class="matrix-view-options">
+                    <label for="toggle-trend-markers">
+                        <input type="checkbox" id="toggle-trend-markers" checked>
+                        <span>Show trend markers</span>
+                    </label>
+                    <label for="toggle-collapse-repeats">
+                        <input type="checkbox" id="toggle-collapse-repeats">
+                        <span>Collapse repeated rows</span>
+                    </label>
+                </div>
+                <div class="table-responsive">
+                    <!-- scope on every header and a name on the table itself. Without them a screen
+                         reader reads a failing row as "Row 3, 18, 0, no" and the reader has to remember what
+                         seven columns were; without the name the table is one unlabelled entry in a rotor
+                         list beside four others. The caption is visually hidden because the h3 above already
+                         says it on screen - it is here for the list, not the page. -->
+                    <table class="matrix-table">
+                        <caption class="visually-hidden">Pattern validation matrix: every row, its stitch count as written and as calculated.</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Row #</th><th scope="col">Instructions</th><th scope="col">Row Mult</th><th scope="col">User Total</th><th scope="col">Calc Total</th><th scope="col">Math Verified</th><th scope="col" class="col-actions">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="step-sequence-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    </div><!-- /#app-main -->
+</div><!-- /#app-shell -->
+
+    <!-- ===================================================== -->
+    <!-- PRINT / PDF CONTAINER                                 -->
+    <!-- ===================================================== -->
+    <div id="print-area" class="print-only">
+        <div id="print-running-header" class="print-running-header"></div>
+        <div class="print-header">
+            <h1 id="print-pattern-title">Untitled Pattern</h1>
+            <div id="print-metadata" class="print-metadata-grid"></div>
+        </div>
+
+        <div class="print-dictionaries-container">
+            <section id="print-stitches-used-section" class="print-card">
+                <h3>Stitches Used</h3>
+                <div id="print-stitches-used">None identified</div>
+            </section>
+            <section id="print-custom-dictionary-section" class="print-card">
+                <h3>Custom Stitches</h3>
+                <div id="print-custom-dictionary">None defined</div>
+            </section>
+        </div>
+
+        <section class="print-table-container">
+            <h3>Pattern Instructions</h3>
+            <table class="print-table">
+                <thead><tr><th>Row #</th><th>Instructions</th><th>Mult</th><th>Stitch Count</th></tr></thead>
+                <tbody id="print-table-body"></tbody>
+            </table>
+        </section>
+
+        <footer class="print-footer">
+            <div id="print-validation-results" class="print-status-box"></div>
+            <p class="print-brand-footnote">Stitch Math Crochet Pattern Validator</p>
+        </footer>
+    </div>
+        
+    <!-- === DEPENDENCY INJECTION === -->
+    <!--
+        Version-stamped so a returning browser cannot serve yesterday's app.js beside today's
+        style.css - a mixture that never existed and cannot be reproduced from a bug report. One token
+        moves all of them together, which is the property that matters; content hashing at build time
+        will replace it and remove the need to remember. tests/test-shell.js section 17 asserts every
+        version site agrees, so forgetting one fails CI rather than reaching a user.
+    -->
+    <script src="validator.js?v=1.0.0"></script>
+    <script src="analytics.js?v=1.0.0"></script>
+    <script src="persistence.js?v=1.0.0"></script>
+    <script src="pdf.js?v=1.0.0"></script>
+    <!--
+        tests.js is NOT loaded here any more. It put window.RunMathTests into a customer's browser
+        along with 22KB they never run, and no build step exists yet to strip it. loadDevOnlyScripts()
+        in app.js adds it back on localhost and file://, so the console harness still works while
+        writing code and no shipped page carries it.
+    -->
+    <script src="app.js?v=1.0.0"></script>
+</body>
+</html>

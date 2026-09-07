@@ -1,0 +1,12 @@
+{
+  "name": "stitch-math",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Crochet pattern validation, grading and yardage. No dependencies: the browser loads the source files directly and the build adds nothing.",
+  "scripts": {
+    "test": "node --test tests/node/suites.test.js tests/node/build.test.js tests/node/pdf.test.js",
+    "test:jsc": "./run-tests.sh",
+    "test:browser": "node tests/browser/persistence.spec.mjs",
+    "build": "node build.js"
+  }
+}

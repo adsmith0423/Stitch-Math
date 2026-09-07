@@ -1,0 +1,798 @@
+/**
+ * Stitch Math - Project Persistence: envelope, validation, migration and the store.
+ *
+ * Two version numbers live here and they are not the same axis. `fileVersion` is the format of an
+ * envelope - the thing that travels in an exported .json file and is what migrate() steps forward.
+ * `version: 2` is the shape of the body inside a stitchmath_saves entry in localStorage, written by
+ * handleSaveProject since long before this file existed. A record is version 2; a file is
+ * fileVersion 1. Confusing them is the mistake this header exists to prevent.
+ *
+ * Layer A (this section) is pure: no DOM, no storage, no timers, and every function returns a value
+ * rather than doing anything. Layer B is the store, and is deliberately decision-free - it enacts
+ * what Layer A decided so the untestable IndexedDB path holds no policy of its own.
+ *
+ * Result convention throughout: { ok: true, value } or { ok: false, error: { code, message, ... } }.
+ * `ok` first and boolean-shaped rather than node-style (err, value), because `if (!result.ok)` reads
+ * like the `if (!stored)` this codebase already uses and there is no callback-error idiom to match.
+ */
+window.StitchPersistence = (() => {
+
+    // === 1. CONSTANTS === //
+
+    /** The envelope format this build writes and is the ceiling for what it will open. */
+    const CURRENT_FILE_VERSION = 1;
+
+    /**
+     * Reserved for a future purely-additive change to `body` that should not cost a fileVersion bump
+     * and should not make older builds refuse the file. Written, never read, in V1.
+     */
+    const APP_SCHEMA = 1;
+
+    /** What an envelope declares itself to be. The app exports other JSON too - a grading package has
+     *  a `gauge` and a `grading` and would otherwise half-load into a project with no rawText. */
+    /* The wire format identifier. Written into every exported .json and checked when one is opened,
+     * which makes it the one string here that is not free to change: rename it later and every
+     * project a designer has already saved becomes "this is not a Stitch Math project".
+     *
+     * It could be renamed today only because nothing has been exported yet. That window is closing.
+     * The same applies to DB_NAME below and the stitchmath_ keys in localStorage - once someone
+     * other than you has used the app, those three names are permanent, and the way to change a
+     * format is to accept both on read for a release or two, never to swap it. */
+    const KIND = 'stitch-math-project';
+
+    /** The project id for work that has never been given a name. Reserved: projectIdFor never
+     *  produces it from a real name, because the prefix keeps the two spaces apart. */
+    const CURRENT_PROJECT_ID = '__current__';
+
+    const SNAPSHOT_LIMIT = 5;
+
+    /**
+     * Autosave takes at most one auto-save snapshot this often. Not a performance tuning knob: the ring
+     * holds five, so a snapshot every few seconds would evict the pre-import copy taken a moment before
+     * the import that is about to be regretted. Safety snapshots ignore this interval.
+     */
+    const SNAPSHOT_MIN_INTERVAL_MS = 5 * 60 * 1000;
+
+    /**
+     * Why a snapshot was taken. Frozen and checked on the way in: a typo'd reason is otherwise invisible
+     * forever - it stores fine, and only shows up as a blank label in the recover panel.
+     */
+    const SNAPSHOT_REASONS = Object.freeze([
+        'auto-save', 'manual-save', 'pre-import', 'pre-restore', 'pre-destructive-operation'
+    ]);
+
+    /**
+     * Four ways a file can be refused, kept distinct because the user needs a different sentence for
+     * each and because `unsupported-version` is the hook a future downgrade path would hang from.
+     */
+    const ERRORS = Object.freeze({
+        MALFORMED: 'malformed',
+        UNSUPPORTED_VERSION: 'unsupported-version',
+        MIGRATION_FAILED: 'migration-failed',
+        INVALID_SCHEMA: 'invalid-schema',
+        STORE_UNAVAILABLE: 'store-unavailable',
+        STORE_REFUSED: 'store-refused'
+    });
+
+    const succeed = (value) => ({ ok: true, value });
+    const fail = (code, message, extra) => ({ ok: false, error: Object.assign({ code, message }, extra || {}) });
+
+    /** Everything else in here reads its inputs as string-keyed maps, and a stored null, array or
+     *  number would sail past a typeof check and fail later somewhere with no idea why. */
+    const isPlainObject = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+
+    // === 2. THE ENVELOPE === //
+
+    /**
+     * Identity, derived rather than random: the same project name always maps to the same record, so
+     * re-opening a file finds its own recovery copy with no rename plumbing anywhere. Untitled work
+     * shares the reserved __current__ slot, which is the honest answer - there is only one of it.
+     */
+    function projectIdFor(name) {
+        const slug = String(name || '').trim().toLowerCase().replace(/\s+/g, '-');
+        return slug ? 'project_' + slug : CURRENT_PROJECT_ID;
+    }
+
+    /**
+     * `body` is the existing saved record minus version/savedAt - the same five keys handleSaveProject
+     * has always written, so it can be handed straight to applyProjectRecord. A translation layer here
+     * would be a second copy of that function's per-field defaulting, free to drift from it.
+     */
+    function buildEnvelope({ projectName, body, savedAt, projectId } = {}) {
+        const name = String(projectName || '');
+        return {
+            fileVersion: CURRENT_FILE_VERSION,
+            kind: KIND,
+            projectId: projectId || projectIdFor(name),
+            projectName: name,
+            savedAt: typeof savedAt === 'number' ? savedAt : Date.now(),
+            app: { name: 'Stitch Math', schema: APP_SCHEMA },
+            body: {
+                rawText: typeof body?.rawText === 'string' ? body.rawText : '',
+                metadata: isPlainObject(body?.metadata) ? body.metadata : {},
+                gauge: isPlainObject(body?.gauge) ? body.gauge : {},
+                gaugeHistory: Array.isArray(body?.gaugeHistory) ? body.gaugeHistory : [],
+                grading: isPlainObject(body?.grading) ? body.grading : {},
+                // Written only when there is one. An empty key in every file would make "this project
+                // had no custom stitches" and "this project predates the field" look identical, and
+                // importStitchesFrom tells the designer which of those they chose.
+                ...(isPlainObject(body?.customStitches) && Object.keys(body.customStitches).length
+                    ? { customStitches: body.customStitches }
+                    : {})
+            }
+        };
+    }
+
+    // === 3. VALIDATION === //
+
+    /** HR-1's sentence, verbatim and in one place, because it is asserted word for word. */
+    function unsupportedFileMessage(from, to) {
+        return 'This Stitch Math project was created with a newer version of Stitch Math and cannot be '
+             + `opened by this version. (File version ${from}; this version reads up to ${to}.) `
+             + 'Your current project has not been changed.';
+    }
+
+    /**
+     * The top of an envelope: is this a Stitch Math project at all, and is it one we may open?
+     * Split out because migrate() needs exactly these checks in exactly this order before it clones
+     * anything, and validate() needs them before it looks at the body.
+     */
+    function checkHeader(env, ceiling) {
+        const top = typeof ceiling === 'number' ? ceiling : CURRENT_FILE_VERSION;
+        if (!isPlainObject(env)) {
+            return fail(ERRORS.MALFORMED, 'This file is not a Stitch Math project: it does not contain a JSON object.');
+        }
+        if (env.kind !== KIND) {
+            const found = typeof env.kind === 'string' && env.kind
+                ? `it declares itself as "${env.kind}"`
+                : 'it declares no file kind';
+            return fail(ERRORS.MALFORMED, `This file is not a Stitch Math project - ${found}.`);
+        }
+        const version = env.fileVersion;
+        if (typeof version !== 'number' || !isFinite(version) || version < 1 || Math.floor(version) !== version) {
+            return fail(ERRORS.MALFORMED,
+                'This Stitch Math project does not say which file version it is, so it cannot be opened.');
+        }
+        // HR-1. Nothing past this line runs for a newer file: no partial read, and above all no write
+        // back out having silently dropped the fields this build does not understand.
+        if (version > top) {
+            return fail(ERRORS.UNSUPPORTED_VERSION,
+                unsupportedFileMessage(version, top),
+                { from: version, to: top });
+        }
+        return succeed(env);
+    }
+
+    /**
+     * Deliberately shallow past the top level. `gauge` and `grading` are defaulted field by field by
+     * applyProjectRecord already, and a deep schema here would be a second copy of knowledge that has
+     * a documented bug history - the two would disagree the first time either was extended.
+     *
+     * `ceiling` overrides the highest fileVersion accepted, and exists only so the migration
+     * dispatcher can be exercised against a real migration before this build has one. Every
+     * production caller omits it. See MIGRATIONS.
+     */
+    function validate(env, ceiling) {
+        const header = checkHeader(env, ceiling);
+        if (!header.ok) return header;
+
+        const bad = (field, message) => fail(ERRORS.INVALID_SCHEMA, message, { field });
+
+        if (typeof env.projectId !== 'string' || !env.projectId) {
+            return bad('projectId', 'This Stitch Math project is missing its project id.');
+        }
+        if (typeof env.projectName !== 'string') {
+            return bad('projectName', 'This Stitch Math project has an unreadable project name.');
+        }
+        if (typeof env.savedAt !== 'number' || !isFinite(env.savedAt)) {
+            return bad('savedAt', 'This Stitch Math project has an unreadable save date.');
+        }
+        if (!isPlainObject(env.body)) {
+            return bad('body', 'This Stitch Math project contains no pattern data.');
+        }
+        const body = env.body;
+        if (typeof body.rawText !== 'string') return bad('body.rawText', 'This Stitch Math project has unreadable pattern text.');
+        if (!isPlainObject(body.metadata)) return bad('body.metadata', 'This Stitch Math project has an unreadable metadata block.');
+        if (!isPlainObject(body.gauge)) return bad('body.gauge', 'This Stitch Math project has an unreadable gauge block.');
+        if (!Array.isArray(body.gaugeHistory)) return bad('body.gaugeHistory', 'This Stitch Math project has an unreadable gauge history.');
+        if (!isPlainObject(body.grading)) return bad('body.grading', 'This Stitch Math project has an unreadable grading block.');
+        // Optional, and checked only when present. Every project written before the dictionary was
+        // carried in the envelope has no such key, and those files must keep opening - that is what
+        // forward-only means here. A key that IS present and is the wrong shape is still an error:
+        // silently ignoring it would drop a designer's dictionary without saying so.
+        if (body.customStitches !== undefined && !isPlainObject(body.customStitches)) {
+            return bad('body.customStitches', 'This Stitch Math project has an unreadable stitch dictionary.');
+        }
+
+        return succeed(env);
+    }
+
+    // === 4. THE LEGACY RECORD === //
+
+    /** The record format handleSaveProject writes. Kept as a named ceiling so the check below reads as
+     *  a rule rather than a magic number, and so raising it is one edit. */
+    const CURRENT_RECORD_VERSION = 2;
+
+    /**
+     * A stitchmath_saves entry becomes an envelope. This is the one real migration V1 ships: it runs on
+     * every existing save in every user's browser from the first load, which is what makes it genuine
+     * rather than decorative.
+     *
+     * An unversioned record is normal, not damaged - saves predating the field are what
+     * test-projectload.js pins as "A version 1 file" - so absent reads as 1 rather than as a fault.
+     */
+    function fromLegacySave(name, record) {
+        if (!isPlainObject(record)) {
+            return fail(ERRORS.MALFORMED, `The saved project "${name}" is not readable.`);
+        }
+        const version = record.version === undefined ? 1 : record.version;
+        if (typeof version !== 'number' || !isFinite(version)) {
+            return fail(ERRORS.MALFORMED, `The saved project "${name}" does not say which format it is in.`);
+        }
+        if (version > CURRENT_RECORD_VERSION) {
+            return fail(ERRORS.UNSUPPORTED_VERSION,
+                `The saved project "${name}" was written by a newer version of Stitch Math and cannot be `
+                + `opened by this version. (Record version ${version}; this version reads up to `
+                + `${CURRENT_RECORD_VERSION}.) Your current project has not been changed.`,
+                { from: version, to: CURRENT_RECORD_VERSION });
+        }
+        return succeed(buildEnvelope({
+            projectName: name,
+            savedAt: typeof record.savedAt === 'number' ? record.savedAt : Date.now(),
+            body: {
+                rawText: record.rawText,
+                metadata: record.metadata,
+                gauge: record.gauge,
+                gaugeHistory: record.gaugeHistory,
+                grading: record.grading
+            }
+        }));
+    }
+
+    // === 5. MIGRATION === //
+
+    /**
+     * Forward only, one step at a time, keyed by the version being migrated FROM: MIGRATIONS[1] takes
+     * a fileVersion 1 envelope and returns a fileVersion 2 one. Each step is pure.
+     *
+     * Empty in V1, and deliberately so - inventing a fake history to prove the dispatcher works would
+     * mean shipping code no file ever takes. It is exported mutable instead, so tests/test-migrate.js
+     * can install a real step, exercise success / throw / forgot-to-bump / missing-step against it,
+     * and remove it again. Adding a genuine V1 -> V2 later is one entry here and one bumped constant.
+     *
+     * There is no route the other way. A file from a newer build is refused whole (see checkHeader);
+     * reading the fields we happen to recognise and writing the rest away is how a designer loses work
+     * they cannot see and cannot undo. Downgrade support, if it is ever wanted, is its own project.
+     */
+    const MIGRATIONS = {};
+
+    /** A step that returns the version it was handed cannot loop forever - the check below catches it
+     *  on the first pass. The cap is for the case nobody thought of. */
+    const MIGRATION_STEP_CAP = 32;
+
+    /**
+     * Bring an envelope up to the current format, or say precisely why it cannot be.
+     *
+     * The order of the checks is the design. Version first, before anything is cloned, written or
+     * shown, so a newer file costs nothing at all; then the walk; then a re-validation, whose failure
+     * means two different things depending on whether a migration ran - `invalid-schema` if the file
+     * arrived at the current version already broken, `migration-failed` if a step broke it. That is
+     * why there are four codes rather than two.
+     */
+    function migrate(input, ceiling) {
+        const top = typeof ceiling === 'number' ? ceiling : CURRENT_FILE_VERSION;
+
+        const header = checkHeader(input, top);
+        if (!header.ok) return header;
+
+        const startedAt = input.fileVersion;
+        // Cloned once, up front: a migration is pure by contract, and this is what makes a broken one
+        // unable to leave the caller's object half-converted when it fails.
+        let env;
+        try {
+            env = structuredClone(input);
+        } catch (err) {
+            return fail(ERRORS.MALFORMED,
+                'This Stitch Math project contains data that cannot be read by this browser.');
+        }
+
+        let steps = 0;
+        while (env.fileVersion < top) {
+            const from = env.fileVersion;
+            const stepFailed = (why) => fail(ERRORS.MIGRATION_FAILED,
+                `This Stitch Math project could not be updated from file version ${from} to `
+                + `${from + 1}: ${why} Your current project has not been changed.`,
+                { from, to: from + 1 });
+
+            if (++steps > MIGRATION_STEP_CAP) {
+                return stepFailed('the update ran too many times to be making progress.');
+            }
+            const step = MIGRATIONS[from];
+            if (typeof step !== 'function') {
+                return stepFailed('this version of Stitch Math does not know how.');
+            }
+            let next;
+            try {
+                next = step(env);
+            } catch (err) {
+                return stepFailed('the update did not complete.');
+            }
+            // The forgot-to-bump case. Without this a step that returns its input unchanged is an
+            // infinite loop, and one that jumps two versions skips a conversion nothing will redo.
+            if (!isPlainObject(next) || next.fileVersion !== from + 1) {
+                return stepFailed('the update produced a file of the wrong version.');
+            }
+            env = next;
+        }
+
+        const checked = validate(env, top);
+        if (!checked.ok) {
+            if (startedAt === top) return checked;
+            return fail(ERRORS.MIGRATION_FAILED,
+                `This Stitch Math project could not be updated from file version ${startedAt} to `
+                + `${top}: the updated file was not readable. Your current project has not been changed.`,
+                { from: startedAt, to: top });
+        }
+        return succeed(env);
+    }
+
+    // === 6. THE PORTABLE FILE === //
+
+    /**
+     * Text off disk to an envelope this build can apply, or a refusal. The whole import decision in
+     * one pure call: JSON, then kind, then version, then schema, and nothing has been written or shown
+     * by the time it returns either way.
+     */
+    function parsePortable(text) {
+        let parsed;
+        try {
+            parsed = JSON.parse(String(text === undefined || text === null ? '' : text));
+        } catch (err) {
+            return fail(ERRORS.MALFORMED,
+                'This file could not be read as a Stitch Math project: it is not valid JSON.');
+        }
+        return migrate(parsed);
+    }
+
+    // === 7. RETENTION === //
+
+    /**
+     * Which snapshots survive, decided as a pure function of what is there. Kept out of the store
+     * deliberately: the cursor that enacts this runs only against a real IndexedDB, which no test can
+     * reach, so the rule itself has to be testable somewhere that is exercised.
+     *
+     * The tie-break on id is load-bearing rather than tidy. Under the headless stub setTimeout fires
+     * instantly, so several snapshots written in one tick share a millisecond; sorting on savedAt
+     * alone would make which five survive depend on sort stability, and the two runners the project
+     * requires to agree would be free to disagree.
+     */
+    function prunePlan(existing, limit) {
+        const cap = typeof limit === 'number' && limit >= 0 ? limit : SNAPSHOT_LIMIT;
+        const rows = (Array.isArray(existing) ? existing : []).filter(isPlainObject);
+        const newest = (a, b) => {
+            const at = typeof a.savedAt === 'number' ? a.savedAt : 0;
+            const bt = typeof b.savedAt === 'number' ? b.savedAt : 0;
+            if (at !== bt) return bt - at;
+            if (a.id === b.id) return 0;
+            return a.id < b.id ? 1 : -1;
+        };
+        const sorted = rows.slice().sort(newest);
+        return {
+            keep: sorted.slice(0, cap).map(row => row.id),
+            drop: sorted.slice(cap).map(row => row.id)
+        };
+    }
+
+    // === 8. ADAPTERS === //
+    //
+    // Two of them, one interface, and no decisions in either. Everything that could be got wrong -
+    // what an envelope must contain, whether a file may be opened, which snapshots survive - is
+    // settled above, in code the memory adapter exercises identically to the real one. The IndexedDB
+    // body is the only surface in this file no test can reach, so it is kept as close to a pure
+    // translation of the calls below as it can be.
+    //
+    //   adapter = { name, get(store, key, cb), put(store, record, cb), delete(store, key, cb),
+    //               query(store, index, range, dir, cb),
+    //               appendPruned(store, index, range, record, plan, cb) }
+    //
+    // `range` is a plain { projectId } descriptor rather than an IDBKeyRange: IDBKeyRange does not
+    // exist outside a browser, so a caller that built one could not run under the test stubs at all.
+    // Each adapter translates it. `plan` is the retention decision, handed in as a function so
+    // appendPruned can apply it inside its own transaction without knowing what the rule is.
+
+    /* Names the IndexedDB database in the user's browser. Same rule as KIND above: safe to change
+       now, permanent the moment anyone has saved a project into it. */
+    const DB_NAME = 'stitch-math';
+    /** The container version, which is not the document version: fileVersion migrates envelopes,
+     *  db.version migrates stores. Designed generously now - `envelope` is an opaque blob the
+     *  database never looks inside - so no future fileVersion drags an onupgradeneeded behind it. */
+    const DB_VERSION = 1;
+    const STORE_CURRENT = 'current';
+    const STORE_SNAPSHOTS = 'snapshots';
+    const SNAPSHOT_INDEX = 'byProjectTime';
+    /** Written and deleted by the probe below. Reserved: projectIdFor cannot produce it. */
+    const PROBE_ID = '__probe__';
+
+    /** Structured-clone on the way in and out, so the memory adapter behaves like the real one:
+     *  a caller that keeps hold of what it stored must not be able to edit the store through it. */
+    const copy = (value) => (value === null || value === undefined ? value : structuredClone(value));
+
+    /**
+     * The fallback, and production code rather than a test double: it is what a browser with no
+     * IndexedDB, or one refusing to open it, actually runs on. Losing everything on reload is the
+     * correct behaviour there and matches what localStorage already offers.
+     */
+    function memoryAdapter() {
+        const stores = { [STORE_CURRENT]: new Map(), [STORE_SNAPSHOTS]: new Map() };
+        let nextId = 1;
+
+        const rowsFor = (store, range) => Array.from(stores[store].values())
+            .filter(row => !range || !range.projectId || row.projectId === range.projectId);
+
+        return {
+            name: 'memory',
+            get(store, key, cb) {
+                cb(succeed(stores[store].has(key) ? copy(stores[store].get(key)) : null));
+            },
+            put(store, record, cb) {
+                const saved = copy(record);
+                // The snapshots store is autoIncrement in IndexedDB; the same ids have to appear here
+                // or the retention tie-break would be testable against a key shape nothing produces.
+                const key = store === STORE_SNAPSHOTS
+                    ? (saved.id === undefined ? (saved.id = nextId++) : saved.id)
+                    : saved.projectId;
+                stores[store].set(key, saved);
+                cb(succeed({ id: key }));
+            },
+            delete(store, key, cb) {
+                stores[store].delete(key);
+                cb(succeed(true));
+            },
+            query(store, index, range, dir, cb) {
+                const rows = rowsFor(store, range)
+                    .sort((a, b) => (a.savedAt - b.savedAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+                if (dir === 'prev') rows.reverse();
+                cb(succeed(rows.map(copy)));
+            },
+            appendPruned(store, index, range, record, plan, cb) {
+                this.put(store, record, (written) => {
+                    if (!written.ok) { cb(written); return; }
+                    const summaries = rowsFor(store, range)
+                        .map(row => ({ id: row.id, savedAt: row.savedAt }));
+                    const decided = plan(summaries);
+                    decided.drop.forEach(id => stores[store].delete(id));
+                    cb(succeed({ id: written.value.id, kept: decided.keep.length, dropped: decided.drop.length }));
+                });
+            }
+        };
+    }
+
+    /**
+     * The real one. `factory` and `keyRange` are passed in rather than named here: this file is loaded
+     * by a test harness that has neither global, and a bare reference at load time would throw before
+     * a single suite ran.
+     *
+     * Opening is lazy and queued. Every call below goes through withDb, so the first operation is what
+     * triggers the open and the rest wait behind it rather than each racing their own.
+     */
+    function idbAdapter(factory, keyRange) {
+        let db = null;
+        let opening = false;
+        let openFailed = null;
+        let waiting = [];
+
+        const refused = (why) => fail(ERRORS.STORE_REFUSED,
+            'This browser refused to write to its recovery storage' + (why ? ' (' + why + ')' : '') + '.');
+        const unavailable = () => fail(ERRORS.STORE_UNAVAILABLE,
+            'This browser will not open its recovery storage.');
+
+        function withDb(run) {
+            if (db) { run(); return; }
+            if (openFailed) { run(); return; }
+            waiting.push(run);
+            if (opening) return;
+            opening = true;
+
+            let request;
+            try {
+                request = factory.open(DB_NAME, DB_VERSION);
+            } catch (err) {
+                openFailed = err;
+                drain();
+                return;
+            }
+            request.onupgradeneeded = (event) => {
+                const target = event.target.result;
+                if (!target.objectStoreNames.contains(STORE_CURRENT)) {
+                    target.createObjectStore(STORE_CURRENT, { keyPath: 'projectId' });
+                }
+                if (!target.objectStoreNames.contains(STORE_SNAPSHOTS)) {
+                    const snapshots = target.createObjectStore(STORE_SNAPSHOTS, { keyPath: 'id', autoIncrement: true });
+                    snapshots.createIndex(SNAPSHOT_INDEX, ['projectId', 'savedAt']);
+                }
+            };
+            request.onsuccess = () => { db = request.result; drain(); };
+            request.onerror = () => { openFailed = request.error || new Error('open failed'); drain(); };
+            // A blocked open is another tab holding an older db version open. Treated as a failure
+            // rather than waited on: the caller gets the memory fallback and a status line, which is
+            // better than an autosave that never reports either way.
+            request.onblocked = () => { openFailed = new Error('blocked'); drain(); };
+        }
+
+        function drain() {
+            opening = false;
+            const queued = waiting;
+            waiting = [];
+            queued.forEach(run => run());
+        }
+
+        /** One transaction, its stores, and a single place for both ways it can end. */
+        function tx(storeName, mode, cb, body) {
+            withDb(() => {
+                if (!db) { cb(unavailable()); return; }
+                let transaction;
+                try {
+                    transaction = db.transaction(storeName, mode);
+                } catch (err) {
+                    // Safari private mode opens the database happily and throws here instead.
+                    cb(refused(err && err.name));
+                    return;
+                }
+                let settled = false;
+                const finish = (result) => { if (!settled) { settled = true; cb(result); } };
+                transaction.onabort = () => finish(refused(transaction.error && transaction.error.name));
+                transaction.onerror = () => finish(refused(transaction.error && transaction.error.name));
+                try {
+                    body(transaction.objectStore(storeName), transaction, finish);
+                } catch (err) {
+                    finish(refused(err && err.name));
+                }
+            });
+        }
+
+        const rangeFor = (range) => (range && range.projectId && keyRange
+            // An array sorts after every number in IndexedDB key ordering, so [id, []] is a clean upper
+            // bound over [id, savedAt] with no sentinel timestamp to be wrong about.
+            ? keyRange.bound([range.projectId], [range.projectId, []])
+            : null);
+
+        return {
+            name: 'idb',
+            get(store, key, cb) {
+                tx(store, 'readonly', cb, (objectStore, transaction, finish) => {
+                    const request = objectStore.get(key);
+                    request.onsuccess = () => finish(succeed(request.result === undefined ? null : request.result));
+                });
+            },
+            put(store, record, cb) {
+                tx(store, 'readwrite', cb, (objectStore, transaction, finish) => {
+                    const request = objectStore.put(record);
+                    request.onsuccess = () => finish(succeed({ id: request.result }));
+                });
+            },
+            delete(store, key, cb) {
+                tx(store, 'readwrite', cb, (objectStore, transaction, finish) => {
+                    const request = objectStore.delete(key);
+                    request.onsuccess = () => finish(succeed(true));
+                });
+            },
+            query(store, index, range, dir, cb) {
+                tx(store, 'readonly', cb, (objectStore, transaction, finish) => {
+                    const rows = [];
+                    const source = index ? objectStore.index(index) : objectStore;
+                    const request = source.openCursor(rangeFor(range), dir || 'next');
+                    request.onsuccess = () => {
+                        const cursor = request.result;
+                        if (!cursor) { finish(succeed(rows)); return; }
+                        rows.push(cursor.value);
+                        cursor.continue();
+                    };
+                });
+            },
+            appendPruned(store, index, range, record, plan, cb) {
+                // One transaction for both halves. Two would let a concurrent snapshot interleave and
+                // leave six behind, or delete the record this call had just written.
+                tx(store, 'readwrite', cb, (objectStore, transaction, finish) => {
+                    let writtenId = null;
+                    const write = objectStore.put(record);
+                    write.onsuccess = () => {
+                        writtenId = write.result;
+                        const summaries = [];
+                        // A key cursor, so pruning never loads the envelopes of the records it keeps.
+                        const walk = objectStore.index(index).openKeyCursor(rangeFor(range), 'next');
+                        walk.onsuccess = () => {
+                            const cursor = walk.result;
+                            if (cursor) {
+                                summaries.push({ id: cursor.primaryKey, savedAt: cursor.key[1] });
+                                cursor.continue();
+                                return;
+                            }
+                            const decided = plan(summaries);
+                            decided.drop.forEach(id => objectStore.delete(id));
+                            finish(succeed({ id: writtenId, kept: decided.keep.length, dropped: decided.drop.length }));
+                        };
+                    };
+                });
+            }
+        };
+    }
+
+    // === 9. THE STORE === //
+
+    /**
+     * The application-facing store. Callbacks rather than promises, and not as a style choice: there
+     * is no async anywhere else in this app, the test context has no microtask queue of its own, and
+     * the stubs fire timers synchronously - a .then() would resolve after the suite had printed its
+     * totals, so a promise-based store would be untestable here.
+     *
+     * Three rules every method keeps:
+     *   - the callback fires exactly once, whatever the adapter does;
+     *   - callers must not assume when. Memory calls back inside the call, IndexedDB later;
+     *   - the callback is optional, because autosave has nowhere to report but the status line.
+     */
+    function createStore(adapter) {
+        let backing = adapter || null;
+        let unavailableError = null;
+        let probing = false;
+        let waiting = [];
+
+        function once(cb) {
+            let fired = false;
+            return (result) => {
+                if (fired) return;
+                fired = true;
+                if (typeof cb === 'function') cb(result);
+            };
+        }
+
+        function settle(next, error) {
+            backing = next;
+            unavailableError = error || null;
+            const queued = waiting;
+            waiting = [];
+            queued.forEach(run => run());
+        }
+
+        /**
+         * Resolve which adapter this session is on, once. The probe is a real write-and-delete round
+         * trip rather than an open: Safari in private mode opens the database successfully and only
+         * throws when the first transaction starts, so an open alone would report a working store and
+         * then silently record nothing.
+         */
+        function ready(run) {
+            if (backing) { run(); return; }
+            waiting.push(run);
+            if (probing) return;
+            probing = true;
+
+            const factory = (typeof indexedDB === 'undefined') ? null : indexedDB;
+            const keyRange = (typeof IDBKeyRange === 'undefined') ? null : IDBKeyRange;
+            if (!factory) {
+                settle(memoryAdapter(), {
+                    code: ERRORS.STORE_UNAVAILABLE,
+                    message: 'This browser has no recovery storage, so nothing is being recorded between sessions.'
+                });
+                return;
+            }
+            const candidate = idbAdapter(factory, keyRange);
+            candidate.put(STORE_CURRENT, { projectId: PROBE_ID, savedAt: Date.now() }, (written) => {
+                if (!written.ok) { settle(memoryAdapter(), written.error); return; }
+                candidate.delete(STORE_CURRENT, PROBE_ID, () => settle(candidate, null));
+            });
+        }
+
+        const op = (cb, run) => {
+            const done = once(cb);
+            ready(() => {
+                try {
+                    run(done);
+                } catch (err) {
+                    done(fail(ERRORS.STORE_REFUSED, 'The recovery store could not be reached.'));
+                }
+            });
+        };
+
+        return {
+            /** 'idb' or 'memory'. Only meaningful once an operation has resolved the probe. */
+            adapterName: () => (backing ? backing.name : 'pending'),
+            /** The error that forced the memory fallback, or null. What the status line reports. */
+            unavailable: () => unavailableError,
+
+            saveCurrent(env, cb) {
+                op(cb, (done) => backing.put(STORE_CURRENT, {
+                    projectId: env.projectId, savedAt: env.savedAt, envelope: env
+                }, (result) => done(result.ok ? succeed(env) : result)));
+            },
+
+            loadCurrent(projectId, cb) {
+                op(cb, (done) => backing.get(STORE_CURRENT, projectId, (result) => {
+                    if (!result.ok) { done(result); return; }
+                    done(succeed(result.value ? result.value.envelope : null));
+                }));
+            },
+
+            /**
+             * Write a safety copy and evict whatever falls out of the ring, in one transaction.
+             * The reason is checked here rather than trusted: it is the only label the recover panel
+             * has, and an unrecognised one is invisible until someone reads a blank row.
+             */
+            snapshot(env, reason, cb) {
+                const done = once(cb);
+                if (SNAPSHOT_REASONS.indexOf(reason) < 0) {
+                    done(fail(ERRORS.MALFORMED, `"${reason}" is not a snapshot reason.`));
+                    return;
+                }
+                ready(() => {
+                    const record = {
+                        projectId: env.projectId,
+                        savedAt: typeof env.savedAt === 'number' ? env.savedAt : Date.now(),
+                        reason,
+                        envelope: env
+                    };
+                    try {
+                        backing.appendPruned(STORE_SNAPSHOTS, SNAPSHOT_INDEX, { projectId: env.projectId },
+                            record, (existing) => prunePlan(existing, SNAPSHOT_LIMIT), done);
+                    } catch (err) {
+                        done(fail(ERRORS.STORE_REFUSED, 'The recovery store could not be reached.'));
+                    }
+                });
+            },
+
+            /** Newest first, as summaries: the panel wants a time and a reason, not five envelopes. */
+            listSnapshots(projectId, cb) {
+                op(cb, (done) => backing.query(STORE_SNAPSHOTS, SNAPSHOT_INDEX, { projectId }, 'prev',
+                    (result) => {
+                        if (!result.ok) { done(result); return; }
+                        done(succeed(result.value.map(row => ({
+                            id: row.id, savedAt: row.savedAt, reason: row.reason
+                        }))));
+                    }));
+            },
+
+            getSnapshot(snapshotId, cb) {
+                op(cb, (done) => backing.get(STORE_SNAPSHOTS, snapshotId, (result) => {
+                    if (!result.ok) { done(result); return; }
+                    done(succeed(result.value ? result.value.envelope : null));
+                }));
+            },
+
+            /** Everything held for one project: the recovery record and its whole ring. */
+            clearProject(projectId, cb) {
+                op(cb, (done) => backing.delete(STORE_CURRENT, projectId, (dropped) => {
+                    if (!dropped.ok) { done(dropped); return; }
+                    backing.query(STORE_SNAPSHOTS, SNAPSHOT_INDEX, { projectId }, 'next', (listed) => {
+                        if (!listed.ok) { done(listed); return; }
+                        let left = listed.value.length;
+                        if (!left) { done(succeed(0)); return; }
+                        const total = left;
+                        listed.value.forEach(row => backing.delete(STORE_SNAPSHOTS, row.id, () => {
+                            if (--left === 0) done(succeed(total));
+                        }));
+                    });
+                }));
+            }
+        };
+    }
+
+    return {
+        CURRENT_FILE_VERSION,
+        CURRENT_RECORD_VERSION,
+        CURRENT_PROJECT_ID,
+        KIND,
+        ERRORS,
+        SNAPSHOT_LIMIT,
+        SNAPSHOT_MIN_INTERVAL_MS,
+        SNAPSHOT_REASONS,
+        projectIdFor,
+        buildEnvelope,
+        validate,
+        migrate,
+        MIGRATIONS,
+        parsePortable,
+        fromLegacySave,
+        prunePlan,
+        memoryAdapter,
+        idbAdapter,
+        createStore
+    };
+})();

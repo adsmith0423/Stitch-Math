@@ -1,0 +1,167 @@
+boot();
+function load(lines){ $('bulk-input').value=lines.join('\n'); $('bulk-parse-btn').fire('click'); }
+function toggle(id,on){ $(id).checked=on; $(id).fire('change'); }
+function body(){ return $('step-sequence-body').children; }
+// The stub's innerHTML getter only returns assigned markup, so a <tr> built by
+// appendChild reads as empty. Pull content from the cells themselves instead.
+function cell(tr,i){ var c=tr.children[i]; return (c.innerHTML||'') + (c.textContent||''); }
+function rowHtml(tr){ return tr.children.map(function(c){return (c.innerHTML||'')+(c.textContent||'');}).join(' '); }
+function html(){ return body().map(rowHtml).join(' '); }
+function rowLabels(){ return body().map(function(tr){ return cell(tr,0).replace(/<[^>]*>/g,''); }); }
+
+var REPEATS = [
+ "Row 1: ch 16, sc in 2nd ch from hook and in each ch across (15)",
+ "Row 2: ch 1, turn, [sc in next 4 sts, inc in next st] x 3 (18)",
+ "Rows 3-7: ch 1, turn, sc in each st across (18)",
+ "Row 8: ch 1, turn, [sc in next 4 sts, sc2tog] x 3 (15)",
+ "Rows 9-12: ch 1, turn, sc in each st across (15)"
+];
+
+print('\n1. Trend markers toggle');
+load(REPEATS);
+ck('markers present by default', /trend-badge/.test(html()), true);
+toggle('toggle-trend-markers', false);
+ck('all markers gone', /trend-badge/.test(html()), false);
+ck('rows still render', body().length, 12);
+toggle('toggle-trend-markers', true);
+ck('markers restored', /trend-badge/.test(html()), true);
+
+print('\n2. Collapsing repeated rows');
+ck('12 lines uncollapsed', body().length, 12);
+toggle('toggle-collapse-repeats', true);
+ck('folds to 5 lines', body().length, 5);
+ck('labels', JSON.stringify(rowLabels()), JSON.stringify(['Row 1','Row 2','Rows 3-7×5','Row 8','Rows 9-12×4']));
+ck('count badge rendered', /repeat-count">×5</.test(html()), true);
+
+print('\n3. Trend on a collapsed group is the net change');
+ck('group 3-7 is flat vs row 2', /trend-flat/.test(cell(body()[2],4)), true);
+ck('row 8 still shows the decrease', /trend-down/.test(cell(body()[3],4)), true);
+
+print('\n4. Non-identical consecutive rows never fold');
+load([
+ "Row 1: ch 16, sc in 2nd ch from hook and in each ch across (15)",
+ "Row 2: ch 1, turn, [sc in next 4 sts, inc in next st] x 3 (18)",
+ "Row 3: ch 1, turn, [sc in next 5 sts, inc in next st] x 3 (21)"
+]);
+ck('stays 3 lines', body().length, 3);
+
+print('\n5. Failed rows always render individually');
+load([
+ "Row 1: ch 16, sc in 2nd ch from hook and in each ch across (15)",
+ "Row 2: ch 1, turn, sc x 99 (99)",
+ "Row 3: ch 1, turn, sc x 99 (99)",
+ "Row 4: ch 1, turn, sc x 99 (99)"
+]);
+ck('failed row not folded away', body().length >= 2, true);
+ck('.row-failed survives for the jump button', /row-failed/.test(body().map(function(t){return t.className;}).join(' ')), true);
+
+print('\n6. Editing expands its group');
+load(REPEATS);
+ck('collapsed', body().length, 5);
+window.enableInlineEdit(4);            // row 5, inside the 3-7 group
+ck('group expanded while editing', body().length > 5, true);
+window.cancelInlineEdit();
+ck('re-collapsed after cancel', body().length, 5);
+
+print('\n7. Preferences persist');
+toggle('toggle-trend-markers', false);
+var saved = JSON.parse(localStorage.getItem('tropicheck_view_prefs'));
+ck('trend pref saved', saved.showTrendMarkers, false);
+ck('collapse pref saved', saved.collapseRepeats, true);
+
+print('\n8. Export still emits every row');
+BLOBS.length = 0;
+$('export-txt-btn').fire('click');
+var lines = BLOBS[0].split('\n').filter(function(l){return /^Row \d+:/.test(l);});
+ck('export has all 12 rows', lines.length, 12);
+
+print('\n9. A foundation-chain row 1 can be edited');
+toggle('toggle-collapse-repeats', false);
+load(["Ch 20", "Row 1: sc in 2nd ch from hook and in each ch across (19)"]);
+ck('chain row rendered', /Chain 20/.test(cell(body()[0],1)), true);
+window.enableInlineEdit(0);
+// The chain lives in initialChain with an empty instruction, so the editor has to be
+// filled from the chain itself or the row opens blank and saving wipes it.
+ck('editor opens on the chain', /value="Ch 20"/.test(cell(body()[0],1)), true);
+window.cancelInlineEdit();
+ck('chain intact after cancel', /Chain 20/.test(cell(body()[0],1)), true);
+window.enableInlineEdit(0);
+$('inline-input-0').value = 'Ch 24';
+window.saveInlineEdit(0);
+ck('edited chain saved', /Chain 24/.test(cell(body()[0],1)), true);
+ck('and written back to the text', /^Ch 24/.test($('bulk-input').value), true);
+
+print('\n10. The turning chain is shown, not deleted');
+// It was being cut out of the instruction and never put back, so the matrix showed a row starting at its
+// second phrase - "dc in each st across" for a row typed as "Ch 3, turn, dc in each st across". The count
+// is still worked out without it; only the display was wrong.
+var FOUND = "Row 1: Ch 21, dc in 4th ch from hook and each ch across (18)";
+function row2(line) { load([FOUND, line]); return cell(body()[1], 1); }
+function yield2(line) { load([FOUND, line]); return cell(body()[1], 4).replace(/<[^>]*>/g,'').trim().split(/\s/)[0]; }
+
+var shown = row2("Row 2: Ch 3, turn, dc in each st across (18)");
+ck('the chain is back in the cell', /Ch 3, turn/.test(shown), true);
+ck('marked as a turning chain', /class="turning-chain"/.test(shown), true);
+ck('and the rest of the row follows it', /dc in each st across/.test(shown), true);
+ck('while the count still leaves it out', yield2("Row 2: Ch 3, turn, dc in each st across (18)"), 18);
+ck('a round-opening ch 1 too', /Ch 1, turn/.test(row2("Row 2: Ch 1, turn, sc in each st across (18)")), true);
+ck('and the reversed wording', /turn, ch 3/i.test(row2("Row 2: turn, ch 3, dc in each st across (18)")), true);
+
+// A chain that says what it is has been decided by the designer, so it is handed to
+// the engine whole - shown verbatim, with no badge, and counted on its own word.
+var counts = "Row 2: Ch 3 (counts as dc), turn, dc in each st across (19)";
+ck('"counts as dc" is left exactly as typed', /Ch 3 \(counts as dc\), turn/.test(row2(counts)), true);
+ck('and is not dressed up as a turning chain', /class="turning-chain"/.test(row2(counts)), false);
+ck('and it counts - 18 sts plus the chain', yield2(counts), 19);
+var notCounts = "Row 2: Ch 3 (does not count as a st), turn, dc in each st across (18)";
+ck('"does not count" is left as typed too', /does not count as a st/.test(row2(notCounts)), true);
+ck('and does not count', yield2(notCounts), 18);
+
+// The editor is the path where the display mattered most: it opened on the shortened
+// row, and saving wrote that back over the original.
+load([FOUND, "Row 2: Ch 3, turn, dc in each st across (18)"]);
+window.enableInlineEdit(1);
+ck('the editor opens on the whole row', /value="Ch 3, turn, dc in each st across \(18\)"/.test(cell(body()[1],1)), true);
+window.cancelInlineEdit();
+
+print('\n11. Row numbering restarts where a row\'s own label restates "1"');
+// A heading too plain for parseSectionHeader to recognise (no colon, no ALL CAPS) - "Sleeve" alone
+// used to leave restart and continue indistinguishable, because nothing ever reset the counter.
+// The fix does not depend on the heading at all: the Sleeve's own first row saying "Row 1" again is
+// itself read as a fresh start.
+$('meta-row-numbering').value = 'restart';
+$('meta-row-numbering').fire('change');
+load([
+    "Body",
+    "Row 1: ch 10, sc in 2nd ch from hook and in each ch across (9)",
+    "Row 2: ch 1, turn, sc in each st across (9)",
+    "Sleeve",
+    "Row 1: ch 6, sc in 2nd ch from hook and in each ch across (5)",
+    "Row 2: ch 1, turn, sc in each st across (5)"
+]);
+ck('restart: Sleeve renumbers from Row 1',
+   JSON.stringify(rowLabels()), JSON.stringify(['Body', 'Row 1', 'Row 2', 'Sleeve', 'Row 1', 'Row 2']));
+
+$('meta-row-numbering').value = 'continue';
+$('meta-row-numbering').fire('change');
+ck('continue: the same pattern stays sequential',
+   JSON.stringify(rowLabels()), JSON.stringify(['Body', 'Row 1', 'Row 2', 'Sleeve', 'Row 3', 'Row 4']));
+
+// A heading not followed by a restated "1" - the yoke-pattern shape, where a construction note
+// ("Separating for Body & Sleeves") sits over rows that keep counting up, never restarting. Restart
+// must not fire here: the designer's own numbering says this is still one continuous piece.
+$('meta-row-numbering').value = 'restart';
+$('meta-row-numbering').fire('change');
+load([
+    "Yoke",
+    "Round 1: ch 12, join with sl st to first ch to form a ring (12)",
+    "Round 2: ch 1, sc in each st around, join with sl st to first sc (12)",
+    "Separating for Body & Sleeves",
+    "Round 3: ch 1, sc in each st around, join with sl st to first sc (12)"
+]);
+ck('a heading with no restated "1" leaves numbering continuous either way',
+   JSON.stringify(rowLabels()),
+   JSON.stringify(['Yoke', 'Rnd 1', 'Rnd 2', 'Separating for Body & Sleeves', 'Rnd 3']));
+$('meta-row-numbering').value = 'restart';
+
+endSuite();

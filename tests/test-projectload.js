@@ -1,0 +1,120 @@
+// What opening a project restores - and, more to the point, what it must not carry over from the project
+// that was open before.
+//
+// Loading is not a fresh page: state survives it. Anything handleLoadProject does not explicitly rewrite
+// keeps the last project's value, and that is invisible until two projects differ in exactly that field.
+// The three caught here had the same shape - a restore sitting inside `if (project.gauge)` or
+// `if (project.metadata)`, so a save without that block silently inherited.
+//
+// `state` is private to app.js's IIFE, so writing the open project back out and reading the file is a
+// legitimate look at what the app holds - and it is also where a leak does real damage, because the
+// inherited value gets written into the other designer's file.
+
+boot();
+
+function saves() { return JSON.parse(localStorage.getItem('stitchmath_saves') || '{}'); }
+function writeOut(as) { $('project-name').value = as; $('save-btn').fire('click'); return saves()[as]; }
+function testersOf(as) { return (writeOut(as).grading.testers || []).map(function (t) { return t.name; }).join(','); }
+
+localStorage.setItem('stitchmath_saves', JSON.stringify({
+    // A modern save: gauge, grader block, testers, a hand-picked difficulty and piece.
+    'A modern file': {
+        version: 2,
+        rawText: 'Ch 6\nRow 1: sc in each ch across. (6)',
+        // sizingPiece is deliberately the opposite of what "Rows (Flat)" derives (half), so an inherited
+        // value and a derived one can be told apart further down.
+        metadata: { designer: 'Jane', difficulty: 'Complex', hook: '4.0mm', yarnWeight: '', construction: 'Rows (Flat)' },
+        gauge: { width: 4, height: 4, stitches: 14, rows: 16, unit: 'in', sizingPiece: 'round' },
+        gaugeHistory: [],
+        grading: {
+            sections: { Body: { repeat: 6 } }, testers: [{ name: 'Ana', size: 'M' }],
+            overrides: {}, modes: {}, fields: {}, customChart: null
+        }
+    },
+    // A save from before the gauge and the grader existed. No gauge block, no metadata, no grading -
+    // exactly the case every one of these bugs hid behind.
+    'A version 1 file': { rawText: 'Ch 8\nRow 1: sc in each ch across. (8)' }
+}));
+$('load-select').fire('change');
+
+print('\n1. The modern file restores its own work');
+$('load-select').value = 'A modern file';
+$('load-btn').fire('click');
+ck('its tester comes back', testersOf('probe-modern'), 'Ana');
+ck('its grader section comes back',
+   Object.keys(writeOut('probe-modern').grading.sections).join(','), 'Body');
+ck('its difficulty comes back', $('meta-difficulty').value, 'Complex');
+ck('its hook comes back', $('meta-hook').value, '4.0mm');
+// The designer overrode this: flat rows derive "half", and they chose "round".
+ck('and the piece they chose is honoured over the derived one', $('sizing-piece').value, 'round');
+
+print('\n2. Opening an older file inherits none of it');
+$('load-select').value = 'A version 1 file';
+$('load-btn').fire('click');
+// Each of these was the previous project's value before the restores moved out of the gauge and metadata
+// guards. The tester is the one that did visible harm: saving the older file wrote another designer's
+// tester into it.
+ck('no tester carried over', testersOf('probe-v1'), '');
+ck('no grader section carried over',
+   Object.keys(writeOut('probe-v1').grading.sections).length, 0);
+ck('no custom chart carried over', writeOut('probe-v1').grading.customChart, 'null');
+
+print('\n3. And the two "the designer chose this" flags reset with it');
+// Both flags block a calculator from filling the field in. Inherited, they block it for a project where
+// the designer chose nothing - the field stays empty AND stays blocked, which reads as the calculator
+// being broken.
+$('load-select').value = 'A modern file';
+$('load-btn').fire('click');
+ck('the modern file keeps the difficulty its designer chose', writeOut('probe-m2').metadata.difficulty, 'Complex');
+$('load-select').value = 'A version 1 file';
+$('load-btn').fire('click');
+// Not empty: with the flag cleared the calculator is free to grade the pattern, which is the point of
+// clearing it. What matters is that it is the calculator's answer for THIS pattern and not the word
+// inherited from the file before it.
+var v1 = writeOut('probe-v2');
+ck('the older file does not inherit the last file\'s difficulty',
+   v1.metadata.difficulty === 'Complex', false);
+ck('it carries whatever the calculator made of it instead',
+   v1.metadata.difficulty.length > 0, true);
+// "half" is what flat rows derive, and this file records no choice of its own. The point is that it is
+// derived from THIS file rather than inherited: the file before it was pinned to "round".
+ck('its piece is derived from its own construction, not inherited', v1.gauge.sizingPiece, 'half');
+ck('with none of the last file\'s swatch either', v1.gauge.stitches, 0);
+ck('nor its hook', v1.metadata.hook, '');
+ck('nor its designer', v1.metadata.designer, '');
+// Construction left the saved metadata when it stopped being a form field - a save carries its
+// rawText, so the inference reproduces it on load rather than storing a second copy that could drift.
+// What matters is the same thing it always did: the file's rows are labelled by ITS construction.
+no('construction is no longer stored as its own key', 'construction' in v1.metadata);
+$('load-select').value = 'A version 1 file';
+$('load-btn').fire('click');
+ck('and its rows are labelled by its own construction',
+   $('step-sequence-body').children[0].children[0].textContent.slice(0, 3), 'Row');
+
+print('\n4. Row numbering and chain-space counting persist, and do not leak between projects');
+// Neither lived in META_FIELDS before: both silently reverted to their default on every load, which
+// is why setting them from the Studio tab never seemed to "stick".
+var E = CrochetMathEngine;
+$('load-select').value = 'A modern file';
+$('load-btn').fire('click');
+$('meta-row-numbering').value = 'continue';
+$('meta-row-numbering').fire('change');
+$('meta-chain-space-convention').value = 'discount';
+$('meta-chain-space-convention').fire('change');
+var savedNumbering = writeOut('probe-numbering');
+ck('row numbering is saved', savedNumbering.metadata.rowNumbering, 'continue');
+ck('chain-space convention is saved', savedNumbering.metadata.chainSpaceConvention, 'discount');
+
+$('load-select').value = 'A version 1 file';
+$('load-btn').fire('click');
+ck('an older file with neither field falls back to restart numbering', $('meta-row-numbering').value, 'restart');
+ck('and to counting chains as stitches', $('meta-chain-space-convention').value, 'count');
+ck('the engine follows the restored dropdown, not the last file\'s choice', E.getChainSpaceConvention(), 'count');
+
+$('load-select').value = 'probe-numbering';
+$('load-btn').fire('click');
+ck('reopening the saved file restores continue numbering', $('meta-row-numbering').value, 'continue');
+ck('and the discount convention', $('meta-chain-space-convention').value, 'discount');
+ck('with the engine following it', E.getChainSpaceConvention(), 'discount');
+
+endSuite();

@@ -1,0 +1,159 @@
+boot();
+
+// The stub's innerHTML getter only returns assigned markup, so read both.
+function panel() { var e = $('finished-size-content'); return (e.innerHTML || '') + (e.textContent || ''); }
+
+function setGauge(w, h, sts, rows, unit) {
+    $('gauge-width').value = String(w);
+    $('gauge-height').value = String(h);
+    $('gauge-stitches').value = String(sts);
+    $('gauge-rows').value = String(rows);
+    $('gauge-unit').value = unit || 'in';
+    $('gauge-width').fire('input');
+}
+function loadPattern(text) {
+    $('bulk-input').value = text;
+    $('bulk-parse-btn').fire('click');
+}
+function setSelect(id, value) { $(id).value = value; $(id).fire('change'); }
+
+// 4 in swatch of 10 sts / 18 rows -> 2.5 sts/in, 4.5 rows/in.
+// 100 sts is then exactly 40.0 in.
+var FLAT = [
+    'Row 1: ch 101, sc in 2nd ch from hook and in each ch across (100)',
+    'Row 2: ch 1, turn, sc in each st across (100)',
+    'Row 3: ch 1, turn, sc in each st across (100)'
+].join('\n');
+// A standalone foundation chain row, which must not count as fabric.
+var ROUNDS = [
+    'Ch 100.',
+    'Rnd 1: sc in each ch around (100)',
+    'Rnd 2: sc in each st around (100)'
+].join('\n');
+var HAT = [
+    'Ch 50.',
+    'Rnd 1: sc in each ch around (50)',
+    'Rnd 2: sc in each st around (50)'
+].join('\n');
+
+print('\n1. Empty state, before anything is entered');
+ok('placeholder shown', /Enter a gauge/.test(panel()));
+no('no NaN anywhere', /NaN/.test(panel()));
+
+print('\n2. Gauge but no pattern');
+setGauge(4, 4, 10, 18, 'in');
+ok('still the placeholder', /Enter a gauge/.test(panel()));
+no('no NaN', /NaN/.test(panel()));
+
+print('\n3. Pattern but no gauge');
+$('gauge-width').value = ''; $('gauge-stitches').value = '';
+$('gauge-width').fire('input');
+loadPattern(FLAT);
+no('no NaN with a pattern and no gauge', /NaN/.test(panel()));
+
+print('\n4. Construction steers the piece before any manual choice');
+// Construction is read off the pattern now, so the way to change it is to load a different pattern.
+loadPattern(ROUNDS);
+ck('rounds default to full circumference', $('sizing-piece').value, 'round');
+loadPattern(FLAT);
+ck('rows default to a half panel', $('sizing-piece').value, 'half');
+
+print('\n5. Both present -> a measurement');
+loadPattern(ROUNDS);
+setGauge(4, 4, 10, 18, 'in');
+loadPattern(ROUNDS);
+var shown = panel();
+ok('reports 40.0 in', /40\.0 in/.test(shown));
+ok('and the metric equivalent', /101\.6 cm/.test(shown));
+ok('names the widest round', /100 sts/.test(shown));
+ok('labels it a circumference', /Circumference/.test(shown));
+ok('invites a category rather than guessing one', /Choose who this is sized for/.test(shown));
+no('no size claimed yet', /classic fit|oversized/.test(shown));
+
+print('\n6. The standalone foundation chain is not counted as fabric');
+// Ch 100 + two worked rounds = 2 rounds of fabric, not 3.
+ok('two rounds counted, not three', /2 rounds/.test(shown));
+ok('length is 2 / 4.5 = 0.4 in', /0\.4 in/.test(shown));
+
+print('\n7. Choosing a category consults the chart');
+setSelect('sizing-category', 'woman');
+shown = panel();
+ok('woman bust chart named', /CYC bust chart/.test(shown));
+ok('Large offered', /Large/.test(shown));
+ok('Medium offered', /Medium/.test(shown));
+ok('Small offered', /Small/.test(shown));
+ok('a fit band is named', /classic fit/.test(shown));
+ok('ease is quoted', /in ease/.test(shown));
+no('X-Large is off the window and not shown', /X-Large/.test(shown));
+
+print('\n8. Flat panels double');
+loadPattern(FLAT);
+setGauge(4, 4, 10, 18, 'in');
+loadPattern(FLAT);
+setSelect('sizing-piece', 'half');
+shown = panel();
+ok('80.0 in circumference after doubling', /80\.0 in/.test(shown));
+ok('shows the per-panel working', /per panel, doubled/.test(shown));
+ok('80 in is off the woman chart', /outside the Woman chart/.test(shown));
+setSelect('sizing-piece', 'round');
+shown = panel();
+ok('undoubled it is 40.0 in again', /40\.0 in/.test(shown));
+ok('and a flat undoubled piece is a Width', /Width/.test(shown));
+
+print('\n9. A manual piece choice survives a construction change');
+loadPattern(ROUNDS);
+ck('manual choice held', $('sizing-piece').value, 'round');
+
+print('\n10. Hats carry no ease band');
+setSelect('sizing-category', 'head');
+setGauge(4, 4, 10, 18, 'in');
+loadPattern(HAT);
+shown = panel();
+ok('20.0 in head', /20\.0 in/.test(shown));
+ok('head chart consulted', /head circumference chart/.test(shown));
+no('no ease band on a hat', /classic fit|oversized|negative ease|zero ease/.test(shown));
+ok('explains why', /ease chart covers bust and chest only/.test(shown));
+ok('names a plausible size', /Child|Tween/.test(shown));
+
+print('\n11. Text export carries a Garment Size Comparison section');
+setSelect('sizing-category', 'woman');
+loadPattern(ROUNDS);
+setGauge(4, 4, 10, 18, 'in');
+loadPattern(ROUNDS);
+var EXPORTED = '';
+Blob = function (parts) { EXPORTED = String(parts[0]); };
+$('export-txt-btn').fire('click');
+ok('section present', /GARMENT SIZE COMPARISON:/.test(EXPORTED));
+ok('measurement exported', /40\.0 in \/ 101\.6 cm/.test(EXPORTED));
+ok('chart exported', /CYC Woman bust chart/.test(EXPORTED));
+ok('a band exported', /classic fit/.test(EXPORTED));
+ok('gauge section still there', /GAUGE & SWATCH:/.test(EXPORTED));
+ok('health section still there', /PATTERN HEALTH:/.test(EXPORTED));
+ok('sizing sits after gauge', EXPORTED.indexOf('GAUGE & SWATCH:') < EXPORTED.indexOf('GARMENT SIZE COMPARISON:'));
+ok('and before validation', EXPORTED.indexOf('GARMENT SIZE COMPARISON:') < EXPORTED.indexOf('VALIDATION'));
+
+print('\n12. Save and load round-trip the sizing choices');
+setSelect('sizing-category', 'man');
+setSelect('sizing-piece', 'half');
+$('project-name').value = 'sizing-roundtrip';
+$('save-btn').fire('click');
+
+setSelect('sizing-category', '');
+setSelect('sizing-piece', 'round');
+
+$('load-select').value = 'sizing-roundtrip';
+$('load-btn').fire('click');
+ck('category restored', $('sizing-category').value, 'man');
+ck('piece restored', $('sizing-piece').value, 'half');
+
+print('\n13. A project saved before sizing existed still loads');
+var raw = JSON.parse(localStorage.getItem('tropicheck_saves'));
+delete raw['sizing-roundtrip'].gauge.sizingCategory;
+delete raw['sizing-roundtrip'].gauge.sizingPiece;
+localStorage.setItem('tropicheck_saves', JSON.stringify(raw));
+$('load-select').value = 'sizing-roundtrip';
+$('load-btn').fire('click');
+ck('category defaults to none', $('sizing-category').value, '');
+no('and nothing broke', /NaN|undefined/.test(panel()));
+
+endSuite();

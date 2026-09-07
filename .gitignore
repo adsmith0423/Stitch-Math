@@ -1,0 +1,18 @@
+.DS_Store
+node_modules/
+
+# Per-machine Claude Code permissions, not project configuration.
+.claude/settings.local.json
+
+# Procreate/Affinity source for the avatar art. The SVGs in Avatar-assets are what the app loads;
+# this is the drawing file they were exported from, and nothing here references it.
+Avatar-assets/Untitled_Artwork.af
+
+# Scratch: things moved aside to be deleted by hand, because tooling that cannot delete files
+# leaves them here instead.
+_to_delete/
+
+# The build output. Not committed on purpose: a built copy sitting beside its sources goes stale
+# the moment someone edits without rebuilding, and there is then no way to tell which is current.
+# The Pages workflow builds it fresh on every push to main.
+dist/

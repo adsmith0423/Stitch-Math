@@ -1,0 +1,214 @@
+// Start-up recovery and the recover panel.
+//
+// Recovery never blocks, never reorders boot and never applies itself. It is an offer, and it is made
+// only when the page has nothing newer on it. The panel it opens is a fire escape, not an archive: the
+// wording is asserted here because it is the one place the app could imply that five slots in a store
+// the browser may clear are somewhere to keep work.
+
+// Both runners have to report the same counts, and they disagree about timers: the Node context has
+// no setTimeout at all, so test-stub.js supplies a synchronous one, while JavaScriptCore's shell has a
+// real asynchronous one and the debounce would never fire before the suite ended. Pin it here rather
+// than in the shared stub, which would change how the other suites behave under jsc.
+//
+// Firing inline is also the harshest reading of the design: every keystroke below runs a whole flush.
+setTimeout = function (fn) { fn(); return 0; };
+clearTimeout = function () {};
+
+var P = window.StitchPersistence;
+
+function panelText() { return $('recover-panel').text(); }
+function restoreButtons() {
+    return $('recover-panel').children.filter(function (row) {
+        return row.children.some(function (c) { return c.tagName === 'BUTTON'; });
+    });
+}
+function said() { return ALERTS.length ? String(ALERTS[ALERTS.length - 1]) : ''; }
+// Every boot() leaves another click handler on the same stub element, so by the middle of this suite
+// one fire() toggles the panel once per boot. Forcing it closed first means the first handler always
+// opens and re-renders it, whatever the rest then do to the class.
+function showPanel() { $('recover-panel').classList.add('hidden'); $('recover-btn').fire('click'); }
+
+print('\n1. The controls are in the markup');
+var HTML = readFile('index.html');
+ok('the Recover button exists', /id="recover-btn"/.test(HTML));
+ok('so does the panel', /id="recover-panel"/.test(HTML));
+ok('and it starts hidden', /id="recover-panel"[^>]*class="recover-panel hidden"/.test(HTML));
+ck('still no inline styles in the markup', (HTML.match(/style="/g) || []).length, 0);
+var CSS = readFile('style.css');
+ok('the panel is styled in the stylesheet', /\.recover-panel \{/.test(CSS));
+// A control written into innerHTML cannot be found by getElementById, so it would work in a browser
+// and silently do nothing here. The panel says so in the markup; check the code really does build it.
+var src = readFile('app.js');
+var render = src.slice(src.indexOf('function renderRecoverPanel'), src.indexOf('function restoreSnapshot'));
+no('the panel is not built out of assigned markup', /innerHTML/.test(render));
+ok('it is built with the element helper', /elem\(/.test(render));
+
+print('\n2. A fresh browser offers nothing, and the button opens the panel on request');
+// The only place in this suite the toggle itself can be read cleanly: exactly one boot has happened,
+// so exactly one handler is bound.
+var first = P.memoryAdapter();
+window.STITCH_ADAPTER = first;
+boot();
+ok('the panel stays hidden', $('recover-panel').classList.contains('hidden'));
+$('recover-btn').fire('click');
+no('a click opens it', $('recover-panel').classList.contains('hidden'));
+ok('and it drew itself', panelText().indexOf('Recent recovery points') >= 0);
+$('recover-btn').fire('click');
+ok('a second click closes it again', $('recover-panel').classList.contains('hidden'));
+
+print('\n3. Work done in one session is offered in the next');
+$('project-name').value = 'Kingbird Cardigan';
+$('bulk-input').value = 'Ch 6\nRow 1: sc in each ch across. (6)';
+$('bulk-input').fire('input');
+// A new session on the same store: the page is blank again, the store is not.
+$('bulk-input').value = '';
+boot();
+ok('the panel is showing', !$('recover-panel').classList.contains('hidden'));
+ok('it names the project', panelText().indexOf('Kingbird Cardigan') >= 0);
+ok('and says when', /just now|m ago|h ago|d ago/.test(panelText()));
+
+print('\n4. It is an offer, not a load');
+// A page that rewrites itself on boot is worse than one that forgets: the designer may have arrived to
+// do something else entirely.
+ck('the pattern box is still empty', $('bulk-input').value, '');
+ok('there is a Restore button to press', restoreButtons().length > 0);
+
+print('\n5. Pressing it brings the work back');
+$('recover-offer-btn').fire('click');
+ck('the pattern is on the page', $('bulk-input').value.indexOf('Ch 6'), 0);
+ck('and so is its name', $('project-name').value, 'Kingbird Cardigan');
+
+print('\n6. An unclean exit changes the wording, not the behaviour');
+// The session token is still set from the boot above, which never cleared it.
+ck('the token is set while a session is open', localStorage.getItem('tropicheck_session'), 'open');
+$('bulk-input').value = '';
+boot();
+ok('the offer says the app closed unexpectedly', panelText().indexOf('closed unexpectedly') >= 0);
+ok('but it is still only an offer', $('bulk-input').value === '');
+
+print('\n7. A page with work on it is not offered an older copy');
+// The recovered copy is older than what is on screen. The ring is still one button away, and restoring
+// from it snapshots first anyway.
+$('bulk-input').value = 'Ch 30\nRow 1: sc in each ch across. (30)';
+boot();
+ok('no offer over the top of live work', $('recover-panel').classList.contains('hidden'));
+ck('and nothing on the page moved', $('bulk-input').value.indexOf('Ch 30'), 0);
+
+print('\n8. An offer opens the panel by itself');
+$('bulk-input').value = '';
+boot();
+no('there is something to see, so it is showing', $('recover-panel').classList.contains('hidden'));
+
+print('\n9. The panel is headed for what it holds');
+// Not "history" and not "versions". Five slots in a store a browser may clear at any moment, that do
+// not travel between machines and do not survive a cleared profile.
+ok('the heading names recovery points', panelText().indexOf('Recent recovery points (last 5)') >= 0);
+no('it is not called a history', /histor/i.test(panelText()));
+ok('and it says outright that they are temporary',
+   panelText().indexOf('Recovery points are temporary. Use Export Project to keep a copy you own.') >= 0);
+
+print('\n10. The empty state says the same thing');
+var bare = P.memoryAdapter();
+window.STITCH_ADAPTER = bare;
+localStorage.setItem('tropicheck_current_project', '');
+boot();
+$('project-name').value = 'Nothing Here';
+showPanel();
+ok('the empty panel points at the copy the designer owns',
+   panelText().indexOf('Recovery points are temporary. Use Export Project to keep a copy you own.') >= 0);
+ok('and offers nothing to restore', restoreButtons().length === 0);
+
+print('\n11. Snapshots are named for what they were');
+var listing = P.memoryAdapter();
+window.STITCH_ADAPTER = listing;
+boot();
+$('project-name').value = 'Ringed';
+$('bulk-input').value = 'Ch 6\nRow 1: sc in each ch across. (6)';
+$('bulk-input').fire('input');
+showPanel();
+ok('an autosave is listed as one', panelText().indexOf('autosaved') >= 0);
+ok('and offers a restore', restoreButtons().length >= 1);
+$('save-btn').fire('click');
+showPanel();
+ok('an explicit save is listed as a save', /\bsaved\b/.test(panelText()));
+
+print('\n12. Restoring a recovery point is itself recoverable');
+// The copy of what is on screen now is durably written before the snapshot is even read.
+var replaced = 'Ch 40\nRow 1: sc in each ch across. (40)';
+$('bulk-input').value = replaced;
+$('bulk-input').fire('input');
+showPanel();
+$('recover-restore-0').fire('click');
+ck('the earlier work is back', $('bulk-input').value.indexOf('Ch 6'), 0);
+showPanel();
+ok('and what it replaced was kept', panelText().indexOf('before a restore') >= 0);
+
+print('\n13. A recovery record this build cannot read costs the record, not the page');
+// The same trade getLocalStorage makes at the top of section 5: one damaged key is worth what is in
+// that key, never the whole app.
+var damaged = P.memoryAdapter();
+damaged.put('current', {
+    projectId: 'project_damaged', savedAt: Date.now(),
+    envelope: { kind: 'tropicheck-project', fileVersion: 99, projectName: 'Damaged', body: {} }
+}, function () {});
+window.STITCH_ADAPTER = damaged;
+localStorage.setItem('tropicheck_current_project', 'project_damaged');
+$('bulk-input').value = '';
+var raised = '';
+try { boot(); } catch (e) { raised = String(e); }
+ck('boot raises nothing', raised, '');
+ok('the page wired itself up', ($('save-btn').listeners.click || []).length > 0);
+ok('nothing was offered', $('recover-panel').classList.contains('hidden'));
+ck('and the line says the record is unreadable', $('save-status').textContent, 'Recovery record unreadable');
+
+print('\n14. A store that throws on read does the same');
+var hostile = P.memoryAdapter();
+hostile.get = function () { throw new Error('gone'); };
+window.STITCH_ADAPTER = hostile;
+var alsoRaised = '';
+try { boot(); } catch (e) { alsoRaised = String(e); }
+ck('boot raises nothing', alsoRaised, '');
+ok('and the page still works', ($('bulk-parse-btn').listeners.click || []).length > 0);
+
+print('\n15. With no store at all, boot is what it always was');
+window.STITCH_ADAPTER = null;
+localStorage.setItem('tropicheck_current_project', 'project_kingbird-cardigan');
+var noStore = '';
+try { boot(); } catch (e) { noStore = String(e); }
+ck('boot raises nothing', noStore, '');
+ok('nothing is offered', $('recover-panel').classList.contains('hidden'));
+showPanel();
+ok('and the panel is honest about having nothing',
+   panelText().indexOf('Recovery points are temporary') >= 0);
+
+print('\n16. Opening a saved project refreshes its recovery record');
+// The one migration V1 ships, and it runs against every save already in every user's browser.
+var loading = P.memoryAdapter();
+window.STITCH_ADAPTER = loading;
+boot();
+localStorage.setItem('tropicheck_saves', JSON.stringify({
+    'An old file': { rawText: 'Ch 8\nRow 1: sc in each ch across. (8)' }
+}));
+$('load-select').value = 'An old file';
+$('load-btn').fire('click');
+var record = null;
+loading.get('current', P.projectIdFor('An old file'), function (r) { record = r.value; });
+ok('a recovery record now exists for it', !!record);
+ck('as a current-format envelope', record.envelope.fileVersion, 1);
+ck('holding the pattern from the unversioned save', record.envelope.body.rawText.indexOf('Ch 8'), 0);
+
+print('\n17. A saved record from a newer build is refused, not half-loaded');
+localStorage.setItem('tropicheck_saves', JSON.stringify({
+    'From the future': { version: 9, rawText: 'Ch 99\nRow 1: sc in each ch across. (99)' }
+}));
+$('project-name').value = 'Still Mine';
+$('bulk-input').value = 'Ch 5\nRow 1: sc in each ch across. (5)';
+$('bulk-input').fire('input');
+var mine = $('bulk-input').value;
+$('load-select').value = 'From the future';
+$('load-btn').fire('click');
+ok('the designer is told', said().indexOf('newer version of Stitch Math') >= 0);
+ck('and the open project is untouched', $('bulk-input').value, mine);
+ck('down to its name', $('project-name').value, 'Still Mine');
+
+endSuite();

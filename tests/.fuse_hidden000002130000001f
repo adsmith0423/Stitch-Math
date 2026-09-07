@@ -1,0 +1,226 @@
+// Export and import: the file a designer owns, and the rules for letting one back in.
+//
+// The second half is the one that matters. A project file from a newer Stitch Math is refused whole -
+// not read for the fields this build recognises, and above all not written back out having dropped
+// the rest. Three separate properties are asserted for that case: the error code, that no snapshot
+// was spent on it, and that the open project is byte-for-byte where it was.
+
+// Both runners have to report the same counts, and they disagree about timers: the Node context has
+// no setTimeout at all, so test-stub.js supplies a synchronous one, while JavaScriptCore's shell has a
+// real asynchronous one and the debounce would never fire before the suite ended. Pin it here rather
+// than in the shared stub, which would change how the other suites behave under jsc.
+//
+// Firing inline is also the harshest reading of the design: every keystroke below runs a whole flush.
+setTimeout = function (fn) { fn(); return 0; };
+clearTimeout = function () {};
+
+var P = window.StitchPersistence;
+var adapter = P.memoryAdapter();
+window.STITCH_ADAPTER = adapter;
+boot();
+
+// The suite supplies its own FileReader, so the button can be driven the way a designer drives it.
+// app.js names it only inside the handler, so it resolves to this at call time.
+var FileReader = function () {
+    var self = this;
+    this.readAsText = function (file) { self.result = file.text; if (self.onload) self.onload(); };
+};
+function chooseFile(text) {
+    $('import-file').files = [{ text: text }];
+    $('import-file').fire('change');
+}
+function exported() { return BLOBS.length ? BLOBS[BLOBS.length - 1] : ''; }
+function said() { return ALERTS.length ? String(ALERTS[ALERTS.length - 1]) : ''; }
+function ringOf(name) {
+    var rows = [];
+    adapter.query('snapshots', 'byProjectTime', { projectId: P.projectIdFor(name) }, 'prev',
+        function (r) { rows = r.value; });
+    return rows;
+}
+
+print('\n1. The controls are on the page and carry no inline styling');
+var HTML = readFile('index.html');
+['export-project-btn', 'import-project-btn', 'import-file'].forEach(function (id) {
+    ok(id + ' is in the markup', new RegExp('id="' + id + '"').test(HTML));
+});
+ck('index.html still carries no inline styles', (HTML.match(/style="/g) || []).length, 0);
+ok('the file input is hidden through the class the shell already uses',
+   /id="import-file"[^>]*class="hidden"/.test(HTML));
+ok('and it only accepts JSON', /id="import-file"[^>]*accept="application\/json,\.json"/.test(HTML));
+// It escapes test-newfile.js's "no field holds data" sweep only because of its type. Worth a comment
+// in the markup, and worth an assertion that the comment is still there.
+ok('the reason for type="file" is written down beside it', /harvests every id'd input/.test(HTML));
+
+print('\n2. Exporting writes a project file');
+$('project-name').value = 'Kingbird Cardigan';
+$('bulk-input').value = 'Ch 6\nRow 1: sc in each ch across. (6)';
+$('bulk-input').fire('input');
+$('meta-designer').value = 'Jane';
+$('meta-designer').fire('change');
+$('gauge-stitches').value = '14';
+$('gauge-stitches').fire('input');
+$('export-project-btn').fire('click');
+var file = exported();
+ok('a file was produced', file.length > 0);
+var read = JSON.parse(file);
+ck('it declares its kind', read.kind, 'tropicheck-project');
+ck('and its file version', read.fileVersion, 1);
+ck('it carries the project name', read.projectName, 'Kingbird Cardigan');
+ck('the pattern', read.body.rawText.indexOf('Ch 6'), 0);
+ck('the designer', read.body.metadata.designer, 'Jane');
+ck('and the gauge', read.body.gauge.stitches, 14);
+ok('written readably rather than on one line', file.indexOf('\n') > 0);
+
+print('\n3. Nothing derived travels with it');
+ck('five body keys', Object.keys(read.body).sort().join(','), 'gauge,gaugeHistory,grading,metadata,rawText');
+
+print('\n4. An empty page exports nothing');
+$('bulk-input').value = '';
+var blobsBefore = BLOBS.length;
+$('export-project-btn').fire('click');
+ck('no file written', BLOBS.length, blobsBefore);
+ok('and the designer is told why', said().indexOf('no pattern to export') >= 0);
+
+print('\n5. The round trip');
+// Create, export, New File, import, compare. savedAt is allowed to move; nothing else is.
+$('project-name').value = 'Round Trip';
+$('bulk-input').value = 'Ch 12\nRow 1: sc in each ch across. (12)\nRow 2: sc in each st across. (12)';
+$('bulk-input').fire('input');
+$('bulk-parse-btn').fire('click');
+$('meta-hook').value = '4.0mm';
+$('meta-hook').fire('change');
+$('gauge-width').value = '4'; $('gauge-height').value = '4';
+$('gauge-rows').value = '18'; $('gauge-stitches').value = '16';
+$('gauge-rows').fire('input');
+$('grade-base-name').value = 'Body';
+$('grade-base-name').fire('input');
+$('export-project-btn').fire('click');
+var savedFile = exported();
+var sentBody = JSON.stringify(JSON.parse(savedFile).body);
+
+$('new-file-btn').fire('click');
+ck('the page really is empty', $('bulk-input').value, '');
+chooseFile(savedFile);
+ck('the pattern is back', $('bulk-input').value.indexOf('Ch 12'), 0);
+ck('the name is back', $('project-name').value, 'Round Trip');
+ck('the hook is back', $('meta-hook').value, '4.0mm');
+ck('the gauge is back', $('gauge-stitches').value, '16');
+ck('the grader is back', $('grade-base-name').value, 'Body');
+
+print('\n6. And the round trip is stable');
+$('export-project-btn').fire('click');
+var secondBody = JSON.parse(exported()).body;
+var firstBody = JSON.parse(sentBody);
+ck('the pattern came back exactly', secondBody.rawText, firstBody.rawText);
+ck('so did the gauge', JSON.stringify(secondBody.gauge), JSON.stringify(firstBody.gauge));
+ck('so did the grader', JSON.stringify(secondBody.grading), JSON.stringify(firstBody.grading));
+ck('and the swatch log', JSON.stringify(secondBody.gaugeHistory), JSON.stringify(firstBody.gaugeHistory));
+// The metadata dropdowns are the one place the two differ, and only under the stub: it does not read
+// markup, so a <select>'s first <option> is invisible and those fields start blank rather than at the
+// defaults the page shows. Loading fills them in - rowNumbering "restart", chainSpaceConvention
+// "count" - which is the load path doing its job. What has to hold is that it settles: a round trip
+// that kept rewriting the file would drift a little further every time.
+ck('the metadata defaults were filled in once', secondBody.metadata.rowNumbering, 'restart');
+chooseFile(exported());
+$('export-project-btn').fire('click');
+ck('and a second round trip changes nothing further',
+   JSON.stringify(JSON.parse(exported()).body), JSON.stringify(secondBody));
+
+print('\n7. Importing takes a safety copy of what it replaces first');
+$('project-name').value = 'Replaced';
+$('bulk-input').value = 'Ch 20\nRow 1: sc in each ch across. (20)';
+$('bulk-input').fire('input');
+var doomedText = $('bulk-input').value;
+chooseFile(savedFile);
+var ring = ringOf('Replaced');
+ok('a snapshot was taken', ring.length > 0);
+ck('marked pre-import', ring[0].reason, 'pre-import');
+ck('holding the work that was replaced', ring[0].envelope.body.rawText, doomedText);
+ck('and the import did land', $('bulk-input').value.indexOf('Ch 12'), 0);
+
+print('\n8. A file from a newer Stitch Math is refused');
+// The rule this whole layer is built around. Reading the fields we recognise and writing the rest away
+// is how a designer loses work they cannot see and cannot undo.
+$('project-name').value = 'Untouched';
+$('bulk-input').value = 'Ch 7\nRow 1: sc in each ch across. (7)';
+$('bulk-input').fire('input');
+var before = $('bulk-input').value;
+var beforeRing = ringOf('Untouched').length;
+var beforeName = $('project-name').value;
+var beforeGauge = $('gauge-stitches').value;
+
+var fromTheFuture = JSON.parse(savedFile);
+fromTheFuture.fileVersion = 3;
+fromTheFuture.projectName = 'From The Future';
+fromTheFuture.body.somethingNew = { this: 'build knows nothing about it' };
+chooseFile(JSON.stringify(fromTheFuture));
+
+ck('the message a designer sees, word for word', said(),
+   'This Stitch Math project was created with a newer version of Stitch Math and cannot be opened by '
+   + 'this version. (File version 3; this version reads up to 1.) Your current project has not been changed.');
+
+print('\n9. And it costs nothing');
+// Byte-identical, not merely "still has a pattern in it".
+ck('the pattern box is unchanged', $('bulk-input').value, before);
+ck('to the character', $('bulk-input').value.length, before.length);
+ck('the project name is unchanged', $('project-name').value, beforeName);
+ck('the gauge is unchanged', $('gauge-stitches').value, beforeGauge);
+// A rejected import must not spend a slot in a five-slot ring. Five bad drag-and-drops would otherwise
+// evict every copy worth having.
+ck('no snapshot was taken', ringOf('Untouched').length, beforeRing);
+
+print('\n10. Every other refusal leaves the page alone too');
+var untouched = $('bulk-input').value;
+[
+    ['not JSON at all', 'this is not a project file'],
+    ['a truncated file', '{"kind":"tropicheck-project","fileVersion":1'],
+    ['an empty file', ''],
+    ['another export of ours', JSON.stringify({ kind: 'tropicheck-grading', gauge: {}, grading: {} })],
+    ['a bare JSON object', '{"rawText":"Ch 6"}'],
+    ['a list', '[1,2,3]']
+].forEach(function (pair) {
+    var alertsBefore = ALERTS.length;
+    chooseFile(pair[1]);
+    ok(pair[0] + ' is refused', ALERTS.length > alertsBefore);
+    ck(pair[0] + ' changes nothing', $('bulk-input').value, untouched);
+});
+ck('still no snapshots spent', ringOf('Untouched').length, beforeRing);
+
+print('\n11. The grading export is named, not half-loaded');
+// It has a gauge and a grading block and would otherwise read as a project with no pattern in it.
+chooseFile(JSON.stringify({ kind: 'tropicheck-grading', gauge: {}, grading: {} }));
+ok('the message says what the file actually is', said().indexOf('tropicheck-grading') >= 0);
+
+print('\n12. A project file with a damaged body is refused as damaged');
+var damaged = JSON.parse(savedFile);
+damaged.body.gaugeHistory = 'not a list';
+chooseFile(JSON.stringify(damaged));
+ok('the designer is told the file is unreadable', said().indexOf('unreadable') >= 0);
+ck('and the page is unchanged', $('bulk-input').value, untouched);
+
+print('\n13. The import becomes the current recovery record');
+chooseFile(savedFile);
+var current = null;
+adapter.get('current', P.projectIdFor('Round Trip'), function (r) { current = r.value; });
+ok('the imported project was recorded', !!current);
+ck('with the imported text', current.envelope.body.rawText.indexOf('Ch 12'), 0);
+
+print('\n14. Importing with no store still works');
+window.STITCH_ADAPTER = null;
+boot();
+var raised = '';
+try { chooseFile(savedFile); } catch (e) { raised = String(e); }
+ck('nothing raised', raised, '');
+ck('and the project opened', $('bulk-input').value.indexOf('Ch 12'), 0);
+
+print('\n15. The file is named so it cannot be confused with the other exports');
+$('project-name').value = 'Kingbird Cardigan';
+$('bulk-input').value = 'Ch 6\nRow 1: sc in each ch across. (6)';
+$('bulk-input').fire('input');
+$('export-project-btn').fire('click');
+var src = readFile('app.js');
+ok('the suffix is -project.json', /-project\.json/.test(src));
+ok('and it goes through downloadFile like every other export',
+   /downloadFile\(`\$\{projectSlug\('pattern'\)\}-project\.json`/.test(src));
+
+endSuite();

@@ -1,0 +1,178 @@
+// The project envelope: what an exported file is, what makes one acceptable, and how a project saved
+// before any of this existed becomes one.
+//
+// This suite touches no DOM at all - StitchPersistence's first layer is pure by design, which is the
+// whole reason the rules can be asserted directly here rather than inferred from what the page did.
+// Every storage assertion in this repo before now was an indirect, DOM-driven one.
+
+var P = window.StitchPersistence;
+
+print('\n1. The module is on the page');
+ok('StitchPersistence exists', !!P);
+ck('it writes file version 1', P.CURRENT_FILE_VERSION, 1);
+ck('and reads records up to version 2', P.CURRENT_RECORD_VERSION, 2);
+ck('the kind string is the one exports carry', P.KIND, 'tropicheck-project');
+ck('five snapshots per project', P.SNAPSHOT_LIMIT, 5);
+ck('auto-save snapshots no oftener than five minutes', P.SNAPSHOT_MIN_INTERVAL_MS, 300000);
+
+print('\n2. Error codes are distinct');
+// Four separate codes rather than one "bad file", because each needs a different sentence and because
+// unsupported-version is the hook a future downgrade path hangs from.
+var CODES = [P.ERRORS.MALFORMED, P.ERRORS.UNSUPPORTED_VERSION, P.ERRORS.MIGRATION_FAILED,
+             P.ERRORS.INVALID_SCHEMA, P.ERRORS.STORE_UNAVAILABLE, P.ERRORS.STORE_REFUSED];
+var unique = {};
+CODES.forEach(function (c) { unique[c] = 1; });
+ck('six codes, none repeated', Object.keys(unique).length, 6);
+ck('the newer-file code reads as intended', P.ERRORS.UNSUPPORTED_VERSION, 'unsupported-version');
+
+print('\n3. Snapshot reasons are a closed set');
+ck('five reasons', P.SNAPSHOT_REASONS.length, 5);
+ok('pre-import is one of them', P.SNAPSHOT_REASONS.indexOf('pre-import') >= 0);
+ok('and the list is frozen', Object.isFrozen(P.SNAPSHOT_REASONS));
+
+print('\n4. Identity is derived, not random');
+// The same name must always produce the same id, or reopening a file would strand its recovery record.
+ck('a name becomes a stable id', P.projectIdFor('Kingbird Cardigan'), 'project_kingbird-cardigan');
+ck('the same name, the same id again', P.projectIdFor('Kingbird Cardigan'), P.projectIdFor('kingbird cardigan'));
+ck('untitled work shares the reserved slot', P.projectIdFor(''), '__current__');
+ck('whitespace is not a name', P.projectIdFor('   '), '__current__');
+// The prefix is what keeps the two spaces apart: no real name can collide with the reserved id.
+no('a project can never be named into the reserved slot', P.projectIdFor('__current__') === '__current__');
+
+print('\n5. buildEnvelope');
+var env = P.buildEnvelope({
+    projectName: 'Kingbird Cardigan',
+    savedAt: 1755900000000,
+    body: {
+        rawText: 'Ch 6\nRow 1: sc in each ch across. (6)',
+        metadata: { designer: 'Jane' },
+        gauge: { width: 4 },
+        gaugeHistory: [{ stitches: 14 }],
+        grading: { sections: {} }
+    }
+});
+ck('carries the current file version', env.fileVersion, 1);
+ck('declares its kind', env.kind, 'tropicheck-project');
+ck('id derived from the name', env.projectId, 'project_kingbird-cardigan');
+ck('name kept separately from the id', env.projectName, 'Kingbird Cardigan');
+ck('the timestamp given', env.savedAt, 1755900000000);
+ck('app schema is reserved and written', env.app.schema, 1);
+ck('body carries the pattern text', env.body.rawText.indexOf('Ch 6'), 0);
+
+print('\n6. The body holds five keys and no derived data');
+// patternSteps, inferred, analytics, linter and the size index are all re-derived from rawText on
+// load. Storing them would be a second answer about the pattern, free to disagree with the parser.
+ck('exactly five body keys', Object.keys(env.body).sort().join(','),
+   'gauge,gaugeHistory,grading,metadata,rawText');
+
+print('\n7. Missing pieces default rather than throw');
+var thin = P.buildEnvelope({ projectName: 'Thin', body: {} });
+ck('no text is empty text', thin.body.rawText, '');
+ck('metadata defaults to a map', Object.keys(thin.body.metadata).length, 0);
+ck('gauge history defaults to a list', Array.isArray(thin.body.gaugeHistory), true);
+ok('savedAt is filled in', typeof thin.body === 'object' && thin.savedAt > 0);
+var empty = P.buildEnvelope();
+ck('called with nothing at all still builds', empty.kind, 'tropicheck-project');
+ck('and an unnamed project lands in the reserved slot', empty.projectId, '__current__');
+// A non-object where a block belongs is damage, not a value to pass through: every reader of these
+// treats them as maps, and an array would fail somewhere with no idea why.
+var wrong = P.buildEnvelope({ projectName: 'Wrong', body: { metadata: [1, 2], gauge: 'nope', gaugeHistory: {} } });
+ck('an array where a map belongs is replaced', Array.isArray(wrong.body.metadata), false);
+ck('a string where a map belongs is replaced', typeof wrong.body.gauge, 'object');
+ck('a map where a list belongs is replaced', Array.isArray(wrong.body.gaugeHistory), true);
+
+print('\n8. validate accepts what buildEnvelope makes');
+var good = P.validate(env);
+ok('a freshly built envelope validates', good.ok);
+ck('and comes back unchanged', good.value.projectId, env.projectId);
+
+print('\n9. validate rejects what is not a project file');
+function why(input) { var r = P.validate(input); return r.ok ? 'accepted' : r.error.code; }
+ck('null', why(null), 'malformed');
+ck('a string', why('{}'), 'malformed');
+ck('an array', why([env]), 'malformed');
+ck('an object with no kind', why({ fileVersion: 1 }), 'malformed');
+// The reason `kind` exists at all: the app exports a grading package that has a gauge and a grading
+// block, and would otherwise half-load into a project with no pattern text.
+ck('another Stitch Math export', why({ kind: 'tropicheck-grading', fileVersion: 1, gauge: {}, grading: {} }), 'malformed');
+var named = P.validate({ kind: 'tropicheck-grading', fileVersion: 1 });
+ok('and the message says what the file actually is', named.error.message.indexOf('tropicheck-grading') >= 0);
+
+print('\n10. A file version has to be a version');
+ck('absent', why({ kind: P.KIND }), 'malformed');
+ck('not a number', why({ kind: P.KIND, fileVersion: '1' }), 'malformed');
+ck('zero', why({ kind: P.KIND, fileVersion: 0 }), 'malformed');
+ck('fractional', why({ kind: P.KIND, fileVersion: 1.5 }), 'malformed');
+
+print('\n11. A body that is the wrong shape is invalid-schema, not malformed');
+// Distinct on purpose: malformed means "this is not one of our files"; invalid-schema means "it is
+// one of ours, at a version we read, and something inside it is wrong".
+function bodyless(patch) {
+    var e = P.buildEnvelope({ projectName: 'X', body: {} });
+    Object.keys(patch).forEach(function (k) {
+        if (k.indexOf('body.') === 0) e.body[k.slice(5)] = patch[k]; else e[k] = patch[k];
+    });
+    return P.validate(e);
+}
+ck('no body', bodyless({ body: null }).error.code, 'invalid-schema');
+ck('and it names the field', bodyless({ body: null }).error.field, 'body');
+ck('pattern text that is not text', bodyless({ 'body.rawText': 42 }).error.field, 'body.rawText');
+ck('a gauge history that is not a list', bodyless({ 'body.gaugeHistory': {} }).error.field, 'body.gaugeHistory');
+ck('a grading block that is not a map', bodyless({ 'body.grading': [] }).error.field, 'body.grading');
+ck('an unreadable save date', bodyless({ savedAt: 'yesterday' }).error.field, 'savedAt');
+ck('a missing project id', bodyless({ projectId: '' }).error.field, 'projectId');
+
+print('\n12. Every rejection carries a sentence a designer can read');
+[null, [env], { kind: P.KIND }, { kind: 'other', fileVersion: 1 }].forEach(function (input, i) {
+    var r = P.validate(input);
+    ok('case ' + (i + 1) + ' has a message', !r.ok && typeof r.error.message === 'string' && r.error.message.length > 20);
+});
+
+print('\n13. fromLegacySave turns a saved record into an envelope');
+// The one real migration V1 ships: it runs against every save already sitting in every user's browser.
+var modern = P.fromLegacySave('A modern file', {
+    version: 2,
+    savedAt: 1755900000000,
+    rawText: 'Ch 6\nRow 1: sc in each ch across. (6)',
+    metadata: { designer: 'Jane', difficulty: 'Complex' },
+    gauge: { width: 4, stitches: 14 },
+    gaugeHistory: [],
+    grading: { sections: { Body: { repeat: 6 } } }
+});
+ok('a version 2 record converts', modern.ok);
+ck('into a fileVersion 1 envelope', modern.value.fileVersion, 1);
+ck('keeping the name', modern.value.projectName, 'A modern file');
+ck('keeping the save date', modern.value.savedAt, 1755900000000);
+ck('and the designer', modern.value.body.metadata.designer, 'Jane');
+ck('and the grading block', modern.value.body.grading.sections.Body.repeat, 6);
+ok('the result validates', P.validate(modern.value).ok);
+
+print('\n14. A record from before the version field is normal, not damaged');
+// test-projectload.js pins exactly this shape as "A version 1 file".
+var ancient = P.fromLegacySave('A version 1 file', { rawText: 'Ch 8\nRow 1: sc in each ch across. (8)' });
+ok('an unversioned record converts', ancient.ok);
+ck('the text survives', ancient.value.body.rawText.indexOf('Ch 8'), 0);
+ck('an absent gauge becomes an empty one', Object.keys(ancient.value.body.gauge).length, 0);
+ck('an absent grading block becomes an empty one', Object.keys(ancient.value.body.grading).length, 0);
+ok('and it validates', P.validate(ancient.value).ok);
+
+print('\n15. A record from a newer build is refused, not read');
+var newer = P.fromLegacySave('From the future', { version: 3, rawText: 'Ch 6' });
+no('a version 3 record is not converted', newer.ok);
+ck('refused as unsupported-version', newer.error.code, 'unsupported-version');
+ck('carrying the version it found', newer.error.from, 3);
+ck('and the ceiling it has', newer.error.to, 2);
+ok('the message says the open project was left alone',
+   newer.error.message.indexOf('has not been changed') >= 0);
+ck('junk in the saves map is malformed', P.fromLegacySave('x', 'not a record').error.code, 'malformed');
+ck('so is a null record', P.fromLegacySave('x', null).error.code, 'malformed');
+
+print('\n16. Envelopes survive a JSON round trip');
+// CI runs Node with no dependencies and the test stubs polyfill structuredClone with JSON, so an
+// envelope carrying a Date or an undefined would behave differently in the two runners.
+var round = JSON.parse(JSON.stringify(env));
+ck('the same JSON out as in', JSON.stringify(round), JSON.stringify(env));
+ok('and it still validates', P.validate(round).ok);
+ck('savedAt is a number, not a Date', typeof env.savedAt, 'number');
+
+endSuite();

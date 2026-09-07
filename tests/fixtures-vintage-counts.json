@@ -1,0 +1,777 @@
+{
+  "note": "Calculated count for every vintage row the engine can fully read - one with no unknown tokens - taken from fixtures-vintage.json at availableStitches 40. A change here means an answer moved: inspect before accepting. When prose stripping landed, 28 rows changed because \"join in <somewhere>\" was counting the location as a made stitch; those were corrections, verified against what the phrase means. REGENERATED 2026-08-08: the previous file was destroyed by a bad shell redirect and could not be restored, so this was rebuilt from fixtures-vintage.json on the definition above. It holds 193 rows where the old one held 301 - the old row set was captured when the engine read a different set of rows and no filter reproduces it. The tripwire is intact and its rule is now explicit; the coverage is narrower.",
+  "rows": [
+    {
+      "row": "2nd Row - 3 s c over tr c, * ch 7, 3 s c in next loop, repeat from * all around ending row with ch 3, d c in tr c.",
+      "yield": 124
+    },
+    {
+      "row": "5th Row - Ch 5, skip 1 ch 3 loop, 3-3 tr c cluster sts with ch 5 between each cluster st in next loop, ch 5, skip 5 s c, s c in space between next 2 s c, repeat from beginning all around in same manner ending row after last cluster st with d tr c (3 times over needle) in joining.",
+      "yield": 42
+    },
+    {
+      "row": "6th Row - Ch 4, ** tr c in next cluster st, * ch 7, s c in next loop, repeat from * once, ch 7, tr c in next cluster st, repeat from ** 6 times, tr c in next cluster st, * ch 7, s c in next loop, repeat from * once, ch 3, tr c in tr c.",
+      "yield": 119
+    },
+    {
+      "row": "7th Row - Ch 3, s c over tr c, * ch 9, s c, ch 3, s c in next loop, repeat from * all around ending row with ch 4, tr tr c (4 times over needle) in tr c.",
+      "yield": 246
+    },
+    {
+      "row": "10th Row - Ch 10, s c in next loop, repeat from beginning all around ending row with sl st in tr tr c.",
+      "yield": 440
+    },
+    {
+      "row": "12th Row - Sl st to 1st ch 3, ch 4, 2 tr c cluster st in same space, * ch 10, skip 1 ch 3 loop, 1-3 tr c cluster st in each of the next 2 ch 3 loops with ch 1 between, repeat from * all around ending row with ch 10, 3 tr c cluster st in last ch 3 loop, ch 1, join in 1st cluster st.",
+      "yield": 115
+    },
+    {
+      "row": "13th Row - Ch 4, 2 tr c cluster st in same space, * ch 6, s c, ch 3, s c in next loop, ch 6, 1-3 tr c cluster st in ch 1 between next 2 cluster sts, repeat from * all around in same manner ending row with ch 3, tr c in 1st cluster st.",
+      "yield": 147
+    },
+    {
+      "row": "14th Row - Work in same manner as 8th row ending row with ch 4, tr tr c in tr c.",
+      "yield": 5
+    },
+    {
+      "row": "15th Row - Same as last row ending row with ch 4, tr tr c in tr tr c.",
+      "yield": 5
+    },
+    {
+      "row": "16th Row - Ch 8, s c in next loop, repeat from beginning all around ending row with sl st in tr tr c (48 loops).",
+      "yield": 360
+    },
+    {
+      "row": "2nd Row - * Ch 7, s c in next d c, repeat from * all around ending row with ch 2, d tr c in same space as beginning (this brings thread in position for next row).",
+      "yield": 313
+    },
+    {
+      "row": "4th Row - * Ch 5, s c in center of next shell, ch 5, s c between shells, repeat from * all around ending row with ch 2, d c in same space as beginning.",
+      "yield": 229
+    },
+    {
+      "row": "5th Row - * Ch 5, s c in next loop, repeat from * all around ending row with ch 2, d c in d c.",
+      "yield": 235
+    },
+    {
+      "row": "10th Row - Ch 6, d c in same space, * ch 3, s c in next loop, ch 3, 1 d c, ch 3, 1 d c in next loop, repeat from * all around ending row with ch 3, s c in next loop, ch 3, join in 3rd st of ch.",
+      "yield": 155
+    },
+    {
+      "row": "11th Row - Sl st into loop, ch 3, 2 d c in same space, * ch 4, s c in next s c, ch 4, skip 1 loop, 3 d c in next loop, repeat from * all around ending row with ch 4, s c in next s c, ch 4, join.",
+      "yield": 95
+    },
+    {
+      "row": "12th Row - Ch 3, d c in same space, 1 d c in next d c, 2 d c in next d c, * ch 4, s c in next sc, ch 4, 2 d c in next d c, 1 d c in next d c, 2 d c in next d c, repeat from * all around ending row with ch 4, s c in next s c, ch 4, join.",
+      "yield": 138
+    },
+    {
+      "row": "13th Row - Ch 3, 1 d c in each of the next 4 d c, * ch 5, s c in next 5 c, ch 5, 1 d c in each of the next 5 d c, repeat from * all around ending row with ch 5, s c in next s c, ch 5, join.",
+      "yield": 93
+    },
+    {
+      "row": "17th Row - Same as 15th row but working 6 chs in each loop before and after each cluster st.",
+      "yield": 7
+    },
+    {
+      "row": "18th Row - Same as 16th row but having 6 chs in each loop before and after each cluster st.",
+      "yield": 7
+    },
+    {
+      "row": "2nd Row - Ch 1 and work 2 s c in each s c (16 s c), join.",
+      "yield": 3
+    },
+    {
+      "row": "3rd Row - Working in s c increase in every other s c, join.",
+      "yield": 1
+    },
+    {
+      "row": "4th Row - Increase in every 3rd s c, join.",
+      "yield": 1
+    },
+    {
+      "row": "5th Row - Increase in every 4th s c (40 s c), join.",
+      "yield": 40
+    },
+    {
+      "row": "6th Row - Ch 5, d c in same space, * skip 1 s c, 1 d c, ch 2, 1 d c (shell) in next s c, repeat from * all around ending row with skip 1 s c, join in 3rd st of ch.",
+      "yield": 58
+    },
+    {
+      "row": "8th Row - Sl st into shell, ch 7 and work same as last row but working 1 d c, ch 4, 1 d c in center of each shell.",
+      "yield": 14
+    },
+    {
+      "row": "9th Row - Sl st into shell, ch 8 and work same as last row but working 1 d c, ch 5, 1 d c in center of each shell.",
+      "yield": 16
+    },
+    {
+      "row": "10th Row - * Ch 6, s c in center of next shell, ch 6, s c between next 2 d c, repeat from * all around ending row with ch 3, d c in same space as beginning (this brings thread in position for next row).",
+      "yield": 267
+    },
+    {
+      "row": "16th Row - Ch 1, s c in same space, * s c in 1st st of ch of next loop, ch 5, tr c in center s c of next s c group, ch 5, 1 s c in last st of ch of next loop, 1 s c in tr c, repeat from * all around ending row with s c in 1st st of ch of next loop, ch 5, tr c in center s c of next s c group, ch 5, s c in last st of ch of next loop, join.",
+      "yield": 140
+    },
+    {
+      "row": "17th Row - Ch 1, s c in same space, 1 s c in next s c, * ch 6, tr c in next tr c, ch 6, 1 s c in each of the next 3 s c, repeat from * all around ending row with ch 6, tr c in tr c, ch 6, s c in next s c, join in 1st s c.",
+      "yield": 155
+    },
+    {
+      "row": "20th Row - Same as 16th row but having 8 chs in each loop.",
+      "yield": 8
+    },
+    {
+      "row": "21st Row - Same as 17th row but having 8 chs in each loop.",
+      "yield": 8
+    },
+    {
+      "row": "22nd Row - Ch 12 and work same as 18th row but having 8 chs in each loop.",
+      "yield": 20
+    },
+    {
+      "row": "23rd Row - Ch 13 and work same as 19th row having 9 chs in each loop.",
+      "yield": 22
+    },
+    {
+      "row": "24th Row - Same as 16th row but having 9 chs in each loop.",
+      "yield": 9
+    },
+    {
+      "row": "25th Row - Same as 17th row but having 10 chs in each loop.",
+      "yield": 10
+    },
+    {
+      "row": "26th Row - Ch 14 and work same as 18th row but having 10 chs in each loop.",
+      "yield": 24
+    },
+    {
+      "row": "27th Row - Ch 7, tr c in same space, * ch 10, 1 s c in each of the next 3 s c, ch 10, tr c in next tr c, ch 10, 1 s c in each of the next 3 s c, ch 10, 1 tr c, ch 3, 1 tr c in next tr c, repeat from * all around ending row with ch 10, 1 s c in each of the next 3 s c, ch 10, tr c in next tr c, ch 10, 1 s c in each of the next 3 s c, ch 10, join in 4th st of ch.",
+      "yield": 201
+    },
+    {
+      "row": "2nd Row - 1 s c, 5 d c, 1 s c over each ch 3 loop, join.",
+      "yield": 7
+    },
+    {
+      "row": "3rd Row - * Ch 5, s c between next 2 petals in back of work, repeat from * 4 times.",
+      "yield": 24
+    },
+    {
+      "row": "4th Row - Ch 1 and over each loop work 1 s c, 7 d c, 1 s c, join.",
+      "yield": 10
+    },
+    {
+      "row": "5th Row - * Ch 6, s c in back of work between next 2 petals, repeat from * 4 times.",
+      "yield": 28
+    },
+    {
+      "row": "6th Row - Ch 1 and over each loop work 1 s c, 9 d c, 1 s c, join, break thread.",
+      "yield": 12
+    },
+    {
+      "row": "8th Row - Work 5 s c up side of next leaf, 3 s c in point of leaf, 5 s c down other side of same leaf, 8 s c over next ch 6 loop, repeat from beginning 4 times, break thread.",
+      "yield": 84
+    },
+    {
+      "row": "9th Row - Start Petal: Attach Light Pink in 1st s c of the 8 s c group between leaves, ch 3, d c in same space, 1 d c in each of the next 2 s c, 2 d c in each of the next 2 s c, 1 d c in each of the next 2 s c, 2 d c in next s c, ch 3, turn.",
+      "yield": 25
+    },
+    {
+      "row": "10th Row - 2 d c in same space, 1 d c in each of the next 10 d c, 3 d c in 3rd st of ch, ch 3, turn.",
+      "yield": 18
+    },
+    {
+      "row": "12th Row - Increase 1 d c at beginning and end of row (22 d c).",
+      "yield": 23
+    },
+    {
+      "row": "13th Row - Same as 11th row having 26 d c in row.",
+      "yield": 26
+    },
+    {
+      "row": "14th Row - Same as 12th row (28 d c).",
+      "yield": 28
+    },
+    {
+      "row": "15th Row - Increase 1 d c at each end and increase 1 d c in each of the 2 center sts (32 d c).",
+      "yield": 3
+    },
+    {
+      "row": "24th Row - Skip 1 d c, s c in next d c, 1 s d c in each of the next 2 d c, 1 d c in each of the next 6 d c, 1 tr c in each of the next 12 d c, 1 d c in each of the next 6 d c, 1 s d c in each of the next 2 d c, s c in next st, break thread.",
+      "yield": 30
+    },
+    {
+      "row": "2nd Row - Sl st into loop, ch 6, s c in same loop, * ch 6, s c in next loop, ch 6, s c in next loop, ch 6, s c in same loop, repeat from * all around ending row with ch 3, d c in sl st (this brings thread in position for next row).",
+      "yield": 261
+    },
+    {
+      "row": "2nd Row - Working in s c work 3 s c in 1st and last s c. Work 1 row even.",
+      "yield": 4
+    },
+    {
+      "row": "4th Row - Increase 1 s c in 1st and last s c. Work 1 row even.",
+      "yield": 2
+    },
+    {
+      "row": "9th Row - 2 s c in 1st s c, 1 s c in each of the next 17 s c, 2 s c in next s c.",
+      "yield": 21
+    },
+    {
+      "row": "10th Row - 3 s c in 1st s c, 1 s c in each of the next 15 s c, 2 s c in last s c.",
+      "yield": 20
+    },
+    {
+      "row": "13th Row - 3 s c in 1st s c, 1 s c in each of the next 21 s c.",
+      "yield": 24
+    },
+    {
+      "row": "14th Row - Skip 1 s c, 1 s c in each of the next 15 s c, 2 s c in next s c.",
+      "yield": 17
+    },
+    {
+      "row": "15th Row - 2 s c in 1st s c, 1 s c in each of the next 13 s c, 2 s c in next s c.",
+      "yield": 17
+    },
+    {
+      "row": "16th Row - Increase 1 s c in 1st s c.",
+      "yield": 1
+    },
+    {
+      "row": "2nd Row - Ch 1, 2 s c in each s c. Do not join or turn this or following rows.",
+      "yield": 3
+    },
+    {
+      "row": "4th Row - Increase in every 3rd st (32 s c), join, break thread.",
+      "yield": 32
+    },
+    {
+      "row": "3rd Row - 1 s c in each s c.",
+      "yield": 1
+    },
+    {
+      "row": "4th Row - Increase 1 s c at beginning and end of row (6 s c). Work 1 row even.",
+      "yield": 7
+    },
+    {
+      "row": "2nd Row - Sl st to loop, ch 3, 12 d c in loop, * 1 s c in center d c of next d c group, 13 d c in next loop, repeat from * once, * s c in center d c of next d c group, ch 4 and work 8 d tr c, 2 tr c, 2 d c with ch 1 between each st in next loop, s c in center d c of next d c group, 2 d c, 2 tr c, 8 d tr c with ch 1 between each st in next loop, ch 4, s c in center d c of next d c group, join, break thread.",
+      "yield": 65
+    },
+    {
+      "row": "6th Row: * Ch 4, s c in next loop, repeat from * twice, ** ch 5, skip 1 loop, 2 d c with ch 4 between in next loop, ch 5, skip 1 loop, s c in next loop, * ch 4, s c in next loop, repeat from * 5 times, repeat from ** all around in same manner ending row with ch 2, d c in d c.",
+      "yield": 125
+    },
+    {
+      "row": "7th Row: * Ch 4, s c in next loop, repeat from * twice, ** ch 6, skip 1 loop, 3 cluster sts with ch 3 between each cluster st in ch 4 loop (cluster st: work 3 tr c in loop keeping last loop of each st on hook, thread over and work off all loops at one time), ch 6, skip 1 loop, s c in next loop, * ch 4, s c in next loop, repeat from * 4 times, repeat from ** all around in same manner ending row with ch 2, d c in d c.",
+      "yield": 119
+    },
+    {
+      "row": "8th Row: * Ch 4, s c in next loop, repeat from * twice, ** ch 6, skip 1 loop, 2 cluster sts with ch 5 between in next loop, ch 5, 2 cluster sts with ch 5 between in next loop, ch 6, skip 1 loop, s c in next loop, * ch 4, s c in next loop, repeat from * 3 times, repeat from ** all around in same manner ending row with ch 2, d c in d c.",
+      "yield": 122
+    },
+    {
+      "row": "2nd Row - 1 s c in 1st s c, sl st in next s c, 1 s c in each of the next 17 s c, sl st in last st, break thread.",
+      "yield": 20
+    },
+    {
+      "row": "2nd Row - 2 s c in 1st d c, 1 s c in next d c, 2 s c in next st, ch 1, turn.",
+      "yield": 6
+    },
+    {
+      "row": "2nd Row - 1 s c in 1st d c, 2 s c in next d c, 1 s c in next st, ch 1, turn.",
+      "yield": 5
+    },
+    {
+      "row": "3rd Row - 1 s c in each s c, ch 1, turn.",
+      "yield": 41
+    },
+    {
+      "row": "2nd Row - * Ch 4, s c in next d c, repeat from * all around ending row with ch 1, d c in same space as beginning (this brings thread in position for next row).",
+      "yield": 196
+    },
+    {
+      "row": "3rd Row - * Ch 4, s c in next loop, repeat from * all around ending row with ch 1, d c in d c (14 loops).",
+      "yield": 196
+    },
+    {
+      "row": "7th Row - Ch 3, 1 d c in each of the next 4 d c, * ch 2, d c in next loop, ch 2, 1 d c in each of the next 5 d c, repeat from * all around ending row with ch 2, d c in next loop, ch 2, join.",
+      "yield": 60
+    },
+    {
+      "row": "8th Row - Ch 3, 1 d c in each of the next 4 d c, * ch 3, s c in next d c, ch 3, 1 d c in each of the next 5 d c, repeat from * all around ending row with ch 3, s c in next d c, ch 3, join.",
+      "yield": 71
+    },
+    {
+      "row": "2nd Row - S c in next loop, ch 5, s c in next loop, * ch 3, s c in next loop, repeat from * twice, turn.",
+      "yield": 15
+    },
+    {
+      "row": "3rd Row - * Ch 3, s c in next loop, repeat from * twice, * ch 5, s c in next loop, repeat from * once, ch 5, turn.",
+      "yield": 19
+    },
+    {
+      "row": "5th Row - * Ch 3, s c in next loop, repeat from * twice, ch 1, turn.",
+      "yield": 9
+    },
+    {
+      "row": "3rd Row - 2 s c in 1st s c, skip 1 s c, sl st in next st.",
+      "yield": 3
+    },
+    {
+      "row": "4th Row - Sl st in sl st, skip 1 s c, 2 s c in next s c.",
+      "yield": 3
+    },
+    {
+      "row": "2nd Row - S c in loop, ch 6, s c in same space, ch 7, s c in same space, ch 6, s c in same space, ch 2, d c in same space with starting ch, ch 3, turn.",
+      "yield": 29
+    },
+    {
+      "row": "3rd Row - 2 d c over ch 2, ch 5, 3 d c in next loop, ch 7, 3 tr c in next loop, ch 7, 3 tr c in same space, ch 7, 3 d c in next loop, ch 5, 3 d c in next loop, ch 3, turn.",
+      "yield": 51
+    },
+    {
+      "row": "4th Row - 1 d c in each of the next 2 d c keeping last loop of each st on hook, thread over and work off all loops at one time, ch 5, sl st in top of st just made for picot, ch 5, s c in next loop, ch 5, 1 d c in each of the next 3 d c keeping last loop of each st on hook, thread over and work off all loops at one time (d c cluster st), ch 7, s c in next loop, ch 7, 1 tr c cluster st over next 3 tr c, ch 7, 1-3 tr c cluster st over next loop, ch 7, 1 tr c cluster st over next 3 tr c, ch 7, s c in next loop, ch 7, d c cluster st over next 3 d c, ch 5, s c in next loop, ch 5, d c cluster st over next 3 d c, ch 5, turn.",
+      "yield": 88
+    },
+    {
+      "row": "6th Row - Ch 3, join to 4th st from beginning of 4th large loop from lower edge on side of skirt, ch 3, s c in next loop of motif, ch 3, s c in 4th st of next loop of skirt, ch 3, s c in next loop of motif, ch 3, s c in 4th st of next loop of skirt, ch 4, s c in next loop of motif, ch 7, skip 1 loop of skirt, s c in 1st st of small loop of skirt, ch 11, s c in next loop of motif, ch 9, s c in next loop, ch 9, s c in next loop, ch 11, join to 1st st of small loop of next skirt, ch 7, s c in next loop of motif, ch 4, skip 1 loop of skirt, s c in 4th st from end of next loop of skirt, ch 3, s c in next loop of motif, * ch 3, s c in 4th st of next loop of skirt, ch 3, s c in next loop of motif, repeat from * once, break thread.",
+      "yield": 100
+    },
+    {
+      "row": "3rd Row - * Ch 5, sl st in same space, ch 2, sl st in next ch 2 loop, repeat from * all around keeping ch 2 in back of picot loop.",
+      "yield": 180
+    },
+    {
+      "row": "4th Row - Work in same manner as last row having ch 3 between each picot loop, join, break thread.",
+      "yield": 3
+    },
+    {
+      "row": "2nd Row - D c in same space, 1 d c in next d c, 2 d c in next st, ch 3, turn.",
+      "yield": 7
+    },
+    {
+      "row": "3rd Row - 2 d c in same space, 1 d c in each of the next 3 d c, 3 d c in end st, ch 3, turn.",
+      "yield": 11
+    },
+    {
+      "row": "4th Row - 1 s c in 2nd st from hook, 1 s c in next st of ch, 1 d c in each of the next 8 d c, 3 d c in next st, ch 1, turn.",
+      "yield": 14
+    },
+    {
+      "row": "5th Row - Sl st in each of the next 2 d c, ch 3, 2 d c in next d c, 1 d c in each of the next 7 d c, 3 d c in next d c, ch 3, turn.",
+      "yield": 20
+    },
+    {
+      "row": "6th Row - 2 d c in same space, 1 d c in each of the next 11 d c, 2 d c in next st, ch 3, turn.",
+      "yield": 18
+    },
+    {
+      "row": "7th Row - 1 s c in 2nd st from hook, 1 s c in next st of ch, 1 d c in each of the next 11 d c, 3 d c in next d c, ch 3, turn.",
+      "yield": 19
+    },
+    {
+      "row": "9th Row - 2 d c in same space, 1 d c in each of the next 11 d c, 3 d c in next d c, ch 3, turn.",
+      "yield": 19
+    },
+    {
+      "row": "10th row - 1 s c in 2nd st from hook, 1 s c in next st of ch, 1 d c in each of the next 17 sts, ch 1, turn.",
+      "yield": 20
+    },
+    {
+      "row": "11th Row - 1 sl st in each of next 3 d c, ch 3, 1 d c in each of next 13 d c, ch 3, turn.",
+      "yield": 22
+    },
+    {
+      "row": "13th Row - 1 s c in 2nd st from hook, 1 s c in next st of ch, 1 d c in each of next 14 d c, ch 1, turn.",
+      "yield": 17
+    },
+    {
+      "row": "14th Row - Sl st in each of the next 2 d c, ch 3, 1 d c in each of next 10 d c, ch 1, turn.",
+      "yield": 16
+    },
+    {
+      "row": "15th Row - Sl st in each of next 3 d c, ch 3, 1 d c in each of next 6 d c, ch 1, turn.",
+      "yield": 13
+    },
+    {
+      "row": "2nd Round. Ch 3, double crochet (dc) in same space, * ch 3, 2 dc in next sc keeping last loop of each dc on hook, thread over and work off all loops at one time, repeat from * 6 times, ch 3, join.",
+      "yield": 37
+    },
+    {
+      "row": "9th Round. Sl st into loop, ch 9, ** 5 tr c cluster over next 5 tr c, * ch 5, tr c in next loop, repeat from * 9 times, ch 5, repeat from ** all around ending last repeat with ch 2, dc in 4th st of ch (this brings thread in position for next round).",
+      "yield": 139
+    },
+    {
+      "row": "0th Round. Ch 10, tr c in next loop, * ch 6, tr c in next loop, repeat from * all around ending with ch 3, dc in 4th st of ch.",
+      "yield": 278
+    },
+    {
+      "row": "2nd Round. Start ruffle: sl st to next loop, * ch 10, sc in same loop, ch 10, sc in same loop, ch 10, sc in same loop, ch 10, sc in next loop, repeat from * all around ending with ch 5, double treble crochet ([d tr c] 3 times over hook) in same space as beginning.",
+      "yield": 398
+    },
+    {
+      "row": "3rd Round. * Ch 10, sc in next loop, repeat from * all around ending with ch 5, d tr c in d tr c.",
+      "yield": 430
+    },
+    {
+      "row": "2nd Round. Ch 3, 2 double crochet (dc) in same loop, * ch 8, 3 dc in next loop, repeat from * 6 times, ch 4, treble crochet (tr c) in 3rd stitch (st) of ch.",
+      "yield": 76
+    },
+    {
+      "row": "3rd Round. Ch 3, 2 dc in same loop, * ch 7, sc in center dc of next dc group, ch 7, 3 dc in next loop, repeat from * 6 times, ch 7, sc in center dc of next dc group, ch 7, join in 3rd st of ch.",
+      "yield": 128
+    },
+    {
+      "row": "2nd Round. Ch 2, 3 sc in 1st loop, * ch 6, 3 sc in next loop, repeat from * 3 times.",
+      "yield": 32
+    },
+    {
+      "row": "3rd Round. * Ch 6, skip next sc, 1 sc in each of the next 2 sc, 3 sc in next loop, repeat from * 4 times.",
+      "yield": 44
+    },
+    {
+      "row": "4th Round. * Ch 6, skip 1 sc, 1 sc in each sc, 3 sc. in next loop, repeat from * 4 times. Repeat the last round always skipping the 1st sc of each sc group and working 3 sc in each loop until there are 10 rounds of sc and 21 sc in each solid section.",
+      "yield": 60
+    },
+    {
+      "row": "2th Round. * Ch 6, skip 2 sc, 1 sc in each of the next 18 sc, ch 6, sc in next loop, repeat from * 4 times.",
+      "yield": 124
+    },
+    {
+      "row": "3th Round. * Ch 6, skip 2 sc, 1 sc in each of the next 15 sc, ch 6, sc in next loop, ch 6, sc in next loop, repeat from * 4 times.",
+      "yield": 140
+    },
+    {
+      "row": "4th Round. ** Ch 6, skip 2 sc, 1 sc in each of the next 12 sc, * ch 6, sc in next loop, repeat from * twice, repeat from ** 4 times.",
+      "yield": 128
+    },
+    {
+      "row": "5th Round. ** Ch 6, skip 2 sc, 1 sc in each of the next 9 sc, ch 6, sc in next loop, repeat from * 3 times, repeat from ** 4 times.",
+      "yield": 264
+    },
+    {
+      "row": "6th Round. ** Ch 6, skip 1 sc, 1 sc in each of the next 7 sc, * ch 6, sc in next loop, repeat from * 4 times, repeat from ** 4 times.",
+      "yield": 164
+    },
+    {
+      "row": "9th Round. Ch 12, sc in same loop where last dc was worked, * ch 12, sc in next loop, repeat from * all around ending with ch 12, join.",
+      "yield": 520
+    },
+    {
+      "row": "0th Round. Ch 1 and work 17 sc over each loop, join.",
+      "yield": 18
+    },
+    {
+      "row": "6th Round. Sl st to 2nd st of next loop, * ch 5, sc in next loop, repeat from * all around ending with ch 2, double crochet (dc) in last sl st (this brings thread in position for next round).",
+      "yield": 230
+    },
+    {
+      "row": "7th Round. * Ch 6, sc in next loop, repeat from * all around ending with ch 2, tr c in dc.",
+      "yield": 274
+    },
+    {
+      "row": "8th Round. Ch 4, tr c over tr c, ch 3, sl st in top of tr c just made for picot, tr c over same tr c already worked over, * ch 4, 2 tr c in next loop, ch 3, sl st in top of last tr c for picot, tr c in same loop, repeat from * all around ending with ch 2, dc in 4th st of ch.",
+      "yield": 130
+    },
+    {
+      "row": "9th Round. * Ch 7, sc in next loop, repeat from * all around ending with ch 3, tr c in dc.",
+      "yield": 313
+    },
+    {
+      "row": "0th Round. Ch 5, tr c over tr c, * ch 7, 1 tr c, ch 1, 1 tr c in next loop, repeat from * all around ending with ch 3, tr c in 4th st of ch.",
+      "yield": 197
+    },
+    {
+      "row": "1th Round. * Ch 4, 1 sc, ch 3, 1 sc (picot) in next ch 1 space, ch 4, sc in next loop, repeat from * all around ending last repeat with sl st in tr c.",
+      "yield": 182
+    },
+    {
+      "row": "2th Round. Ch 3, sc in same space, ch 8, * skip the next picot, 1 sc, ch 3, 1 sc in next sc, ch 8, repeat from * all around ending last repeat with ch 4, tr c in joining.",
+      "yield": 169
+    },
+    {
+      "row": "3th Round. * Ch 6, skip the next picot, sc in beginning of next loop, ch 6, sc at end of same loop, repeat from * all around ending with ch 6, skip the next picot, sc in next loop, ch 3, dc in tr c.",
+      "yield": 173
+    },
+    {
+      "row": "8th Round. * Ch 7, sc in next loop, repeat from * all around ending with ch 3, tr c in dc.",
+      "yield": 313
+    },
+    {
+      "row": "1st Round. Same as 8th round but having 5 chs between each tr c group.",
+      "yield": 5
+    },
+    {
+      "row": "2nd Round. Same as 9th round but having ch 8 in each loop and ending with ch 4, tr c in dc.",
+      "yield": 13
+    },
+    {
+      "row": "4th Round. * Ch 3, 1 sc, ch 3, 1 sc (picot) in next ch 1 space, ch 3, sc in next loop, repeat from * all around ending last repeat with sl st in tr c.",
+      "yield": 156
+    },
+    {
+      "row": "5th Round. Ch 3, sc in same space, ch 7, * skip the next picot, 1 sc, ch 3, 1 sc in next sc, ch 7, repeat from * all around ending last repeat with ch 3, tr c in joining.",
+      "yield": 156
+    },
+    {
+      "row": "6th Round. * Ch 5, skip the next picot, sc in beginning of next loop, ch 5, sc in end of same loop, repeat from * all around ending with ch 5, skip the next picot, sc in next loop, ch 2, dc in tr c.",
+      "yield": 148
+    },
+    {
+      "row": "2nd Round. Ch 3, dc in same space, * ch 2, 2 dc in next dc, repeat from * 10 times, ch 2, join in 3rd st of ch.",
+      "yield": 46
+    },
+    {
+      "row": "3rd Round. Slip stitch (sl st) into loop, ch 3, dc in same loop, * ch 2, 2 dc in same loop, 2 dc in next loop, repeat from * 10 times, ch 2, 2 dc in same loop, join in 3rd st of ch, cut thread.",
+      "yield": 69
+    },
+    {
+      "row": "4th Round. Attach Aqua Spangle or Turquoise in any ch 2 loop, ch 3, dc in same loop, ch 2, 2 dc in same loop, * ch 2, 2 dc in next ch 2 loop, ch 2, 2 dc in same loop (2 dc shell), repeat from * all around ending with ch 2, join in 3rd st of ch.",
+      "yield": 82
+    },
+    {
+      "row": "6th Round. Sl st into loop of shell, ch 3, dc in same space, ch 3, 2 dc in same space, * ch 4, 2 dc, ch 3, 2 dc in next shell, repeat from * all around ending with ch 4, join.",
+      "yield": 109
+    },
+    {
+      "row": "7th Round. Sl st into loop of shell, ch 3, 2 dc in same space, ch 3, 3 dc in same space, * ch 5, 3 dc, ch 3, 3 dc (3 dc shell) in next shell, repeat from * all around ending with ch 5, join.",
+      "yield": 96
+    },
+    {
+      "row": "1th Round. Attach Silver or White in 1st st of ch 6 of any shell, ch 6, double treble crochet ([d tr c] 3 times over hook) in same loop, * ch 1, d tr c in same loop, repeat from * 14 times, * ch 1, sc in next loop, ch 1, 16 d tr c with ch 1 between each d tr c in next shell, repeat from * all around ending with ch 1, sc in next loop, ch 1, join in 5th st of ch, cut thread.",
+      "yield": 64
+    },
+    {
+      "row": "4th Round. Ch 3, 2 dc in same space, * ch 5, sc in next loop, ch 5, 3 dc in next loop, repeat from * all around ending with ch 5, sc in next loop, ch 5, join in 3rd st of ch.",
+      "yield": 137
+    },
+    {
+      "row": "2th Round. Ch 3, dc in same loop, * ch 5, 2 dc in next loop, repeat from * all around ending with ch 3, dc in 3rd st of ch.",
+      "yield": 138
+    },
+    {
+      "row": "4th Round. Ch 3, 2 sc in same loop, * 2 sc, ch 3, 2 sc in next loop, repeat from * all around ending with 2 sc in 1st loop, join, cut thread.",
+      "yield": 68
+    },
+    {
+      "row": "4th Round. Sl st into loop, * ch 9, sl st in next loop, repeat from * all around ending with ch 4, double treble crochet ([d tr c] 3 times over hook) in sl st at beginning (this brings thread in position for next round).",
+      "yield": 364
+    },
+    {
+      "row": "5th Round. Ch 3, sc over st just made, * ch 7, 1 sc, ch 3, 1 sc in center st of next large loop, repeat from * all around ending with ch 3, treble crochet (tr c) in d tr c.",
+      "yield": 233
+    },
+    {
+      "row": "6th Round. Same as last round but ending with ch 3, tr c in tr c.",
+      "yield": 4
+    },
+    {
+      "row": "7th Round. Ch 3, sc over tr c, * ch 9, 1 sc, ch 3, 1 sc in center st of next large loop, repeat from * all around ending with ch 4, d tr c in tr c.",
+      "yield": 271
+    },
+    {
+      "row": "4th Round. Sl st to next ch 3 loop, ch 4, 8 tr c in same loop, ch 10, skip the next picot, 7 dc in next ch 3 loop, * ch 10, skip the next picot, 9 tr c in next ch 3 loop, ch 10, skip the next picot, 7 dc in next ch 3 loop, repeat from * all around ending with ch 9, sc in 4th st of ch at beginning.",
+      "yield": 67
+    },
+    {
+      "row": "5th Round. * Ch 3, sc in next tr c, repeat from * 7 times, 5 sc, ch 3, 5 sc in next loop, sc in next dc, * ch 3, sc in next dc, repeat from * 5 times, 5 sc, ch 3, 5 sc in next loop, sc in next tr c, repeat from beginning all around ending last repeat with a sl st in next sc.",
+      "yield": 82
+    },
+    {
+      "row": "2nd Round. Sl st into loop, ** ch 5, sl st in 4th st from hook for picot, ch 1, sc in next loop, * ch 9, 1 sc, ch 3, 1 sc in next large loop, repeat from * 5 times, ch 9, sc in 1st loop of next pineapple, repeat from ** all around ending last repeat with ch 4, d tr c in sl st.",
+      "yield": 178
+    },
+    {
+      "row": "1st Round. Same as 10th round but ch 6 for each loop.",
+      "yield": 6
+    },
+    {
+      "row": "2nd Round. Same as 11th round but work 5 sc in each loop.",
+      "yield": 5
+    },
+    {
+      "row": "3rd Round. Same as 12th round but ch 7 for each loop.",
+      "yield": 7
+    },
+    {
+      "row": "4th Round. Same as 13th round but work 7 sc in each loop.",
+      "yield": 7
+    },
+    {
+      "row": "9th Round. Sl st into loop, * ch 3, sc in next loop, repeat from * 4 times, ch 6, skip 1 loop, 1 sc, ch 3, 1 sc, ch 3, 1 sc in next small loop, ch 6, skip 1 loop, sc in 1st loop of next pineapple, * ch 3, sc in next loop, repeat from * twice, ch 6, skip 1 loop, 1 sc, ch 3, 1 sc, ch 3, 1 sc in next small loop, ch 6, skip 1 loop, sc in 1st loop of next pineapple, repeat from 1st * all around ending with a sl st.",
+      "yield": 90
+    },
+    {
+      "row": "0th Round. Sl st into loop, * ch 3, sc in next loop, repeat from * 3 times, ch 6, sc in 5th st of next loop, ch 3, sc in next loop, ch 3, sc in next loop, ch 3, sc in 2nd st of next loop, ch 6, sc in next loop, * ch 3, sc in next loop, repeat from * once, ch 6, sc in 5th st of next loop, ch 3, sc in next loop, ch 3, sc in next loop, ch 3, sc in 2nd st of next loop, ch 6, sc in next loop, repeat from 1st * all around ending with a sl st.",
+      "yield": 94
+    },
+    {
+      "row": "2nd Round. Sl st into loop, ** ch 3, sc in next loop, ch 3, sc in next loop, ch 5, skip 1 loop, sc in next sc, * ch 5, sc in next loop, repeat from * 3 times, ch 5, sc in next sc, ch 5, skip 1 loop, 1 sc, ch 3, 1 sc in next loop, ch 5, skip 1 loop, sc in next sc, * ch 5, sc in next loop, repeat from * 3 times, ch 5, sc in next sc, ch 5, skip 1 loop, sc in next loop, repeat from ** all around ending with a sl st.",
+      "yield": 169
+    },
+    {
+      "row": "3rd Round. Sl st into loop, ** ch 5, sc in 4th st from hook for picot, ch 1, sc in next loop, ch 7, skip 1 loop, sc in next loop, * ch 5, sc in next loop, repeat from * 3 times, ch 7, 1 sc, ch 3, 1 sc in next loop, ch 7, skip next small loop, 1 sc, ch 3, 1 sc in next loop, ch 7, sc in next loop, * ch 5, sc in next loop, repeat from * 3 times, ch 7, skip 1 loop, sc in 1st loop of next pineapple, repeat from ** all around ending last repeat with ch 3, tr c in 1st loop of next pineapple.",
+      "yield": 186
+    },
+    {
+      "row": "4th Round. Ch 3, sc over tr c, ** ch 9, skip next small loop, 1 sc, ch 3, 1 sc in next loop, * ch 7, sc in next loop, repeat from * 4 times, ch 7, skip next small loop, 1 sc, ch 3, 1 sc in next loop, ch 7, skip next small loop, sc in next loop, * ch 7, sc in next loop, repeat from * 3 times, ch 7, 1 sc, ch 3, 1 sc in next loop, repeat from ** all around ending last repeat with ch 3, tr c in tr c.",
+      "yield": 209
+    },
+    {
+      "row": "2nd Round. Sl st into loop, ** ch 5, sl st in 4th st from hook for picot, ch 1, sc in next loop, * ch 7, 1 sc, ch 3, 1 sc in next large loop, repeat from * 5 times, ch 7, sc in next loop, repeat from ** all around ending last repeat with ch 3, tr c in sl st.",
+      "yield": 154
+    },
+    {
+      "row": "7th Round. * Ch 11, sc in next loop, repeat from * all around ending with ch 11, join in tr c.",
+      "yield": 480
+    },
+    {
+      "row": "9th Round. * Ch 7, skip next 2 dc, sc in next dc, repeat from * all around ending with ch 3, tr c in joining.",
+      "yield": 153
+    },
+    {
+      "row": "0th Round. Ch 3, sc over tr c, * ch 7, 1 sc, ch 3, 1 sc in next loop, repeat from * all around ending with ch 3, tr c in tr c.",
+      "yield": 233
+    },
+    {
+      "row": "4th Round. Ch 1, * 4 sc, ch 3, 4 sc in next loop, ch 3, repeat from * all around ending last repeat with ch 1, sc in 1st sc.",
+      "yield": 58
+    },
+    {
+      "row": "6th Round. Ch 1, * 4 sc in next loop, ch 3, 4 sc in next loop, ch 3, repeat from * all around ending last repeat with ch 1, sc in 1st sc.",
+      "yield": 58
+    },
+    {
+      "row": "3rd Round. Ch 4, cluster st in same space, * ch 2, tr c over next loop, ch 2, cluster st in next cluster st, repeat from * all around ending with ch 2, tr c over last loop, ch 2, join.",
+      "yield": 122
+    },
+    {
+      "row": "4th Round. Ch 4, cluster st in same space, * ch 3, tr c in next tr c, ch 3, cluster st in next cluster st, repeat from * all around ending with ch 3, tr c in next tr c, ch 3, join.",
+      "yield": 161
+    },
+    {
+      "row": "5th Round. Repeat 4th round but having ch 4 between cluster sts and tr c - s.",
+      "yield": 5
+    },
+    {
+      "row": "6th Round. Repeat 4th round but having ch 5 between cluster sts and tr c - s.",
+      "yield": 6
+    },
+    {
+      "row": "7th Round. Ch 4, cluster st in same space, ch 3, cluster st in same space (cluster st shell), * ch 4, tr c in next tr c, ch 4, cluster st shell in next cluster st, repeat from * all around ending with ch 4, tr c in next tr c, ch 4, join.",
+      "yield": 194
+    },
+    {
+      "row": "2nd Row. D c in next d c, ch 2, skip 1 mesh, 2 d c, ch 2, 2 d c (shell) in next loop, ch 2, skip 1 mesh, d c in next d c, ch 2, d c in 3rd st of end ch, ch 8, turn.",
+      "yield": 23
+    },
+    {
+      "row": "3rd Row. Skip the ch 2 loop, 4 d c in next loop, * ch 3, 4 d c in next loop, repeat from * once, ch 7, turn. Repeat the last 2 rows for desired length omitting ch 7 at end of last row of work and do not turn.",
+      "yield": 25
+    },
+    {
+      "row": "2nd Round. Attach Green in any d c, s c in same space, ch 3, s c in same space (picot), * 1 s c in each of the next 3 d c, ch 3, s c in same space with last s c, repeat from * 6 times, ending with 1 s c in each of the last 2 d c, join, cut thread.",
+      "yield": 50
+    },
+    {
+      "row": "3rd Round. Attach Red in center of space between picots, ch 11, d c between next 2 picots, * ch 8, d c between next 2 picots, repeat from * 5 times, ending with ch 8, sl st in 3rd st of ch.",
+      "yield": 66
+    },
+    {
+      "row": "3rd Row. Attach White in ch 3 loop, ch 3, 2 d c in same space, * ch 4, 2 d c, ch 3, 2 d c (shell) in next ch 3 loop, ch 4, 3 d c in next loop, repeat from * all around ending with ch 4, 2 d c, ch 3, 2 d c in next loop, ch 4, join.",
+      "yield": 109
+    },
+    {
+      "row": "2nd Round. Over each loop work 1 s c, 5 d c, 1 s c, join.",
+      "yield": 7
+    },
+    {
+      "row": "3rd Round. * Ch 5, sl st in back of work between next 2 petals, repeat from * 7 times.",
+      "yield": 42
+    },
+    {
+      "row": "4th Round. Over each loop work 1 s c, 7 d c, 1 s c, join.",
+      "yield": 9
+    },
+    {
+      "row": "6th Round. Ch 3, 1 d c in each d c and 2 d c, ch 3, 2 d c in each ch 3 loop, join.",
+      "yield": 46
+    },
+    {
+      "row": "7th Round. Ch 4, 1 tr c in each d c and 2 tr c, ch 3, 2 tr c in each ch 3 loop, join, cut thread.",
+      "yield": 47
+    },
+    {
+      "row": "7th Round. Attach White in 2nd tr c of Green petal, ch 5, skip 3 tr c, s c in next tr c. * ch 3, tr c between petals, ch 3, s c in 2nd tr c of next Green petal, ch 5, skip 3 tr c, s c in next tr c, repeat from * all around ending with ch 3, tr c between petals, ch 3, join.",
+      "yield": 78
+    },
+    {
+      "row": "1th Round. Ch 3, work 1 d c in each d c and 2 d c, ch 3, 2 d c in each ch 3 loop, join, cut thread.",
+      "yield": 46
+    },
+    {
+      "row": "3th Round. * Ch 6, s c in next loop, ch 6, s c in next s c, repeat from * all around ending with ch 3, d c in same space as beginning (this brings thread in position for next round).",
+      "yield": 267
+    },
+    {
+      "row": "4th Round. * Ch 6, s c in next loop, repeat from * all around ending with ch 3, d c in d c. Repeat the 14th round twice.",
+      "yield": 274
+    },
+    {
+      "row": "7th Round. * Ch 7, s c in next loop, repeat from * all around ending with ch 7, s c in d c, cut thread.",
+      "yield": 313
+    },
+    {
+      "row": "2nd Row. 1 s c in each s c. Repeat the last row 26 times, cut yarn.",
+      "yield": 1
+    },
+    {
+      "row": "1th Row. 1 s c in each of the 1st 28 s c, turn.",
+      "yield": 1
+    },
+    {
+      "row": "2nd Round. Ch 12, tr c in same st where 1st tr c was made, * ch 8, tr c in st where next tr c was made, repeat from * 30 times, ch 8, join in 4th st of ch (33 meshes).",
+      "yield": 291
+    },
+    {
+      "row": "3rd Round. Ch 1, s c in next mesh, * ch 5, s c in same mesh, s c in next mesh, repeat from * all around ending with ch 5, s c in same mesh, join in 1st s c.",
+      "yield": 136
+    },
+    {
+      "row": "5th Round. Sl st into 1st loop, ch 5, s c in same loop, * ch 2, skip 1 loop, 2 tr c with ch 2 between in next loop, ch 2, 2 d tr c (3 times over hook) with ch 2 between in same loop, ch 2, 2 tr c with ch 2 between in same loop (shell), ch 2, skip 1 loop, 1 s c, ch 5, 1 s c in next loop, repeat from * all around (there will be a ch 5 loop in 1st mesh and a ch 5 loop in last mesh in this round). Do not join. Place a marker at beginning of each round.",
+      "yield": 73
+    },
+    {
+      "row": "7th Round. Ch 2, 1 s c, ch 5, 1 s c in center of 1st shell, * ch 2, shell in next ch 5 loop, ch 2, 1 s c, ch 5, 1 s c in center of next shell, repeat from * all around. Repeat the last 2 rounds twice.",
+      "yield": 41
+    },
+    {
+      "row": "6th Round. * Ch 3, 2 tr c, 3 d tr c, 2 tr c with ch 2 between each st in next ch 5 loop, ch 3, 1 s c, ch 5, 1 s c in center of next shell, repeat from * all around ending with ch 3, 2 tr c, 3 d tr c, 2 tr c with ch 2 between each st in next ch 5 loop.",
+      "yield": 67
+    },
+    {
+      "row": "7th Round. * Ch 3, s c between 1st 2 d tr c of next shell, ch 5, s c in next loop of same shell, ch 3, 2 tr c, 3 d tr c, 2 tr c with ch 2 between each st in next ch 5 loop, repeat from * all around ending with ch 3, s c between 1st 2 d tr c of next shell, ch 5, s c in next loop of same shell.",
+      "yield": 87
+    },
+    {
+      "row": "0th Round. Work in same manner as 18th round but having 3 tr c, 2 d tr c, 3 tr c with ch 2 between each st in each shell.",
+      "yield": 8
+    },
+    {
+      "row": "4th Round. * Ch 2, shell in next ch 5 loop, ch 2, 1 s c, ch 5, 1 s c in center of next shell, repeat from * all around ending to correspond. Repeat the last 2 rounds once.",
+      "yield": 16
+    },
+    {
+      "row": "2nd Round. Ch 3, d c in same space, 2 d c in each of the next 4 d c, 1 d c in each of the next 16 d c, 2 d c in each of the next 5 d c, 1 d c in each of the next 16 d c, join in 3rd st of ch.",
+      "yield": 54
+    },
+    {
+      "row": "3rd Round. Ch 3, d c in same space, 2 d c in each of the next 9 d c, 1 d c in each of the next 16 d c, 2 d c in each of the next 10 d c, 1 d c in each of the next 16 d c, join in 3rd st of ch.",
+      "yield": 74
+    },
+    {
+      "row": "4th Round. Ch 3, 1 d c in each of the next 6 d c, 2 d c in each of the next 6 d c, 1 d c in each of the next 7 d c, 1 s d c in each of the next 5 d c (s d c: thread over hook, insert in st, pull loop through, thread over and pull through all loops at one time), 1 s c in each of the next 6 d c, 1 s d c in each of the next 5 d c, 1 d c in each of the next 7 d c, 2 d c in each of the next 6 d c, 1 d c in each of the next 7 d c, 1 s d c in each of the next 5 d c, 1 s c in each of the next 6 d c, 1 s d c in each of the next 5 d c, join in 3rd st of ch.",
+      "yield": 86
+    }
+  ]
+}
