@@ -43,16 +43,20 @@ for (const suiteFile of assertionSuites()) {
 // so drift is caught in both directions - a count that improves may mean a loosened assertion.
 const CORPORA = [
     {
+        // `miscounted` is rows that PASSED while their calculated count disagreed with the one the
+        // pattern wrote. Pinned separately from `failed` because it is a different fault and was
+        // invisible for a long time: a disagreeing written count is advisory and never fails a row,
+        // so a FAIL-only baseline called a corpus clean while it displayed the wrong figure.
         file: 'test-corpus-pattern.js',
-        pattern: /^(\d+) of (\d+) rows failed$/,
-        keys: ['failed', 'total'],
-        expected: { failed: 0, total: 20 }
+        pattern: /^(\d+) of (\d+) rows failed, (\d+) miscounted$/,
+        keys: ['failed', 'total', 'miscounted'],
+        expected: { failed: 0, total: 20, miscounted: 0 }
     },
     {
         file: 'test-corpus-p2.js',
-        pattern: /^(\d+) of (\d+) rows failed$/,
-        keys: ['failed', 'total'],
-        expected: { failed: 0, total: 10 }
+        pattern: /^(\d+) of (\d+) rows failed, (\d+) miscounted$/,
+        keys: ['failed', 'total', 'miscounted'],
+        expected: { failed: 0, total: 10, miscounted: 0 }
     },
     {
         file: 'test-corpus-suite.js',

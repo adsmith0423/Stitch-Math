@@ -24,6 +24,12 @@ var body = $('step-sequence-body');
 print('  #  | exp | got | ok | instruction / reason');
 print('-----+-----+-----+----+--------------------------------------------');
 var bad = 0;
+// A row that PASSES while its calculated count disagrees with the one the pattern wrote. Counted
+// separately from a failure because it is a different fault: nothing is wrong with the stitches, the
+// number reported for them is simply not the number the designer wrote. A disagreeing written count
+// is advisory and never fails a row, so counting only failures called a corpus clean while it
+// displayed the wrong figure - which is exactly how a broken granny square shipped.
+var miscount = 0;
 body.children.forEach(function (tr, i) {
     var c = tr.children;
     var label = c[0].textContent;
@@ -33,6 +39,7 @@ body.children.forEach(function (tr, i) {
     var st    = c[5].innerHTML.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     var ok    = st.indexOf('FAIL') === -1;
     if (!ok) bad++;
+    else if (c.length >= 6 && exp && exp.trim() !== '0' && got && exp.trim() !== got) miscount++;
     print(
         (label + '        ').slice(0, 7) + '|' +
         ('   ' + exp).slice(-4) + ' |' +
@@ -40,4 +47,4 @@ body.children.forEach(function (tr, i) {
         (ok ? instr.slice(0, 44) : st.slice(0, 90))
     );
 });
-print('\n' + bad + ' of ' + body.children.length + ' rows failed');
+print('\n' + bad + ' of ' + body.children.length + ' rows failed, ' + miscount + ' miscounted');

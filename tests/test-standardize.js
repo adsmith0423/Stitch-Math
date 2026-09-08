@@ -123,7 +123,53 @@ ck('the key line is not underlined', cue(2), '');
 ck('nor the one below it', cue(3), '');
 no('and nothing in the sidebar mentions it', sidebarText().indexOf('"half double crochet"') >= 0);
 
-print('\n10. The counts never move');
+print('\n10. "*" is a multiplier too');
+// "(2 sc, inc) * 6" is ordinary amigurumi notation and expandBracketRepeats has always counted it,
+// but the STYLE layer could not see it - so a pattern written that way silently got no
+// beginner-phrasing offer and, worse, no "this repeat runs the wrong number of times" correction.
+ok('bracket shorthand is recognised with x', !!E.buildRepeatPhrasingFix('[2 sc, inc] x 6'));
+ok('and with *', !!E.buildRepeatPhrasingFix('(2 sc, inc) * 6'));
+ok('and in brackets with *', !!E.buildRepeatPhrasingFix('[2 sc, inc] * 6'));
+ok('standardizeRepeatText rewrites it', !!E.standardizeRepeatText('(2 sc, inc) * 6'));
+
+print('\n10b. A stated count is still not a repeat');
+// The guard that keeps the multiplier alternation honest: a bare "(24)" is an answer, not a group,
+// and "(56, 60)" is a size list. Reading either as a repeat would rewrite a number the pattern meant.
+ck('a stated count', String(E.buildRepeatPhrasingFix('sc in each st around (24)')), 'null');
+ck('a size list', String(E.buildRepeatPhrasingFix('ch 52 (56, 60)')), 'null');
+ck('an open asterisk repeat is left to its own expander',
+   String(E.buildRepeatPhrasingFix('* 2 sc, inc; rep from * around')), 'null');
+
+print('\n10c. The repeat-times math fix now resolves in * notation');
+// Not a style point: without a repeat unit the row fell through to a raw stitch deficit and the
+// correction could not be offered at all.
+var starFix = E.evaluateStep(0, 18, '(2 sc, inc) * 5', 1, 0, 0, 0).fixes
+    .filter(function (f) { return f.id === 'repeat-times'; })[0];
+ok('the fix is offered', !!starFix);
+ck('it targets the multiplier', starFix.edit.target, 'multiplier');
+ck('from the number in the text', starFix.edit.from, 5);
+ck('to the one the row has stitches for', starFix.edit.to, 6);
+// applyLintEdit has to find "* 5" in the raw line. A word boundary before "*" never matches, so
+// written the obvious way this resolved to null and the button silently became advice.
+// Rnd 3 produces 18, so Rnd 4's repeat is one pass short - the same numbers the direct call above
+// used, rather than a second fixture free to disagree with it.
+load('', ['Rnd 1: 6 sc in magic ring (6)',
+          'Rnd 2: inc in each st around (12)',
+          'Rnd 3: (1 sc, inc) * 6 (18)',
+          'Rnd 4: (2 sc, inc) * 5 (24)']);
+var applied = false;
+$('lint-side-body').children.forEach(function (card) {
+    var flat = card.children.map(function (p) { return p.textContent; }).join(' ');
+    if (applied || flat.indexOf('This repeat runs') < 0) return;
+    var actions = card.children[card.children.length - 1];
+    actions.children.forEach(function (b) {
+        if (!applied && b.textContent === 'Suggest a fix') { b.fire('click'); applied = true; }
+    });
+});
+ok('an apply button was offered and pressed', applied);
+ok('and the multiplier was rewritten', $('bulk-input').value.indexOf('(2 sc, inc) * 6') >= 0);
+
+print('\n11. The counts never move');
 // Every finding here is a style note. None of them can fail a row.
 ck('no row failed', $('step-sequence-body').children.filter(function (tr) {
     return tr.children.length >= 6 && /FAIL/.test(tr.children[5].innerHTML);

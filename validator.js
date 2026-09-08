@@ -2047,7 +2047,13 @@ window.CrochetMathEngine = (function() {
      */
     function analyzeRepeatUnit(instructionString, rowMultiplier, parsed, availableStitches = 0) {
         const text = String(instructionString || '');
-        const inline = text.match(/[\(\[\*]([^\(\)\[\]\*]+)[\)\]\*]\s*(?:x|times|rep)?\s*(\d+)/i);
+        // The multiplier alternation carries "*" alongside "x" for the same reason REPEAT_SHORTHAND_RE
+        // does - "(2 sc, inc) * 6" is ordinary amigurumi notation. This one costs more than a style
+        // note when it is missed: without a repeat unit the "this repeat runs 5 times but the row has
+        // stitches for 6" correction cannot be offered at all, and the row falls through to a raw
+        // stitch deficit. Note the marker is OPTIONAL, so "*sc, inc; rep from * 5" already matched on
+        // the bare digits and is unaffected.
+        const inline = text.match(/[\(\[\*]([^\(\)\[\]\*]+)[\)\]\*]\s*(?:x|times|rep|\*)?\s*(\d+)/i);
 
         if (inline) {
             const body = parseInstructions(inline[1], 0);
@@ -2307,7 +2313,16 @@ window.CrochetMathEngine = (function() {
 
         // The count in parentheses disagreeing with the stitches is advisory in the matrix - it never
         // fails a row - but it is the single most common thing a designer actually wants corrected.
-        if (expectedYield > 0 && calculatedYield !== expectedYield) {
+        //
+        // EXCEPT on a round worked into chain spaces, where this is withheld. A granny square states
+        // its count in double crochets and this engine's figure includes the chains that form the
+        // corner and side spaces, so the two are measuring different things and the difference is not
+        // a typo. Offered there, the button rewrote a correct "(24)" to a wrong "(38)" - it corrupted
+        // the very patterns it was meant to tidy. The note below still reports the difference; only
+        // the one-click rewrite is taken away, on the same principle as every other advisory-only
+        // finding: where Stitch Math cannot be sure which number is right, it does not offer to
+        // write one.
+        if (expectedYield > 0 && calculatedYield !== expectedYield && !(ctx.spaceCost > 0)) {
             const short = expectedYield - calculatedYield;
             out.push({
                 id: 'stated-count', severity: 'math',
@@ -2432,6 +2447,11 @@ window.CrochetMathEngine = (function() {
         // into the spaces of the round below and passes over every stitch, so recognising such a row is
         // what stops it being reported as leaving 12 stitches unworked when that is how it is built.
         let spaceCost = 0;
+        // Yield contributed by chains rather than by stitches worked into the fabric. A granny square
+        // states its count in double crochets - "(24)" means 24 dc, never 24 dc plus the twelve chains
+        // that form its corner and side spaces - so the two figures have to be kept apart or a correct
+        // round reports half as much again as it made. See stitchYield in evaluateStep.
+        let chainYield = 0;
         // A corner named without its width is the one the round below made. Two is the near-universal
         // granny corner, and only the starting assumption: the first ch-N corner the row names replaces it.
         let lastCornerWidth = 2;
@@ -2621,6 +2641,7 @@ window.CrochetMathEngine = (function() {
                     // excused under either convention.
                     if (spaceWidth > 0 && !isToEnd) spaceCost += spaceWidth;
                     totalYield += stepYield;
+                    if (key === 'ch' || key === 'chain') chainYield += stepYield;
                     tokens.push({ name: key, count: multiplier * perPosition, cost: stepCost, yield: stepYield });
                     matchedInChunk = true;
                     chunk = chunk.replace(match[0], '').trim();
@@ -2640,7 +2661,7 @@ window.CrochetMathEngine = (function() {
 
         return {
             totalCost, totalYield, cost: totalCost, yield: totalYield,
-            spaceCost, cornersUsed,
+            spaceCost, cornersUsed, chainYield,
             expandedText: expanded, expandedInstruction: expanded,
             unrecognizedTokens, unknownTokens: unrecognizedTokens,
             tokens, errors: [], warnings: [], reasons: [], messages: []
@@ -2909,6 +2930,127 @@ window.CrochetMathEngine = (function() {
      * a count note and that is the more urgent thing to read; if the pattern's number happens to include
      * the spaces, nothing is omitted.
      */
+    /**
+     * The written count disagrees, and the reason is the convention rather than a mistake.
+     *
+     * A granny square states "(24)" meaning twenty-four double crochets. Counting the corner and side
+     * chains as well gives 38, so under the default convention a perfectly correct round looks wrong
+     * by fourteen - and the designer has no way to tell that from an actual miscount.
+     *
+     * This is the note that replaced offering to "correct" the 24 to a 38, which rewrote the right
+     * number to the wrong one in the very patterns it was meant to tidy. Here the two readings are
+     * both known, so when the written count matches the OTHER one exactly, that is not a typo: it is
+     * the pattern telling us which convention it was written in, and the only useful thing to say is
+     * which setting makes the numbers agree.
+     */
+    /**
+     * How many standard clusters a round of a square is made of, or null if it is not that shape.
+     *
+     * A classic granny square grows by exactly four clusters a round - one added to each side - so
+     * round X holds 4X clusters and 12X double crochets. That is a strong enough regularity to check
+     * against, and nothing else in the engine checks it: a round that drops one side cluster still
+     * consumes and produces a consistent count, passes every balance rule, and comes out a rhombus.
+     *
+     * THE GATE IS THE HARD PART. Plenty of rounds work into chain spaces without being granny
+     * squares - mesh, filet, shells, picot edgings - and holding those to a four-cluster rhythm would
+     * flag correct work. So a round only qualifies when it carries the whole signature: it went into
+     * chain spaces, it turned corners, and its stitches divide into threes AND its clusters into
+     * fours. A round failing any of those returns null and takes no part in the check, which is the
+     * conservative direction: a missed granny square costs a warning nobody sees, where a false one
+     * tells a designer their correct shawl is a broken square.
+     */
+    const CLUSTER_DC = 3;
+
+    /**
+     * A corner, by its shape: a bracketed group holding a chain, worked INTO a space -
+     * "(3 dc, ch 2, 3 dc) in next ch-2 sp". That chain inside the group is the corner itself; the two
+     * clusters either side of it are what turn the fabric ninety degrees.
+     *
+     * Read off the text rather than off parsed.cornersUsed, which counts a corner only when the
+     * designer writes the WORD "corner" - true of "in ch-2 corner sp" and not of the equally common
+     * "in next ch-2 sp", so half of all squares register no corners at all. The group's own "in ... sp"
+     * must follow the closing bracket, which is what keeps a mesh repeat like
+     * "[dc in next ch-2 sp, ch 1] x 12" out: there the space is worked into from INSIDE the group.
+     */
+    const CORNER_GROUP_RE = /[\(\[][^()\[\]]*\bch(?:ain)?\s*\d+[^()\[\]]*[\)\]]\s*(?:in|into)\b[^,;]{0,40}?\bsp/gi;
+
+    /**
+     * Counted on the text AS WRITTEN, not on the expanded form: expandBracketRepeats folds a group
+     * into an NinN token, which is exactly the shape being looked for here and destroys it. Writing a
+     * round out in full is not required either - two distinct corner groups is the most a square ever
+     * spells, since the other two live inside its "x 3", which is why the threshold is two.
+     */
+    function cornerGroupCount(instructionText) {
+        CORNER_GROUP_RE.lastIndex = 0;
+        const found = String(instructionText || '').match(CORNER_GROUP_RE);
+        CORNER_GROUP_RE.lastIndex = 0;
+        return found ? found.length : 0;
+    }
+
+    function clusterCount(evaluation, instructionText) {
+        if (!evaluation || !(evaluation.spaceCost > 0)) return null;
+        // Corners are what make this a square rather than a strip or a circle. Two is enough to ask
+        // for - a round written with its repeat left open expands to fewer than four - and the
+        // cluster arithmetic below has to agree as well before anything is claimed.
+        if (cornerGroupCount(instructionText) < 2 && !(evaluation.cornersUsed > 0)) return null;
+        const stitches = evaluation.stitchYield;
+        if (!(stitches > 0) || stitches % CLUSTER_DC !== 0) return null;
+        const clusters = stitches / CLUSTER_DC;
+        return clusters % 4 === 0 ? clusters : null;
+    }
+
+    /**
+     * Two consecutive rounds of a square that do not differ by exactly four clusters.
+     *
+     * Stated as a GROWTH rule rather than as "round X must hold 4X", because the growth is the thing
+     * that is actually true of the fabric and it needs no agreement about which round is round one -
+     * a square worked as the second piece of a document, or one whose first round the engine could
+     * not classify, is still checked from wherever the run begins.
+     *
+     * Advisory, and `edit: null`: a square that grows by eight is not a broken square, it is a
+     * different motif, and the only honest thing to do is say the shape will not come out square and
+     * let the designer decide.
+     */
+    function buildClusterGrowthFix(previousClusters, clusters, label) {
+        const gained = clusters - previousClusters;
+        if (gained === 4) return null;
+
+        return {
+            id: 'granny-growth', severity: 'style',
+            title: gained > 4
+                ? `This round adds ${gained} clusters where a square adds 4`
+                : gained < 0
+                    ? `This round has ${-gained} fewer clusters than the one before it`
+                    : `This round adds ${gained} cluster${gained === 1 ? '' : 's'} where a square adds 4`,
+            detail: `The round before it holds ${previousClusters} cluster${previousClusters === 1 ? '' : 's'} `
+                + `(${previousClusters * CLUSTER_DC} dc) and this one holds ${clusters} `
+                + `(${clusters * CLUSTER_DC} dc). A square gains exactly one cluster on each of its four `
+                + `sides, so the next round after ${previousClusters} should hold ${previousClusters + 4}.`,
+            lesson: 'A classic granny square holds 4X clusters on round X - 4, 8, 12, 16 - because each '
+                + 'round adds one cluster to every side. Growing by more than four makes the piece '
+                + 'ruffle; by fewer, it cups. The stitch count still balances either way, which is why '
+                + 'nothing else catches it.',
+            edit: null
+        };
+    }
+
+    function conventionMismatchNote(expectedYield, calculatedYield, stitchYield, rawYield, spaceCost) {
+        if (!(spaceCost > 0) || !expectedYield || expectedYield === calculatedYield) return [];
+
+        if (expectedYield === stitchYield) {
+            return [`Written count ${expectedYield} is this round's stitches without the chains that `
+                + `form its spaces; counting those as well gives ${calculatedYield}. Nothing is wrong `
+                + `with the round — set "Chain-Sp Counts As" to "only the stitches worked into it" and `
+                + `the two agree.`];
+        }
+        if (expectedYield === rawYield) {
+            return [`Written count ${expectedYield} counts the chains that form this round's spaces as `
+                + `stitches; leaving them out gives ${calculatedYield}. Set "Chain-Sp Counts As" to `
+                + `"the chains count" and the two agree.`];
+        }
+        return [];
+    }
+
     function chainSpaceNotes(instruction, calculatedYield, expectedYield) {
         if (!expectedYield || expectedYield !== calculatedYield) return [];
         const clean = expandBracketRepeats(stripRowPreamble(String(instruction || '')))
@@ -2943,10 +3085,48 @@ window.CrochetMathEngine = (function() {
      * `totalCost` is deliberately absent rather than zero: CalculatePatternHealth reads it through
      * Number.isFinite and treats a missing one as consuming nothing, which is exactly true of all four.
      */
+    /**
+     * Does this round open with a chain that stands in for its first stitch?
+     *
+     * Broader than impliedStandingChain, and deliberately so: that one anchors the chain to the START
+     * of the line, which is right for a turning chain but wrong for a granny round. A granny round
+     * traverses first - "sl st to next ch-2 sp, ch 3, 2 dc in same sp" - so the chain that stands for
+     * the round's first dc is not at position 0 and the anchored test missed every one of them,
+     * leaving the stitch count exactly one short on every round of every square.
+     *
+     * Two signals, either sufficient: the pattern says so outright, or it joins to the top of that
+     * chain at the end of the round, which says the same thing in the other direction - you only join
+     * to the top of a chain that is standing where a stitch would be.
+     */
+    function standingChainSubstitutes(text) {
+        const line = String(text || '');
+        if (!line) return false;
+        if (/\b(?:ch|chain)\s*\d+\s*\(\s*(?:this\s+)?counts?\s+as\b(?![^)]*\bnot\b)/i.test(line)) return true;
+
+        const join = line.match(
+            /\b(?:sl\s*st|slst|slip\s+stitch|join)\b[^,;]{0,40}?\btop\s+of\s+(?:the\s+)?(?:beg(?:inning)?\s+)?ch(?:ain)?\s*-?\s*(\d+)\b/i);
+        // The chain it names has to actually be on the line, or the join is describing something the
+        // round never made.
+        if (join) return new RegExp(`\\b(?:ch|chain)\\s*${join[1]}\\b`, 'i').test(line);
+
+        // The same join written without naming the chain - "sl st to top", "join with sl st in top of
+        // beg ch". Extremely common, and it says exactly as much: you only join to the TOP of
+        // something standing where a stitch would be. Paired with an opening chain of two or more,
+        // because a ch 1 opening a round is a turning chain that stands for nothing.
+        if (!/\b(?:sl\s*st|slst|slip\s+stitch|join)\b[^,;]{0,30}?\btop\b/i.test(line)) return false;
+        const opening = line.match(/\b(?:ch|chain)\s*(\d+)\b/i);
+        return !!opening && parseInt(opening[1], 10) >= 2;
+    }
+
     function unworkedRow(calculatedYield, expectedYield, notes) {
         return {
             costIsValid: true,
             calculatedYield,
+            // A foundation, a magic ring and a chain ring all count their own stitches directly and
+            // never counted scaffolding chains in the first place, so the two figures are the same
+            // here. Set rather than left undefined, so every caller can read stitchYield off any
+            // evaluation without checking which path produced it.
+            stitchYield: calculatedYield,
             reason: '',
             errorDetails: (expectedYield !== 0 && calculatedYield !== expectedYield)
                 ? [{ type: 'yield_mismatch', message: 'Yield mismatch' }]
@@ -3002,7 +3182,16 @@ window.CrochetMathEngine = (function() {
         // A ring made from a short chain, before the general path counts the scaffolding as stitches.
         const ringCheck = parseChainRing(instructionString);
         if (ringCheck.isChainRing) {
-            const calculatedYield = ringCheck.count * rowMultiplier;
+            // parseChainRing counts what was worked INTO the ring, which leaves out the chain the
+            // round stood up on - so a granny square's opening round came back 11 where the designer
+            // wrote 12. Credited only under the discount convention, for two reasons: it is the
+            // reading in which that standing chain is unambiguously a stitch rather than three
+            // chains, and 11 is the figure every existing corner test is pinned to under the default.
+            // With it, round one is 12 and the square runs 12, 24, 36, 48 - three stitches per
+            // cluster, four clusters per round.
+            const standing = chainSpaceConvention === 'discount'
+                && standingChainSubstitutes(instructionString) ? 1 : 0;
+            const calculatedYield = ringCheck.count * rowMultiplier + standing;
             return unworkedRow(calculatedYield, expectedYield,
                 buildCountNote(calculatedYield, expectedYield)
                     .concat(chainSpaceNotes(instructionString, calculatedYield, expectedYield)));
@@ -3051,11 +3240,47 @@ window.CrochetMathEngine = (function() {
             errorDetails.push({ type: 'yield_mismatch', message: 'Yield mismatch' });
         }
 
+        // The count in double crochets, for a round worked into chain spaces.
+        //
+        // A granny square states "(24)" meaning twenty-four double crochets - never twenty-four plus
+        // the twelve chains that form its corner and side spaces. calculatedYield counts both, so a
+        // correct round reported half as much again as it made, the matrix showed the wrong number,
+        // and the linter offered to write it into the pattern.
+        //
+        // Two things have to come off, and they pull in opposite directions. Chains that FORM a space
+        // are scaffolding and are subtracted - including the ones inside a corner group, which is what
+        // the discount convention already knows how to do, so it is borrowed here rather than
+        // reimplemented. The opening chain that STANDS FOR a stitch is not scaffolding: it is the
+        // round's first dc wearing a chain's clothing, so it is added back. resolveStandingChains has
+        // already rewritten it to "ch 1" by this point, which is exactly why subtracting every chain
+        // leaves the count one short.
+        //
+        // Only computed for a round that went into spaces at all, so an ordinary row pays nothing for
+        // this and its reported count is untouched.
+        let stitchYield = calculatedYield;
+        if (spaceCost > 0) {
+            const previous = chainSpaceConvention;
+            chainSpaceConvention = 'discount';
+            let discounted;
+            try {
+                discounted = parseInstructions(instructionString, availableStitches, 0, availableCorners);
+            } finally {
+                chainSpaceConvention = previous;
+            }
+            const standsForAStitch = standingChainSubstitutes(instructionString);
+            stitchYield = Math.max(0,
+                (discounted.totalYield - discounted.chainYield) * rowMultiplier + (standsForAStitch ? 1 : 0));
+        }
+
+        // The figure this round reports, chosen by the declared convention. Named before the notes and
+        // the diagnosis context are built, so all three describe the same number.
+        const reportedYield = chainSpaceConvention === 'discount' ? stitchYield : calculatedYield;
+
         const notation = notationFaults(instructionString);
         const diagnosisContext = {
             availableStitches,
             totalCost,
-            calculatedYield,
+            calculatedYield: reportedYield,
             expectedYield,
             repeat: analyzeRepeatUnit(instructionString, rowMultiplier, parsed, availableStitches),
             unknownTokens: parsed.unrecognizedTokens,
@@ -3063,7 +3288,10 @@ window.CrochetMathEngine = (function() {
             // Whether the stitches balance, as decided above. buildFixes reports the imbalance itself
             // when it has no single edit to offer for it, and cannot re-derive that from the numbers:
             // a round working into chain spaces leaves stitches behind on purpose.
-            costIsValid
+            costIsValid,
+            // How much of this round went into chain spaces rather than into stitches. buildFixes uses
+            // it to withhold the stated-count rewrite - see the comment there.
+            spaceCost
         };
         const resolutions = buildResolutions(diagnosisContext);
         const likelyCauses = costIsValid && !parsed.unrecognizedTokens.length
@@ -3072,7 +3300,12 @@ window.CrochetMathEngine = (function() {
 
         return {
             costIsValid: costIsValid && parsed.unrecognizedTokens.length === 0,
-            calculatedYield,
+            // Which of the two readings the round reports is the designer's declared convention, not
+            // this function's choice - see stitchYield above.
+            calculatedYield: reportedYield,
+            // The other reading, always available. The pair is what lets the notes tell a designer
+            // that their written count matches the convention they have NOT selected.
+            rawYield: calculatedYield,
             // What the row eats, alongside what it makes. Both are worked out here either way; only the
             // yield used to be handed back, leaving every consumer to re-derive consumption from the
             // available count and get it wrong on any row that works into spaces.
@@ -3081,13 +3314,19 @@ window.CrochetMathEngine = (function() {
             errorDetails,
             unknownTokens: parsed.unrecognizedTokens,
             spaceCost,
+            // The same round counted in stitches rather than in stitches-and-chains. Equal to
+            // calculatedYield on every row that does not work into spaces, so a caller can read it
+            // unconditionally.
+            stitchYield,
             // Corners this round went into, so the next one knows how many it has.
             cornersUsed: parsed.cornersUsed,
             // A standing chain the pattern pairs unconventionally is followed, not corrected - the note
             // is the only place that difference is mentioned. Raised whether or not the arithmetic came
             // out: a row can be punctuated wrong and still land on the right number, and that is the
             // case most worth saying out loud, because nothing else about it looks amiss.
-            notes: buildCountNote(calculatedYield, expectedYield)
+            notes: buildCountNote(reportedYield, expectedYield)
+                .concat(conventionMismatchNote(expectedYield, reportedYield, stitchYield,
+                                               calculatedYield, spaceCost))
                 .concat(standingChainNotes(instructionString))
                 .concat(turningChainNote(instructionString))
                 .concat(chainSpaceNotes(instructionString, calculatedYield, expectedYield))
@@ -3462,8 +3701,14 @@ window.CrochetMathEngine = (function() {
      * the pattern meant as an answer. The body excludes brackets by character class, so a group holding
      * another group simply does not match - left alone whole rather than read half-way and rebuilt
      * wrong. Global, because standardizeRepeatText walks every group on a line.
+     *
+     * "*" is a multiplier here as well as "x": amigurumi is written "(2 sc, inc) * 6" at least as often
+     * as "[2 sc, inc] x 6", and expandBracketRepeats has always counted it - only this rule could not
+     * see it, so a pattern in that notation silently got no beginner-phrasing offer. It cannot collide
+     * with the OTHER meaning of "*" (the "*...; rep from * around" repeat marker), because that form
+     * has no closing bracket before its digits and so never reaches this alternation.
      */
-    const REPEAT_SHORTHAND_RE = /[\(\[]([^()\[\]]+)[\)\]]\s*(?:(?:x|rep(?:eat)?)\s*(\d+)|(\d+)\s*times)/gi;
+    const REPEAT_SHORTHAND_RE = /[\(\[]([^()\[\]]+)[\)\]]\s*(?:(?:x|\*|rep(?:eat)?)\s*(\d+)|(\d+)\s*times)/gi;
 
     /** Which plain stitch an increase makes two of, where the abbreviation says so itself. Bare "inc"
      *  is deliberately absent: it names no stitch, so the row it sits in has to supply one. */
@@ -3633,6 +3878,101 @@ window.CrochetMathEngine = (function() {
                 + 'follow along without decoding what the brackets and multiplier mean.',
             edit: { target: 'repeatPhrasing', from: match[0], to: phrased }
         };
+    }
+
+    /**
+     * Which way a shaping round distributes its increases: the difference between a circle and a
+     * hexagon.
+     *
+     *   'uniform'  (2 sc, inc) * 6                    - the whole round is one repeat
+     *   'offset'   1 sc, inc, (2 sc, inc) * 5, 1 sc   - a run of stitches sits outside the repeat
+     *   null       everything else - not a shaping round, or not one this can read
+     *
+     * WHY THIS MATTERS. Stacked increases land in the same position every round, so six increase
+     * columns run radially and the fabric creases along them - a flat circle comes out a hexagon.
+     * Staggering rotates the column by splitting one base run across the round boundary, which
+     * distributes the tension and produces a smooth curve. The two are arithmetically IDENTICAL -
+     * same six increases, same 6k plain stitches, same cost and yield - so nothing in the validation
+     * can tell them apart, and nothing should: both are correct. Only the finished object differs.
+     *
+     * WHY THE TEST IS COST, NOT TEXT. The tempting rule is "is there text outside the brackets", and
+     * it is wrong: a joined round is written "ch 2 (does not count as a stitch), [dc, dc-inc] x 12,
+     * sl st to first dc", where both of those fragments are outside the group and neither is a run of
+     * stitches. They cost NOTHING - a starting chain consumes no stitch and a joining slip stitch is
+     * stripped - where a real staggered prefix ("1 sc, inc") costs 2. So the question asked here is
+     * how much the outside CONSUMES from the round below, which is exactly the distinction wanted and
+     * needs no list of scaffolding phrases to maintain.
+     *
+     * Shaping is likewise read off the arithmetic rather than by looking for "inc" and "dec" by name:
+     * a group that yields more or fewer stitches than it consumes is shaping the fabric, whatever it
+     * calls itself. That also correctly passes over a mesh repeat like "(sc, ch 1, sk 1) x 12", which
+     * costs and yields two and is a stitch pattern rather than a shaping round.
+     */
+    function increaseStyle(instructionText) {
+        const text = String(instructionText || '');
+        if (!text) return null;
+
+        REPEAT_SHORTHAND_RE.lastIndex = 0;
+        const match = REPEAT_SHORTHAND_RE.exec(text);
+        REPEAT_SHORTHAND_RE.lastIndex = 0;
+        if (!match) return null;
+
+        const body = parseInstructions(match[1], 0);
+        if (body.totalCost === body.totalYield) return null;
+
+        const before = parseInstructions(text.slice(0, match.index), 0);
+        const after = parseInstructions(text.slice(match.index + match[0].length), 0);
+        return (before.totalCost + after.totalCost) > 0 ? 'offset' : 'uniform';
+    }
+
+    /**
+     * A piece that changes shaping strategy partway up, which leaves a seam on an otherwise smooth
+     * shape - or one flat facet on an otherwise faceted one.
+     *
+     * THE TRAP THIS EXISTS TO AVOID. A correctly staggered pattern ALTERNATES between the two forms:
+     *
+     *     Rnd 3: (1 sc, inc) * 6                    uniform
+     *     Rnd 4: 1 sc, inc, (2 sc, inc) * 5, 1 sc   offset
+     *     Rnd 5: (3 sc, inc) * 6                    uniform
+     *     Rnd 6: 2 sc, inc, (4 sc, inc) * 5, 2 sc   offset
+     *
+     * so a rule that fired whenever the style changed would fire on every round of a correct pattern -
+     * the single worst thing this check could do. What separates correct alternation from a real
+     * switch is the RHYTHM: staggering rotates the column one round at a time, so every offset round
+     * is separated by exactly one uniform round and two uniform shaping rounds never run together.
+     *
+     * So the finding is raised on the first offset round that follows two or more consecutive uniform
+     * ones - the round where the piece demonstrably stopped alternating, which is also the round a
+     * reader would look at. A pattern that is uniform throughout has no offset round and says nothing;
+     * a correctly staggered one never accumulates a uniform pair.
+     *
+     * @param styles the styles of a section's shaping rounds, in order, nulls already dropped.
+     * @returns { at, ...fix } where `at` indexes into `styles`, or null.
+     */
+    function buildIncreaseStyleFix(styles) {
+        const list = Array.isArray(styles) ? styles : [];
+        let uniformRun = 0;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i] === 'uniform') { uniformRun++; continue; }
+            if (list[i] !== 'offset') continue;
+            if (uniformRun < 2) { uniformRun = 0; continue; }
+
+            return {
+                at: i,
+                id: 'increase-style-mixed', severity: 'style',
+                title: 'This round staggers its increases, but the shaping above it stacks them',
+                detail: `The ${uniformRun} rounds before this one work their increases as a single `
+                    + `repeat, which lines them up in columns; this one splits a run across the start `
+                    + `and end of the round, which rotates them. Both are correct on their own — mixed `
+                    + `in one piece they leave a seam where the strategy changes.`,
+                lesson: 'Stacked increases pile up in six columns and read as the corners of a '
+                    + 'hexagon; staggered ones rotate each round and come out smooth. A staggered '
+                    + 'pattern alternates — one uniform round, one offset round — so two uniform '
+                    + 'shaping rounds in a row is the sign a piece has switched strategy partway up.',
+                edit: null
+            };
+        }
+        return null;
     }
 
     /** The abbreviation to write for an increase that doubles a stitch other than the row's own base -
@@ -3850,6 +4190,10 @@ window.CrochetMathEngine = (function() {
         ROW_LABELS,
         parseInstructions,
         analyzeRepeatUnit,
+        increaseStyle,
+        buildIncreaseStyleFix,
+        clusterCount,
+        buildClusterGrowthFix,
         // The cross-row half of the diagnosis. evaluateStep cannot reach it - it sees one row.
         applyUpstreamCause,
         buildFixes,

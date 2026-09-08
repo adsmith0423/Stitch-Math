@@ -3080,57 +3080,153 @@
      * and once about whether the checker can be trusted - so that suite is the real specification for
      * this table and the numbers below are not to be edited without running it.
      */
+    /**
+     * The front matter every round template opens with. Lifted out because the stacked and seamless
+     * versions of a shape differ ONLY in how their increases are distributed - if the two carried
+     * separate copies of the hook, yarn, gauge and abbreviations, a change to one would silently make
+     * the pair differ in something that has nothing to do with the strategy being demonstrated.
+     */
+    const AMIGURUMI_FRONT_MATTER = [
+        'Hook: 3.5mm (E/4), or size needed to obtain gauge',
+        'Yarn: Worsted Weight (Category 4), approx. 100 yards',
+        'Gauge: 16 sc x 18 rows = 4 in.',
+        '',
+        'Abbreviations',
+        'ch = chain',
+        'sc = single crochet',
+        'inc = increase (2 sc in the same stitch)',
+        'dec = decrease (2 sc worked together)',
+        ''
+    ];
+
+    const BEANIE_FRONT_MATTER = [
+        'Hook: 5.5mm (I/9), or size needed to obtain gauge',
+        'Yarn: Worsted Weight (Category 4), approx. 220 yards',
+        'Gauge: 12 dc x 7 rows = 4 in.',
+        '',
+        'Abbreviations',
+        'ch = chain',
+        'dc = double crochet',
+        'dc-inc = double crochet increase (2 dc in the same stitch)',
+        'sl st = slip stitch',
+        ''
+    ];
+
+    /*
+     * STACKED AND SEAMLESS, OFFERED AS PAIRS.
+     *
+     * A rounded piece can distribute its increases two ways, and the choice is visible in the finished
+     * object rather than in any number:
+     *
+     *   stacked   (2 sc, inc) * 6                    every increase in the same position each round,
+     *                                                so six columns run radially and the circle
+     *                                                creases along them - it comes out a hexagon.
+     *   seamless  1 sc, inc, (2 sc, inc) * 5, 1 sc   one base run split across the round boundary,
+     *                                                which rotates the column and spreads the tension.
+     *
+     * The two are ARITHMETICALLY IDENTICAL - same six increases, same 6k plain stitches, same cost and
+     * yield - so no amount of validation can prefer one, and neither is a mistake. That is exactly why
+     * they are offered as pairs: the difference is a design decision, and the only honest way to teach
+     * it is to let someone insert both and look at the two.
+     *
+     * Within a pair the notation matches (the sphere and circle pairs in "(...) * N", the beanie pair
+     * in "[...] x N") so that the strategy is the ONLY thing that differs between them. Across pairs it
+     * varies on purpose - both spellings are valid and a designer meets each.
+     */
     const PATTERN_TEMPLATES = [
         {
-            id: 'sphere',
-            name: 'Basic Amigurumi Sphere',
-            blurb: 'Worked in continuous rounds from a magic ring: increase to the middle, straight sides, then decrease away.',
-            text: [
-                'Hook: 3.5mm (E/4), or size needed to obtain gauge',
-                'Yarn: Worsted Weight (Category 4), approx. 100 yards',
-                'Gauge: 16 sc x 18 rows = 4 in.',
-                '',
-                'Abbreviations',
-                'ch = chain',
-                'sc = single crochet',
-                'inc = increase (2 sc in the same stitch)',
-                'dec = decrease (2 sc worked together)',
-                '',
+            id: 'circle-stacked',
+            name: 'Flat Circle (stacked)',
+            blurb: 'Increases pile up in six columns, so the disc reads as a hexagon. Choose it when you want visible structure — or to see what staggering fixes.',
+            text: AMIGURUMI_FRONT_MATTER.concat([
+                'Flat Circle',
+                'Rnd 1: 6 sc in magic ring (6)',
+                'Rnd 2: inc in each st around (12)',
+                'Rnd 3: (1 sc, inc) * 6 (18)',
+                'Rnd 4: (2 sc, inc) * 6 (24)',
+                'Rnd 5: (3 sc, inc) * 6 (30)',
+                'Rnd 6: (4 sc, inc) * 6 (36)'
+            ]).join('\n')
+        },
+        {
+            id: 'circle-seamless',
+            name: 'Flat Circle (seamless)',
+            blurb: 'The same stitch counts, round for round — but each even round splits its first run across the join, rotating the increases so the disc lies flat and smooth.',
+            text: AMIGURUMI_FRONT_MATTER.concat([
+                'Flat Circle',
+                'Rnd 1: 6 sc in magic ring (6)',
+                'Rnd 2: inc in each st around (12)',
+                'Rnd 3: (1 sc, inc) * 6 (18)',
+                'Rnd 4: 1 sc, inc, (2 sc, inc) * 5, 1 sc (24)',
+                'Rnd 5: (3 sc, inc) * 6 (30)',
+                'Rnd 6: 2 sc, inc, (4 sc, inc) * 5, 2 sc (36)'
+            ]).join('\n')
+        },
+        {
+            id: 'sphere-stacked',
+            name: 'Amigurumi Sphere (stacked)',
+            blurb: 'Continuous rounds from a magic ring: increase to the middle, straight sides, decrease away. Increases and decreases both stack, so the shape has six soft facets.',
+            text: AMIGURUMI_FRONT_MATTER.concat([
                 'Sphere',
                 'Rnd 1: 6 sc in magic ring (6)',
                 'Rnd 2: inc in each st around (12)',
-                'Rnd 3: [sc, inc] x 6 (18)',
-                'Rnd 4: [2 sc, inc] x 6 (24)',
+                'Rnd 3: (1 sc, inc) * 6 (18)',
+                'Rnd 4: (2 sc, inc) * 6 (24)',
                 'Rnd 5-8: sc in each st around (24)',
-                'Rnd 9: [2 sc, dec] x 6 (18)',
-                'Rnd 10: [sc, dec] x 6 (12)',
-                'Rnd 11: dec x 6 (6)'
-            ].join('\n')
+                'Rnd 9: (2 sc, dec) * 6 (18)',
+                'Rnd 10: (1 sc, dec) * 6 (12)',
+                'Rnd 11: dec * 6 (6)'
+            ]).join('\n')
         },
         {
-            id: 'beanie',
-            name: 'Top-Down Beanie',
-            blurb: 'A flat circle crown increased to size, then worked straight down the sides. Joined rounds.',
+            id: 'sphere-seamless',
+            name: 'Amigurumi Sphere (seamless)',
+            blurb: 'Identical counts to the stacked sphere, with the shaping rotated on the even rounds — the version to use when the seam would show through stuffing.',
+            text: AMIGURUMI_FRONT_MATTER.concat([
+                'Sphere',
+                'Rnd 1: 6 sc in magic ring (6)',
+                'Rnd 2: inc in each st around (12)',
+                'Rnd 3: (1 sc, inc) * 6 (18)',
+                'Rnd 4: 1 sc, inc, (2 sc, inc) * 5, 1 sc (24)',
+                'Rnd 5-8: sc in each st around (24)',
+                'Rnd 9: (2 sc, dec) * 6 (18)',
+                // k=1, so the prefix has no plain stitches before its decrease and the whole base run
+                // moves to the suffix. Still exactly six decreases over 18 stitches.
+                'Rnd 10: dec, (1 sc, dec) * 5, 1 sc (12)',
+                'Rnd 11: dec * 6 (6)'
+            ]).join('\n')
+        },
+        {
+            id: 'beanie-stacked',
+            name: 'Top-Down Beanie (stacked crown)',
+            blurb: 'A flat circle crown increased to size, then worked straight down the sides. Joined rounds, with the crown increases stacked.',
             // The "does not count as a stitch" convention rather than a ch-3 that stands in for the
             // first dc: both are correct and published, but only one of them leaves a beginner's
             // arithmetic doing what it looks like it does.
-            text: [
-                'Hook: 5.5mm (I/9), or size needed to obtain gauge',
-                'Yarn: Worsted Weight (Category 4), approx. 220 yards',
-                'Gauge: 12 dc x 7 rows = 4 in.',
-                '',
-                'Abbreviations',
-                'ch = chain',
-                'dc = double crochet',
-                'sl st = slip stitch',
-                '',
+            text: BEANIE_FRONT_MATTER.concat([
                 'Crown',
                 'Rnd 1: ch 2 (does not count as a stitch), 12 dc in magic ring, sl st to first dc (12)',
                 'Rnd 2: ch 2 (does not count as a stitch), dc-inc in each st around, sl st to first dc (24)',
                 'Rnd 3: ch 2 (does not count as a stitch), [dc, dc-inc] x 12, sl st to first dc (36)',
                 'Rnd 4: ch 2 (does not count as a stitch), [2 dc, dc-inc] x 12, sl st to first dc (48)',
                 'Rnd 5-12: ch 2 (does not count as a stitch), dc in each st around, sl st to first dc (48)'
-            ].join('\n')
+            ]).join('\n')
+        },
+        {
+            id: 'beanie-seamless',
+            name: 'Top-Down Beanie (seamless crown)',
+            blurb: 'The same crown, with the last increase round rotated so the increase columns do not read as ridges under a close-fitting hat.',
+            text: BEANIE_FRONT_MATTER.concat([
+                'Crown',
+                'Rnd 1: ch 2 (does not count as a stitch), 12 dc in magic ring, sl st to first dc (12)',
+                'Rnd 2: ch 2 (does not count as a stitch), dc-inc in each st around, sl st to first dc (24)',
+                'Rnd 3: ch 2 (does not count as a stitch), [dc, dc-inc] x 12, sl st to first dc (36)',
+                // Twelve repeats rather than six, so the core runs 11 times and the split run is one dc
+                // on each side. The ch 2 and the joining sl st cost nothing, so they are not what makes
+                // this round read as offset - the 1 dc either side of the repeat is.
+                'Rnd 4: ch 2 (does not count as a stitch), 1 dc, dc-inc, [2 dc, dc-inc] x 11, 1 dc, sl st to first dc (48)',
+                'Rnd 5-12: ch 2 (does not count as a stitch), dc in each st around, sl st to first dc (48)'
+            ]).join('\n')
         },
         {
             id: 'scarf',
@@ -3154,7 +3250,13 @@
         {
             id: 'granny',
             name: 'Granny Square',
-            blurb: 'Clusters worked into chain spaces rather than into stitches - the shape that teaches why a round can leave stitches unworked.',
+            // A granny square states its counts in double crochets and leaves out the chains that form
+            // its corner and side spaces, which is the "discount" reading. Declared here and applied on
+            // insert, so the template arrives with the app set to the convention it was written in
+            // rather than showing a fourteen-stitch discrepancy the reader has to diagnose. The control
+            // visibly changes, so nothing is done behind the designer's back.
+            chainSpace: 'discount',
+            blurb: 'Five rounds of clusters worked into chain spaces rather than into stitches. Grows by exactly four clusters a round \u2014 4, 8, 12, 16, 20 \u2014 which is what keeps it square.',
             text: [
                 'Hook: 4.0mm (G/6), or size needed to obtain gauge',
                 'Yarn: Worsted Weight (Category 4), approx. 60 yards',
@@ -3165,9 +3267,15 @@
                 'dc = double crochet',
                 'sl st = slip stitch',
                 '',
+                'Note: counts are double crochets only, and do not include the corner and side chains.',
+                'Set "Chain-Sp Counts As" to "only the stitches worked into it" to check them.',
+                '',
                 'Granny Square',
                 'Rnd 1: ch 4, sl st to form ring. ch 3, 2 dc in ring, [ch 2, 3 dc in ring] x 3, ch 2, sl st to top of ch-3 (12)',
-                'Rnd 2: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, sl st to top of ch-3 (24)'
+                'Rnd 2: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, sl st to top of ch-3 (24)',
+                'Rnd 3: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp, ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, 3 dc in next ch-1 sp, ch 1, sl st to top of ch-3 (36)',
+                'Rnd 4: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, sl st to top of ch-3 (48)',
+                'Rnd 5: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, sl st to top of ch-3 (60)'
             ].join('\n')
         }
     ];
@@ -3187,6 +3295,13 @@
 
         const apply = () => {
             box.value = template.text;
+            // Before the parse, not after: the convention decides what every round of the pattern
+            // counts, so applying it afterwards would validate once against the wrong reading.
+            if (template.chainSpace && UI['meta-chain-space-convention']) {
+                UI['meta-chain-space-convention'].value = template.chainSpace;
+                window.CrochetMathEngine.setChainSpaceConvention(template.chainSpace);
+                syncMetadataToGauge();
+            }
             handleBulkSubmit();
             notify(`Inserted the ${template.name} template.`, 'success');
         };
@@ -4110,6 +4225,75 @@
         });
     }
 
+    /**
+     * Flags a piece that changes increase strategy partway up - stacked shaping for several rounds,
+     * then staggered, or the reverse - which leaves a visible seam on an otherwise smooth shape.
+     *
+     * Scoped to the SECTION, because a sphere and the beanie worked after it are two objects and each
+     * is entitled to its own strategy. Rounds the engine cannot classify are dropped rather than
+     * breaking the run: a sphere's straight middle sits between its increases and its decreases and
+     * says nothing about either.
+     *
+     * A post-pass rather than part of the walk, matching addUpstreamCauses above: the engine's rule
+     * reads a whole section's rhythm, and keeping it a pure function of that list is what makes it
+     * testable without building a pattern first. Read stepInstructionText, not instructionString, for
+     * the same reason the dialect and shorthand checks do - preprocessTurningChain has taken the
+     * opening chain out of the evaluated form, and a round is classified on what the designer wrote.
+     */
+    function addIncreaseStyleFindings(rows) {
+        const sections = [];
+        let current = [];
+        sections.push(current);
+
+        rows.forEach(row => {
+            if (row.status === 'section') { current = []; sections.push(current); return; }
+            if (row.status === 'note' || row.step.isNote) return;
+            const style = window.CrochetMathEngine.increaseStyle(stepInstructionText(row.step));
+            if (style) current.push({ style, row });
+        });
+
+        sections.forEach(shaped => {
+            const fix = window.CrochetMathEngine.buildIncreaseStyleFix(shaped.map(entry => entry.style));
+            if (!fix) return;
+            const target = shaped[fix.at];
+            if (!target) return;
+            const { at, ...finding } = fix;
+            target.row.evaluation.fixes = (target.row.evaluation.fixes || []).concat(finding);
+        });
+    }
+
+    /**
+     * Flags a square whose rounds do not grow by four clusters.
+     *
+     * A granny square adds one cluster to each of its four sides every round, so it runs 4, 8, 12, 16.
+     * A round that drops one still balances perfectly - it consumes what the round below produced and
+     * states a count that matches - so nothing else in the engine notices, and the piece comes out a
+     * rhombus. This is the only check that looks at the shape rather than the arithmetic.
+     *
+     * Only consecutive rounds that BOTH carry the granny signature are compared (see clusterCount);
+     * anything else breaks the run rather than being compared across a gap, so a square followed by a
+     * border, or a document holding a square and a shawl, is not measured against itself.
+     */
+    function addClusterGrowthFindings(rows) {
+        let previous = null;
+        rows.forEach(row => {
+            if (row.status === 'section') { previous = null; return; }
+            if (row.status === 'note' || row.step.isNote) return;
+
+            const clusters = window.CrochetMathEngine.clusterCount(
+                row.evaluation, stepInstructionText(row.step));
+            // A round the gate does not recognise ends the run: comparing across it would measure a
+            // square's round 5 against its round 3 and report a jump of eight that is not there.
+            if (clusters === null) { previous = null; return; }
+
+            if (previous !== null) {
+                const fix = window.CrochetMathEngine.buildClusterGrowthFix(previous, clusters, row.label);
+                if (fix) row.evaluation.fixes = (row.evaluation.fixes || []).concat(fix);
+            }
+            previous = clusters;
+        });
+    }
+
     /** Single source of truth for the row-by-row validation pass. The on-screen table, the print area
      *  and the text export all need the same calculated counts, and before this existed the first two
      *  ran separate loops that could disagree. */
@@ -4364,6 +4548,8 @@
         });
 
         addUpstreamCauses(rows);
+        addIncreaseStyleFindings(rows);
+        addClusterGrowthFindings(rows);
 
         // Two halves: what the pattern does, and what it adds up to. The analytics counters are
         // tallied by the loop above rather than by a second walk over the rows, so they cost nothing
@@ -5118,9 +5304,15 @@
 
         if (edit.target === 'multiplier') {
             // The shapes extractMultiplier and analyzeRepeatUnit both read: "x 3", "x3", "rep 3",
-            // "repeat 3 times". The LAST one stating the number the engine measured is the one that
-            // moves - a row can carry both a bracket's own count and the row's.
-            const re = /\b(?:x|times|rep(?:eat)?)\s*(\d+)/gi;
+            // "repeat 3 times", "* 3". The LAST one stating the number the engine measured is the one
+            // that moves - a row can carry both a bracket's own count and the row's.
+            //
+            // "*" sits OUTSIDE the \b rather than inside the alternation with the words: a word
+            // boundary before "*" asks the character before it to be a word character, which in
+            // "(2 sc, inc) * 5" is a space - so written the obvious way this never matches, the edit
+            // resolves to null, and a correction the engine had already worked out degrades silently
+            // to advice with no button.
+            const re = /(?:\b(?:x|times|rep(?:eat)?)|\*)\s*(\d+)/gi;
             let match, last = null;
             while ((match = re.exec(text)) !== null) {
                 if (parseInt(match[1], 10) === edit.from) last = match;

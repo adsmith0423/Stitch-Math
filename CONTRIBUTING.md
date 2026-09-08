@@ -109,7 +109,7 @@ source files did not have to change to run under Node.
 `./run-tests.sh` is kept as the macOS fallback and takes a filter argument, which the Node
 runner does not. Both exit non-zero on any failure, so either can gate a commit.
 
-The baseline is **3944 assertions, 0 failed** across 105 node:test cases, and the two runners report identical per-suite
+The baseline is **4112 assertions, 0 failed** across 107 node:test cases, and the two runners report identical per-suite
 counts. If a previously passing count drops, that is a regression; if one rises, check that
 an assertion was not simply loosened.
 
@@ -152,10 +152,16 @@ against the real markup via `readFile('index.html')`. That is why `run-tests.sh`
 paths instead of changing directory.
 
 **Baseline that must hold.** Engine 177/177, parser 8/8, feedback 5/5, analytics 16/16;
-**3944 assertions, 0 failed** as `./run-tests.sh` reports it on its closing line, which is the
+**4112 assertions, 0 failed** as `./run-tests.sh` reports it on its closing line, which is the
 grand total across every suite including the engine ones named above;
 `test-corpus-pattern` and `test-corpus-p2` at 0 failing
-rows; `test-corpus-suite` at 12 of 12 and `test-corpus-suite2` at 10 of 10;
+rows; `test-corpus-pattern` and `test-corpus-p2` also at **0 miscounted**; `test-corpus-suite` at 12 of 12
+and `test-corpus-suite2` at 10 of 10. All four now hold the same stronger claim: a row counts as good
+only if it passed **and** its calculated count agrees with the one the pattern wrote. A disagreeing
+written count is advisory and never fails a row, so the older FAIL-only baselines called a corpus
+clean while it displayed the wrong figure on every line — which is how a broken granny square shipped.
+A pattern written in a non-default chain-space convention declares it with `chainSpace: 'discount'` on
+its corpus entry rather than being left to disagree;
 `test-corpus-garment` at 3 of 3 read the same from OCR and PDF, 234 work rows, 16 failing —
 that last one is **expected** to be short of perfect and the OCR/PDF agreement is the
 load-bearing half of it. A previously passing count that drops is a regression; one that rises

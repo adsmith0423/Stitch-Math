@@ -55,14 +55,30 @@ function run(pat) {
     // Construction used to be forced here, to 'Rounds (Circular)' - not even one of the dropdown's
     // own option values; it only ever worked because worksInRounds does a substring test. It is read
     // off each pattern's own "Rnd"/"Row" labels now, which is what the `rounds` flag already recorded.
+    // Each pattern is read in the convention it was written in; anything without one gets the app
+    // default, which is what it has always had. See test-corpus-suite.js.
+    $('meta-chain-space-convention').value = pat.chainSpace || 'count';
+    $('meta-chain-space-convention').fire('change');
     $('bulk-input').value = pat.rows.join('\n');
     $('bulk-parse-btn').fire('click');
     var body = $('step-sequence-body').children, bad = [];
     body.forEach(function (tr, i) {
+        if (tr.children.length < 6) return;              // note and section rows span the table
         var st = tr.children[5].innerHTML;
-        if (/FAIL/.test(st)) bad.push({ row: i+1, stated: tr.children[3].textContent,
-            got: tr.children[4].innerHTML.replace(/<[^>]*>/g,'').trim().split(' ')[0],
-            why: st.replace(/<span class="math-reason">/g,' :: ').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,100) });
+        var stated = String(tr.children[3].textContent).trim();
+        var got = tr.children[4].innerHTML.replace(/<[^>]*>/g,'').trim().split(' ')[0];
+        if (/FAIL/.test(st)) {
+            bad.push({ row: i+1, stated: stated, got: got,
+                why: st.replace(/<span class="math-reason">/g,' :: ').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,100) });
+            return;
+        }
+        // "Fully clean" means the row passed AND the number reported for it is the number the pattern
+        // wrote. A disagreeing written count never fails a row, so the FAIL-only check called a corpus
+        // clean while it displayed the wrong figure on every line - see test-corpus-suite.js.
+        if (stated && stated !== '0' && got && stated !== got) {
+            bad.push({ row: i+1, stated: stated, got: got,
+                       why: 'passed, but the calculated count disagrees with the written one' });
+        }
     });
     return { total: body.length, bad: bad };
 }

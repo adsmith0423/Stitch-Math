@@ -58,6 +58,28 @@ for (var i = 0; i < count; i++) {
     ck(name + ' has no failing row', failingRows().join(',') || 'none', 'none');
 }
 
+print('\n2b. Every skeleton\'s written counts match what Stitch Math calculates');
+// THE assertion that was missing, and the reason a granny square shipped whose every round displayed
+// the wrong number. "No failing rows" is not the same claim: a count in brackets that disagrees with
+// the stitches is advisory and never fails a row, so a template could show "written 24, calculated 38"
+// on every line and still pass section 2. A template is a worked example - if its own numbers do not
+// agree, it teaches the reader to ignore the one figure the tool exists to produce.
+for (var n = 0; n < count; n++) {
+    $('bulk-input').value = '';
+    var tname = templateName(n);
+    insertButton(n).fire('click');
+    var disagreed = [];
+    $('step-sequence-body').children.forEach(function (tr) {
+        if (tr.children.length < 6) return;
+        var stated = String(tr.children[3].textContent).trim();
+        var calc = tr.children[4].innerHTML.replace(/<[^>]*>/g, '').trim().split(' ')[0];
+        // A row stating no count of its own has nothing to disagree with.
+        if (!stated || stated === '0') return;
+        if (stated !== calc) disagreed.push(tr.children[0].textContent + ' says ' + stated + ', calculated ' + calc);
+    });
+    ck(tname + ' agrees with itself on every row', disagreed.join(' | ') || 'none', 'none');
+}
+
 print('\n3. Every skeleton states all four required elements');
 // The skeleton demonstrates what requiredElements asks for rather than merely satisfying it, so this
 // is checked against the inserted text, not against the metadata form.

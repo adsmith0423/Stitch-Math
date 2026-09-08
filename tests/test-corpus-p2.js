@@ -14,6 +14,9 @@ var PAT = [
 $('bulk-input').value = PAT;
 $('bulk-parse-btn').fire('click');
 var bad = 0;
+// See test-corpus-pattern.js: a passing row whose calculated count disagrees with the written one is
+// its own fault, and counting only failures hides it completely.
+var miscount = 0;
 print(' #  |exp |got | ok');
 print('----+----+----+---------------------------------------------');
 $('step-sequence-body').children.forEach(function (tr, i) {
@@ -23,6 +26,7 @@ $('step-sequence-body').children.forEach(function (tr, i) {
     var st  = c[5].innerHTML.replace(/<span class="math-reason">/g,' :: ').replace(/<span class="math-fix">/g,' >> ').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
     var ok  = st.indexOf('FAIL') === -1;
     if (!ok) bad++;
+    else if (c.length >= 6 && exp && exp.trim() !== '0' && got && exp.trim() !== got) miscount++;
     print(('R'+(i+1)+'    ').slice(0,4)+'|'+('   '+exp).slice(-4)+'|'+('   '+got).slice(-4)+'| '+(ok?'ok':'XX  '+st.slice(0,120)));
 });
-print('\n'+bad+' of '+$('step-sequence-body').children.length+' rows failed');
+print('\n'+bad+' of '+$('step-sequence-body').children.length+' rows failed, '+miscount+' miscounted');

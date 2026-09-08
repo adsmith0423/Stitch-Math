@@ -57,7 +57,10 @@ var PATTERNS = [
 "Row 2: ch 1, turn, htr in each st across (20)",
 "Row 3: ch 2, turn, tr in each st across (20)"]},
 
-{ name: "Granny square (rounds, ch-2 corners)", rounds: true, rows: [
+// Written in double crochets only, the way granny squares are: "(24)" is 24 dc and does not include
+// the chains forming the corner and side spaces. Declared rather than assumed, because the app's
+// default convention counts those chains and would read this correct square as 11 and 38.
+{ name: "Granny square (rounds, ch-2 corners)", rounds: true, chainSpace: 'discount', rows: [
 "Rnd 1: ch 4, sl st to join, ch 3, 2 dc in ring, ch 2, [3 dc in ring, ch 2] x 3, sl st to top of ch-3 (12)",
 "Rnd 2: sl st to ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, (3 dc, ch 2, 3 dc) in next ch-2 sp] x 3, ch 1, sl st to top (24)"]},
 
@@ -70,20 +73,37 @@ function run(pat) {
     // Construction used to be forced here, to 'Rounds (Circular)' - not even one of the dropdown's
     // own option values; it only ever worked because worksInRounds does a substring test. It is read
     // off each pattern's own "Rnd"/"Row" labels now, which is what the `rounds` flag already recorded.
+    // Each pattern is read in the convention it was written in. Everything without one gets the
+    // app default, which is what it has always had.
+    $('meta-chain-space-convention').value = pat.chainSpace || 'count';
+    $('meta-chain-space-convention').fire('change');
     $('bulk-input').value = pat.rows.join('\n');
     $('bulk-parse-btn').fire('click');
 
     var body = $('step-sequence-body').children;
     var bad = [];
     body.forEach(function (tr, i) {
+        if (tr.children.length < 6) return;                 // note and section rows span the table
         var st = tr.children[5].innerHTML;
+        var stated = String(tr.children[3].textContent).trim();
+        var got = tr.children[4].innerHTML.replace(/<[^>]*>/g,'').trim().split(' ')[0];
         if (/FAIL/.test(st)) {
             bad.push({
-                row: i + 1,
-                stated: tr.children[3].textContent,
-                got: tr.children[4].innerHTML.replace(/<[^>]*>/g,'').trim().split(' ')[0],
+                row: i + 1, stated: stated, got: got,
                 why: st.replace(/<span class="math-reason">/g,' :: ').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0, 110)
             });
+            return;
+        }
+        // A PASSING row whose calculated count disagrees with the one the designer wrote.
+        //
+        // This is the failure mode that let a granny square ship reading 11 and 38 where the pattern
+        // said 12 and 24: a written count that disagrees is advisory and never fails a row, so
+        // counting only FAILs said every pattern here was clean while one of them displayed the wrong
+        // number on every line. "Fully clean" now means the row passed AND the two numbers agree,
+        // which is the claim the metric was always assumed to be making.
+        if (stated && stated !== '0' && got && stated !== got) {
+            bad.push({ row: i + 1, stated: stated, got: got,
+                       why: 'passed, but the calculated count disagrees with the written one' });
         }
     });
     return { total: body.length, bad: bad };
