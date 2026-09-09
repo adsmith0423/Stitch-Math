@@ -21,10 +21,11 @@ function addStitch(name, def, cost, yieldVal) {
 }
 
 // Compiler and Studio were two entries onto the same panels and were merged, so the count has never
-// been one per panel group. Construction is the twelfth, after Schematics was retired.
+// been one per panel group. Construction is the eleventh, after Schematics was retired and the
+// Studio Locker removed with the avatar.
 var NAV_IDS = ['nav-dashboard', 'nav-patterns', 'nav-library', 'nav-studio', 'nav-sizer',
     'nav-testers', 'nav-analytics', 'nav-gauge',
-    'nav-publish', 'nav-locker', 'nav-construction', 'nav-settings'];
+    'nav-publish', 'nav-construction', 'nav-settings'];
 
 // Every panel the app had before the shell landed, plus Settings, Help and the panels split out of the
 // grader since. Each must still be in the markup and reachable from exactly one view.
@@ -33,7 +34,7 @@ var PANELS = ['intro-header', 'project-panel', 'metadata-panel', 'input-section'
     'finished-size-panel',
     'pattern-analytics-dashboard', 'output-section', 'complexity-panel',
     'custom-stitch-section', 'gauge-profile-panel', 'gauge-history-dashboard',
-    'settings-panel', 'help-panel', 'locker-panel'];
+    'settings-panel', 'help-panel'];
 
 var CLEAN = [
     'Row 1: ch 13, sc in 2nd ch from hook and in each ch across (12)',
@@ -41,7 +42,7 @@ var CLEAN = [
     'Row 3: ch 1, turn, sc in each st across (18)'
 ];
 
-print('\n1. Twelve destinations, none of them a form control');
+print('\n1. Eleven destinations, none of them a form control');
 NAV_IDS.forEach(function (id) {
     ok(id + ' is in the markup', HTML.indexOf('id="' + id + '"') !== -1);
 });
@@ -49,10 +50,11 @@ NAV_IDS.forEach(function (id) {
     var tag = (HTML.match(new RegExp('<(\\w+)[^>]*\\bid="' + id + '"')) || [, ''])[1];
     ck(id + ' is a button', tag, 'button');
 });
-ck('twelve of them', (HTML.match(/class="nav-item"/g) || []).length, 12);
+ck('eleven of them', (HTML.match(/class="nav-item"/g) || []).length, 11);
 no('Compiler is no longer a destination of its own', /id="nav-compiler"/.test(HTML));
 no('Schematics is retired', /id="nav-schematics"/.test(HTML));
-// The twelve are grouped into four hubs now, so document order follows the grouping rather than
+no('and the Studio Locker went with the avatar', /id="nav-locker"/.test(HTML));
+// The eleven are grouped into four hubs now, so document order follows the grouping rather than
 // the old flat run. Within Library & Assets, Pattern Files still leads into the Stitch Library.
 ok('Pattern Files leads into Stitch Library',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-library"'));
@@ -69,18 +71,18 @@ HUB_IDS.forEach(function (id) {
 ck('four of them', (HTML.match(/class="nav-hub"/g) || []).length, 4);
 ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 4);
 // A hub is not a destination. If one ever gained a NAV_TARGETS entry it would own a route and a
-// view, and the rail would have sixteen places to go rather than twelve.
+// view, and the rail would have fifteen places to go rather than eleven.
 HUB_IDS.forEach(function (id) {
     no(id + ' is not itself a destination', HTML.indexOf('id="' + id + '" class="nav-item"') !== -1);
 });
-// The grouping lives in app.js. Read it back and prove it covers the twelve exactly once - a
-// thirteenth view added with a route and no hub would otherwise be reachable by URL and invisible
+// The grouping lives in app.js. Read it back and prove it covers the eleven exactly once - a
+// twelfth view added with a route and no hub would otherwise be reachable by URL and invisible
 // in the rail, which is the failure this pins.
 var shellSrc = readFile('app.js');
 var hubBody = shellSrc.slice(shellSrc.indexOf('const NAV_HUBS = {'),
                              shellSrc.indexOf('const HUB_IDS'));
 var grouped = (hubBody.match(/'nav-[a-z]+'/g) || []).map(function (s) { return s.slice(1, -1); });
-ck('NAV_HUBS lists twelve destinations', grouped.length, 12);
+ck('NAV_HUBS lists eleven destinations', grouped.length, 11);
 NAV_IDS.forEach(function (id) {
     ck(id + ' has exactly one hub', grouped.filter(function (g) { return g === id; }).length, 1);
 });
@@ -97,8 +99,8 @@ NAV_IDS.forEach(function (id) {
 });
 // Where you are decides which hub is open, so the two cannot drift apart. Spot-check the mapping
 // rather than trusting that "exactly one" happened to be the right one.
-nav('nav-locker');
-ck('the Locker opens Library & Assets', openHubs()[0], 'hub-library');
+nav('nav-gauge');
+ck('the Gauge Profile opens Library & Assets', openHubs()[0], 'hub-library');
 nav('nav-construction');
 ck('Construction opens Studio', openHubs()[0], 'hub-studio');
 nav('nav-analytics');
@@ -114,13 +116,13 @@ var STAGE_NAV = ['nav-patterns', 'nav-studio', 'nav-sizer', 'nav-testers', 'nav-
 function stage(navId) { return $('stage-' + navId); }
 function railShown() { return !hidden('stage-rail'); }
 
-// On for the workflow, off everywhere else. A five-step "write a pattern" strip above the Studio
-// Locker would be pointing at work that page has nothing to do with.
+// On for the workflow, off everywhere else. A five-step "write a pattern" strip above the Gauge
+// Profile would be pointing at work that page has nothing to do with.
 STAGE_NAV.forEach(function (id) {
     nav(id);
     ok(id + ' shows the rail', railShown());
 });
-['nav-dashboard', 'nav-analytics', 'nav-gauge', 'nav-locker', 'nav-construction', 'nav-settings',
+['nav-dashboard', 'nav-analytics', 'nav-gauge', 'nav-construction', 'nav-settings',
  'nav-library'].forEach(function (id) {
     nav(id);
     no(id + ' does not', railShown());
@@ -254,7 +256,7 @@ var LEFT_SLICE = HTML.slice(HTML.indexOf('id="left-column"'), HTML.indexOf('id="
  ['structure-section', false], ['grader-section', false], ['input-section', false],
  ['tester-panel', false], ['tester-notes-panel', false],
  ['matrix-section', false], ['settings-panel', false], ['help-panel', false],
- ['publish-panel', false], ['locker-panel', false],
+ ['publish-panel', false],
  ['construction-panel', false], ['construction-yoke-panel', false],
  ['construction-impact-panel', false]].forEach(function (pair) {
     ck(pair[0] + (pair[1] ? ' is in the left column' : ' is in the right column'),
@@ -986,402 +988,7 @@ ck('and New File leaves all of it standing', $('rec-stitches').textContent, '56'
 // Left as the app found it, so the sections below start from a known store.
 resetProgress();
 
-print('\n13. The Studio Locker');
-// TEMPORARY, paired with the review switch in app.js: the shop currently hands out every item free so the
-// wardrobe can be tried on. Every rule about BUYING one is vacuous while that is on, so the shop is locked
-// for these sections and let go again at 13j-ii, which checks the switch itself. When the switch is
-// deleted from app.js, delete these two lines and 13j-ii with it.
-window.STITCH_LOCK_SHOP = true;
-
-// The tiles are real elements with ids, so a purchase can be made the way a designer makes one - by
-// pressing the thing. `item(id)` is the tile for a catalogue entry.
-function item(id) { return $('locker-item-' + id); }
-function art(id) { return $('locker-art-' + id); }
-// Whether a tile is actually in the grid. getElementById cannot answer this - the stub conjures an empty
-// div for any id it has never seen - so the grid is walked instead.
-function tileIds() {
-    var ids = [];
-    ($('locker-grid').children || []).forEach(function (node) {
-        (node.children || []).forEach(function (tile) {
-            if (tile.id) ids.push(String(tile.id).replace('locker-item-', ''));
-        });
-    });
-    return ids;
-}
-function tileShown(id) {
-    var found = false;
-    ($('locker-grid').children || []).forEach(function (node) {
-        (node.children || []).forEach(function (tile) {
-            if (tile.id === 'locker-item-' + id) found = true;
-        });
-    });
-    return found;
-}
-function openLocker() { nav('nav-locker'); }
-
-resetProgress();
-openLocker();
-ck('a fresh browser owns only the free face', $('locker-owned').textContent, '1 of 50 owned');
-ck('and is wearing it', progress().equipped.head, 'head-swoop');
-ck('so the free face reads as worn', item('head-swoop').text().indexOf('Wearing') >= 0, true);
-ok('and the avatar is drawn into the topbar', /<svg class="av/.test($('av-topbar').innerHTML));
-ok('and the sidebar', /<svg class="av/.test($('av-sidebar').innerHTML));
-ok('and the locker itself', /<svg class="av/.test($('av-hero').innerHTML));
-
-print('\n13b. An item beyond the balance is refused');
-seedProgress({ points: 30 });
-openLocker();
-ok('it renders locked', item('ruffle-hibiscus-sun').classList.contains('is-locked'));
-item('ruffle-hibiscus-sun').fire('click');
-ck('pressing it takes nothing', progress().points, 30);
-no('and hands over nothing', progress().owned['ruffle-hibiscus-sun']);
-
-// Silence was the bug: pressing an item you could not afford rebuilt the whole grid, threw away the
-// scroll position and said nothing, which looks exactly like a dead click.
-ok('and says how far short it is', /Ruffle Hat costs 400 points/.test($('locker-note').textContent));
-ok('with the shortfall named', /370 short/.test($('locker-note').textContent));
-
-print('\n13b-ii. A refused press does not rebuild the grid');
-// Same elements, not replacements: a rebuild is what lost the reader's place on a page this tall, so a
-// click that changes nothing must not touch the tiles.
-var tileBefore = item('ruffle-hibiscus-sun');
-item('ruffle-hibiscus-sun').fire('click');
-ck('the tile is the same element afterwards', item('ruffle-hibiscus-sun') === tileBefore, true);
-// And a real purchase refreshes in place rather than replacing the grid.
-seedProgress({ points: 500 });
-openLocker();
-var keptTile = item('beanie-hibiscus-sun');
-item('beanie-hibiscus-sun').fire('click');
-ck('buying keeps the tiles it drew', item('beanie-hibiscus-sun') === keptTile, true);
-ck('and updates the one it changed', keptTile.text().indexOf('Wearing') >= 0, true);
-
-print('\n13c. Buying deducts, records and wears');
-seedProgress({ points: 500 });
-openLocker();
-item('beanie-lagoon-sun').fire('click');
-ck('the price comes off the balance', progress().points, 380);
-ok('the item is owned', progress().owned['beanie-lagoon-sun']);
-ck('and is worn straight away', progress().equipped.hat, 'beanie-lagoon-sun');
-ck('the balance on the panel agrees', $('locker-balance').textContent, '380');
-ck('and the count moved', $('locker-owned').textContent, '3 of 50 owned');
-
-print('\n13d. Buying never costs a level');
-// The whole reason the store carries `spent`: 480 points is Level 5, and it must still be Level 5 after
-// 220 of them have been turned into a hat.
-resetProgress();
-seedProgress({ points: 480 });
-openLocker();
-ck('480 points is level 5', $('xp-level').textContent, 'Level 5');
-item('cap-palm-sun').fire('click');
-ck('the balance drops', progress().points, 260);
-ck('the spend is recorded', progress().spent, 220);
-ck('but the level holds', $('xp-level').textContent, 'Level 5');
-ck('and so does the rank', $('xp-title').textContent, 'Pattern Explorer');
-
-print('\n13e. Nothing is bought twice');
-var beforeRebuy = progress().points;
-item('cap-palm-sun').fire('click');   // now owned, so this equips rather than buys
-ck('pressing an owned item costs nothing', progress().points, beforeRebuy);
-ck('and it is still owned once', Object.keys(progress().owned).length, 1);
-
-print('\n13f. One item a slot, and a face is not optional');
-resetProgress();
-seedProgress({ points: 1000 });
-openLocker();
-item('beanie-lagoon-sun').fire('click');
-item('bucket-orchid-lagoon').fire('click');
-ck('a second hat replaces the first', progress().equipped.hat, 'bucket-orchid-lagoon');
-ck('rather than stacking', Object.keys(progress().owned).length, 2);
-item('bucket-orchid-lagoon').fire('click');
-ck('pressing the worn one takes it off', progress().equipped.hat, '');
-item('beanie-lagoon-sun').fire('click');
-ck('and an owned one goes back on', progress().equipped.hat, 'beanie-lagoon-sun');
-item('head-swoop').fire('click');
-ck('but the head slot refuses to empty', progress().equipped.head, 'head-swoop');
-
-print('\n13g. What is worn is what is drawn');
-resetProgress();
-seedProgress({ points: 1000 });
-openLocker();
-item('beanie-hibiscus-sun').fire('click');
-ok('the worn duo reaches the markup', /duo-hibiscus-sun/.test($('av-hero').innerHTML));
-ok('and the topbar copy', /duo-hibiscus-sun/.test($('av-topbar').innerHTML));
-item('beanie-lagoon-sun').fire('click');
-ok('swapping the duo swaps the class', /duo-lagoon-sun/.test($('av-hero').innerHTML));
-no('and drops the old one', /duo-hibiscus-sun/.test($('av-hero').innerHTML));
-// The drawing is rendered three times at once, so an id inside it would be a duplicate.
-no('the avatar carries no ids', /<svg class="av[^>]*>[\s\S]*?\sid=/.test($('av-hero').innerHTML));
-
-print('\n13g-iii. Every slot survives being read back');
-// The bug this pins: `equipped` was rebuilt on read from a hand-written list of five slots when there are
-// six, so buying the one hair-slot item wrote a key the very next read discarded - owned, charged for,
-// and never seen. One item per slot, bought and read back through a fresh render, catches the class.
-resetProgress();
-seedProgress({ points: 5000 });
-openLocker();
-[['head', 'head-bob'], ['hat', 'beanie-hibiscus-sun'], ['hair', 'clip-hibiscus-sun'],
- ['face', 'glasses-lagoon-sun'], ['neck', 'scarf-hibiscus-sun'], ['tool', 'hook-hibiscus-sun']
-].forEach(function (pair) {
-    var slot = pair[0], id = pair[1];
-    item(id).fire('click');
-    ck(slot + ' is worn after buying it', progress().equipped[slot], id);
-    // Read back through a render, which is where the dropped slot used to vanish.
-    nav('nav-dashboard');
-    openLocker();
-    ck(slot + ' is still worn after a reload of the view', progress().equipped[slot], id);
-    // Item ids read `<shape>-<duo>`, and no shape name carries a dash. A head is named on the drawing by
-    // its silhouette, not its colour - the colour is chosen now.
-    var mark = (slot === 'head') ? 'style-' + id.replace('head-', '')
-             : 'duo-' + id.split('-').slice(1).join('-');
-    ok(slot + ' reaches the drawing', $('av-hero').innerHTML.indexOf(mark) >= 0);
-});
-ck('and all six are worn at once', [
-    progress().equipped.head, progress().equipped.hat, progress().equipped.hair,
-    progress().equipped.face, progress().equipped.neck, progress().equipped.tool
-].filter(function (v) { return v; }).length, 6);
-
-print('\n13g-ii. The base head and the skin tone are choices, and they are free');
-resetProgress();
-openLocker();
-ck('the Basic base is the starting one', progress().base, 'basic');
-ck('and the first skin tone is worn', progress().skin, 1);
-var pointsBefore = progress().points;
-
-$('locker-skin-3').fire('click');
-ck('choosing a skin tone costs nothing', progress().points, pointsBefore);
-ck('and nothing is recorded as spent', progress().spent, 0);
-ck('the choice is kept', progress().skin, 3);
-ok('and it reaches the drawing', /class="av av-large skin-3/.test($('av-hero').innerHTML));
-ok('including the small copies', /skin-3/.test($('av-topbar').innerHTML));
-ok('and the faces in the catalogue', /skin-3/.test(art('head-bob').innerHTML));
-
-print('\n13g-vi. Hair colour is chosen beside the skin tone, and is free too');
-ck('the first hair colour is worn to begin with', progress().hair, 1);
-$('locker-hair-3').fire('click');
-ck('choosing one costs nothing', progress().points, pointsBefore);
-ck('and nothing is recorded as spent', progress().spent, 0);
-ck('the choice is kept', progress().hair, 3);
-ok('and it reaches the drawing', /hair-3/.test($('av-hero').innerHTML));
-ok('the small copies follow it', /hair-3/.test($('av-topbar').innerHTML));
-ok('and every face in the catalogue', /hair-3/.test(art('head-long').innerHTML));
-// The cut and the colour are separate decisions: every silhouette wears the chosen one.
-ok('a different silhouette wears the same colour', /hair-3/.test(art('head-buzz').innerHTML));
-ok('and is named by its own shape', /style-buzz/.test(art('head-buzz').innerHTML));
-$('locker-hair-1').fire('click');
-
-print('\n13g-vii. Pupil colour is chosen beside the hair colour, and is free too');
-ck('the first pupil colour is worn to begin with', progress().pupil, 1);
-$('locker-pupil-4').fire('click');
-ck('choosing one costs nothing', progress().points, pointsBefore);
-ck('and nothing is recorded as spent', progress().spent, 0);
-ck('the choice is kept', progress().pupil, 4);
-ok('and it reaches the drawing', /pupil-4/.test($('av-hero').innerHTML));
-ok('the small copies follow it', /pupil-4/.test($('av-topbar').innerHTML));
-ok('and the sidebar copy', /pupil-4/.test($('av-sidebar').innerHTML));
-// Every free choice is painted into every head preview. The previews are cached on a signature of those
-// choices, so a choice missing from it leaves the grid stale - which is how the skin tone and then the
-// hair colour each went missing from these tiles once.
-ok('and every face in the catalogue', /pupil-4/.test(art('head-long').innerHTML));
-ok('including a silhouette nobody is wearing', /pupil-4/.test(art('head-buzz').innerHTML));
-ck('the button reads as chosen', $('locker-pupil-4').classList.contains('is-on'), true);
-ck('and the one it replaced does not', $('locker-pupil-1').classList.contains('is-on'), false);
-// The pupil goes on TOP of the eye, as the artwork stacks it - the pupil art is a little wider than the
-// hole in the almond, so laid over it the whole disc reads rather than only the part the hole lets
-// through. Drawn under, the eye swallows its own edge. Holds for both bases, which use different eyes.
-['basic', 'cutie'].forEach(function (base) {
-    $('locker-base-' + base).fire('click');
-    var markup = $('av-hero').innerHTML;
-    var eyeClass = base === 'cutie' ? 'av-lash' : 'av-eye';
-    ok(base + ' draws its pupils', markup.indexOf('class="av-pupil"') >= 0);
-    ok(base + ' draws the pupils over the eye they sit in',
-       markup.indexOf('class="av-pupil"') > markup.indexOf('class="' + eyeClass + '"'));
-});
-// The two bases are told apart by which eye drawing is used, and only one has cheeks.
-$('locker-base-cutie').fire('click');
-ok('a Cutie wears the lashed eye', /class="av-lash"/.test($('av-hero').innerHTML));
-no('and not the plain one as well', /class="av-eye"/.test($('av-hero').innerHTML));
-$('locker-base-basic').fire('click');
-ok('the Basic base wears the plain eye', /class="av-eye"/.test($('av-hero').innerHTML));
-$('locker-pupil-1').fire('click');
-// Nonsense in the store falls back to the first colour rather than drawing no pupils.
-seedProgress({ pupil: 99 });
-openLocker();
-ok('a stored value out of range falls back', /pupil-1/.test($('av-hero').innerHTML));
-seedProgress({ skin: 3, hair: 2, pupil: 3 });
-openLocker();
-ck('and a stored choice survives a reload', progress().pupil, 3);
-ok('reaching the drawing with the rest of the look',
-   /class="av av-large skin-3 hair-2 pupil-3 /.test($('av-hero').innerHTML));
-// Back to a fresh store: the sections below compare against the balance and base a reset leaves behind,
-// so this must not hand them a seeded one.
-resetProgress();
-openLocker();
-
-// An accessory is shown as itself, not as a head wearing it.
-no('an accessory tile draws no face', /av-skin/.test(art('beanie-hibiscus-sun').innerHTML));
-// Framed to the item rather than the face: the art is drawn where it sits on a head, so shown in the
-// avatar's own box it would float in a corner at a third of the size. Read as a box rather than pinned to
-// coordinates, so moving the hat does not fail this.
-function boxOf(markup) {
-    var m = markup.match(/viewBox="(-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)"/);
-    return m ? { x: +m[1], y: +m[2], w: +m[3], h: +m[4] } : null;
-}
-var beanieBox = boxOf(art('beanie-hibiscus-sun').innerHTML);
-var heroBox = boxOf($('av-hero').innerHTML);
-ok('it is framed on its own', !!beanieBox && !!heroBox);
-ok('in a smaller box than the whole avatar', beanieBox.w < heroBox.w && beanieBox.h < heroBox.h);
-
-print('\n13g-iv. Two bases, told apart by lashes and rosy cheeks');
-no('the Basic base has no lashes', /av-lash/.test($('av-hero').innerHTML));
-no('and no cheeks at all', /av-blush/.test($('av-hero').innerHTML));
-$('locker-base-cutie').fire('click');
-ck('choosing a base costs nothing', progress().points, pointsBefore);
-ck('but it is kept', progress().base, 'cutie');
-ok('the Cutie base has lashes', /av-lash/.test($('av-hero').innerHTML));
-ok('and rosy cheeks', /av-blush/.test($('av-hero').innerHTML));
-ok('the small copies follow it', /av-lash/.test($('av-topbar').innerHTML));
-ok('and so do the faces in the catalogue', /av-lash/.test(art('head-buzz').innerHTML));
-// Those two are the whole difference. Nothing else about the drawing changes.
-ck('the base is named on the drawing', /base-cutie/.test($('av-hero').innerHTML), true);
-// A store written while the choice was framed as gender keeps what it chose. The value is translated on
-// the way out rather than migrated in place, so these read the drawing.
-seedProgress({ base: 'fem' });
-openLocker();
-ok('a legacy feminine store draws the Cutie base', /base-cutie/.test($('av-hero').innerHTML));
-ok('lashes and all', /av-lash/.test($('av-hero').innerHTML));
-ok('and the Cutie button reads as chosen', $('locker-base-cutie').classList.contains('is-on'));
-// And the next write heals it, because every write is of a freshly read progress.
-$('locker-skin-2').fire('click');
-ck('the stored value is brought up to date', progress().base, 'cutie');
-
-seedProgress({ base: 'masc' });
-openLocker();
-ok('a legacy masculine store draws the Basic base', /base-basic/.test($('av-hero').innerHTML));
-seedProgress({ base: 'zzz' });
-openLocker();
-ok('and nonsense falls back to Basic', /base-basic/.test($('av-hero').innerHTML));
-
-print('\n13g-v. No hairstyle or accessory is gendered');
-// Both bases offer the entire catalogue. Filtering the wardrobe by the base was the app deciding which
-// haircuts a person is allowed to want, and it is gone.
-['head-swoop', 'head-bob', 'head-buzz', 'head-bun', 'head-curly', 'head-pigtails',
- 'head-wavy', 'head-long'].forEach(function (id) {
-    ok(id + ' is offered on the Cutie base', tileShown(id));
-});
-$('locker-base-basic').fire('click');
-['head-swoop', 'head-bob', 'head-buzz', 'head-bun', 'head-curly', 'head-pigtails',
- 'head-wavy', 'head-long'].forEach(function (id) {
-    ok(id + ' is offered on the Basic base too', tileShown(id));
-});
-ck('and switching back costs nothing', progress().points, pointsBefore);
-
-print('\n13k. The look is carried whole, and no slot is dropped on read');
-// Two guards for one recurring mistake: code that rebuilds part of the store by naming its fields drops
-// whatever was added last. It has happened twice - the `hair` slot on read, and the skin and then hair
-// colour in the locker previews. Neither guard names a field or a slot, so a choice added later is
-// covered without either being taught about it.
-resetProgress();
-seedProgress({ points: 9999999, skin: 4, hair: 2, base: 'cutie' });
-openLocker();
-// (a) The preview of the head being worn must draw the same look as the avatar itself.
-function lookClasses(markup, size) {
-    return (markup.match(new RegExp('<svg class="av ' + size + ' ([^"]*)"')) || [, ''])[1];
-}
-ck('a head preview draws the same look as the avatar',
-   lookClasses(art('head-swoop').innerHTML, 'av-tile'),
-   lookClasses($('av-hero').innerHTML, 'av-large'));
-
-// (b) Every slot the grid offers still holds what was last put in it after a further write - the moment
-// a slot dropped on read is persisted as lost.
-tileIds().forEach(function (id) { item(id).fire('click'); });
-$('locker-skin-2').fire('click');
-var worn = progress().equipped || {};
-var filled = Object.keys(worn).filter(function (key) { return worn[key]; }).length;
-var slotCount = ($('locker-grid').children || []).filter(function (node) {
-    return node.className === 'locker-group';
-}).length;
-ok('the grid offers more than one slot', slotCount > 1);
-ck('and every one of them is still worn after a later write', filled, slotCount);
-
-print('\n13i. Every hairstyle is registered against the face, not placed by eye');
-// The artwork is exported one layer at a time, each cropped to its own bounding box, so no two assets
-// share a coordinate system as they arrive. Each carries the translate that puts it back on the face. An
-// export that lost its transform would draw at the origin - up and left of the head, silently.
-['head-swoop', 'head-bob', 'head-buzz', 'head-bun', 'head-curly', 'head-pigtails',
- 'head-wavy', 'head-long'].forEach(function (id) {
-    var markup = art(id).innerHTML;
-    ok(id + ' carries a registration transform', /<g transform="translate\(/.test(markup));
-    ok(id + ' draws hair', /class="av-hair"/.test(markup));
-});
-// The waves used to be the dome with a wave laid over it, and the wave stepped 1.8 lower with every
-// segment - so it crossed both eyes and finished below where it started. One shape cannot drift away from
-// a second shape it does not have.
-var wavy = art('head-wavy').innerHTML;
-ck('the waves are one shape, not a cap plus an overlay',
-   (wavy.match(/<path class="av-hair"/g) || []).length, 1);
-
-print('\n13i-ii. A hat sits on the crown, not on the face');
-// The eyes run y=532..744 and the head starts at y=0.
-//
-// What is NOT asserted here, and why: the obvious rule is "no hat's lowest edge falls below the eyes", and
-// it cannot be read off this box. Every brim wraps DOWN around the temples, well outside the face, so the
-// bucket's box bottom is y=578 and the ruffle's y=630 while the lowest either draws ACROSS THE EYES is
-// y=299 and y=504. A test on the box bottom therefore fails hats that are perfectly fine, which is what it
-// did. Measuring the real thing means rasterising and scanning the ink inside the eyes' own x-range - done
-// in the build, not here. What survives is what the box can honestly carry: a hat begins above the head
-// and its mass sits above the eyes. Both move the moment a hat is placed too low.
-[['beanie', 'hibiscus-sun'], ['bucket', 'orchid-lagoon'],
- ['cap', 'palm-sun'], ['ruffle', 'hibiscus-sun']].forEach(function (pair) {
-    var box = boxOf(art(pair[0] + '-' + pair[1]).innerHTML);
-    ok(pair[0] + ' is framed', !!box);
-    ok(pair[0] + ' starts above the top of the head', box.y < 0);
-    ok(pair[0] + ' carries its mass above the eyes', box.y + box.h / 2 < 532);
-});
-
-print('\n13j. Four frame shapes, and every duo for the clip and the scarf');
-var DUO_NAMES = ['hibiscus-sun', 'lagoon-sun', 'mango-lagoon', 'palm-sun', 'orchid-lagoon', 'sky-hibiscus'];
-['glasses', 'square', 'cateye', 'browline'].forEach(function (shape) {
-    var ids = tileIds().filter(function (id) { return id.indexOf(shape + '-') === 0; });
-    ck(shape + ' is offered in three colours', ids.length, 3);
-    ids.forEach(function (id) { ok(id + ' is on the shelf', tileShown(id)); });
-});
-DUO_NAMES.forEach(function (duo) {
-    ok('the yarn clip comes in ' + duo, tileShown('clip-' + duo));
-    ok('and so does the scarf', tileShown('scarf-' + duo));
-});
-// Each frame is a different rim on the same pair of eyes, and each arrives as its own export. What makes
-// them one set is not shared path data any more - it is that all four land on the eyes. The eye band runs
-// y=532 to y=744; a frame whose box misses y=638 is sitting on the forehead or the cheeks.
-[['glasses', 'sky-hibiscus'], ['square', 'sky-hibiscus'],
- ['cateye', 'hibiscus-sun'], ['browline', 'lagoon-sun']].forEach(function (pair) {
-    var box = boxOf(art(pair[0] + '-' + pair[1]).innerHTML);
-    ok(pair[0] + ' is framed', !!box);
-    ok(pair[0] + ' sits on the eyes', box.y < 638 && box.y + box.h > 638);
-});
-
-print('\n13j-ii. TEMPORARY: every reward item is handed out for free');
-// The review switch, and the whole reason the sections above had to lock the shop. When it goes, this
-// section goes with it and nothing else should need touching - the point of putting it behind one function.
-delete window.STITCH_LOCK_SHOP;
-resetProgress();
-openLocker();
-ck('a fresh browser owns the whole catalogue',
-   $('locker-owned').textContent, '50 of 50 owned');
-no('and nothing is drawn as locked or for sale',
-   tileIds().some(function (id) { return item(id).classList.contains('is-locked'); }));
-// Owned is not the same as wearable: equipItem used to read `owned` directly, so the grid said Owned on
-// every tile and pressing one did nothing at all.
-var freebie = 'needles-sky-hibiscus';
-item(freebie).fire('click');
-ck('an unearned item can actually be worn', progress().equipped.tool, freebie);
-ck('and it cost nothing', progress().points, 0);
-ck('with nothing recorded as spent', progress().spent, 0);
-ok('and it was never written into owned',
-   Object.keys(progress().owned).length === 0);
-item(freebie).fire('click');
-ck('pressing it again takes it off', progress().equipped.tool, '');
-
-print('\n13h. A re-roll is a purchase too, so it does not cost rank');
+print('\n11i. A re-roll is a purchase, so it does not cost rank');
 resetProgress();
 seedProgress({ points: 500 });
 pinRoll('bobble');
@@ -1536,7 +1143,7 @@ ok('with the bullet spoken as a full stop rather than the word "bullet"',
    /replace\(\/\\s\*•\\s\*\/g, '\. '\)/.test(describeBody));
 
 print('\n12. Hash routing');
-// Twelve views and one address, until now. The slug is derived from the nav id rather than written
+// Eleven views and one address. The slug is derived from the nav id rather than written
 // beside it, so a view cannot gain a route without a tab or a tab without a route - which is the whole
 // reason to assert the mapping rather than a hand-written list.
 var SLUGS = NAV_IDS.map(function (id) { return id.replace(/^nav-/, ''); });

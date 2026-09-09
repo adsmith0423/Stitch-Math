@@ -48,9 +48,6 @@
     <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M12 3.8 21 19.6H3zM12 9.6v4.6M12 16.8v.1"/></symbol>
     <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="ic-check" viewBox="0 0 24 24"><path d="m4.8 12.4 4.6 4.6 9.8-9.8"/></symbol>
-    <!-- A face, for the locker. Stroked like the rest of the set: the avatars are full-color
-         drawings, but the nav entry pointing at them is another icon and has to read as one. -->
-    <symbol id="ic-face" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M9 10.4v.1M15 10.4v.1M8.9 14.6c1.8 1.8 4.4 1.8 6.2 0"/></symbol>
     <!-- Four corner brackets round a plus, for Construction. The frame is open on all four sides: the
          thing inside it is finished, the way in is not. -->
     <symbol id="ic-frame" viewBox="0 0 24 24"><path d="M4.4 9.6V4.4h5.2M14.4 4.4h5.2v5.2M19.6 14.4v5.2h-5.2M9.6 19.6H4.4v-5.2M9.2 12h5.6M12 9.2v5.6"/></symbol>
@@ -151,7 +148,6 @@
                     <button type="button" id="nav-patterns" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-yarn"></use></svg><span class="nav-label">Pattern Files</span></button>
                     <button type="button" id="nav-library"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg><span class="nav-label">Stitch Library</span></button>
                     <button type="button" id="nav-gauge"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-swatch"></use></svg><span class="nav-label">Gauge Profile</span></button>
-                    <button type="button" id="nav-locker"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-face"></use></svg><span class="nav-label">Studio Locker</span></button>
                 </div></div>
             </div>
 
@@ -169,12 +165,11 @@
              projects saved, clean compiles, swatches logged. Progress store, app.js section 12. -->
         <div class="sidebar-points">
             <div class="points-head">
-                <span id="av-sidebar" class="av-mount av-mount-rail"></span>
                 <span class="points-title">Stitch Points</span>
                 <strong id="points-total">0</strong>
             </div>
             <div class="points-track"><span id="points-bar" class="points-bar"></span></div>
-            <p id="points-next" class="points-next">Next reward at 100 pts</p>
+            <p id="points-next" class="points-next">Next level at 100 pts</p>
             <p id="points-note" class="points-note">Write, export or save a pattern to start earning.</p>
         </div>
     </aside>
@@ -204,15 +199,11 @@
                     <span class="dock-btn-label">Compiler</span>
                 </button>
 
-                <!-- Status pill. This replaced three separate meter cards and a 32px portrait.
-                     The avatar is still here, at 22px and leading the pill rather than owning a
-                     card of its own: the Locker has to show you what you bought SOMEWHERE the
-                     whole time, but it does not have to be the loudest thing in the topbar.
+                <!-- Status pill. This replaced three separate meter cards.
                      xp-title and xp-count are still rendered - the rank name and the exact figure
                      move to the tooltip and to assistive tech respectively, so nothing that
                      renderProgress computes is dropped, only de-emphasised. -->
                 <div id="status-pill" class="status-pill" title="Progress">
-                    <span id="av-topbar" class="av-mount av-mount-chip"></span>
                     <span class="status-seg">
                         <svg class="ic status-ic" aria-hidden="true" focusable="false"><use href="#ic-frame"></use></svg>
                         <strong id="row-count">0</strong><span class="status-unit">rows</span>
@@ -244,7 +235,7 @@
                  rather than the app's structure. Writing a pattern crosses five views - metadata,
                  the editor, the grader, tester feedback, the export - and nothing used to say so.
                  Rendered by renderStageRail, app.js section 12. Hidden on the views it does not
-                 describe, so it never appears above the Locker or Settings.
+                 describe, so it never appears above Settings or the Gauge Profile.
                  Every stage stays clickable at all times: nothing here gates anything, the ticks
                  only report what the pattern already has. -->
             <nav id="stage-rail" class="stage-rail hidden" aria-label="Pattern workflow"></nav>
@@ -1019,65 +1010,6 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                         pattern that validates is not thereby guaranteed to fit. It is provided as is,
                         with no warranty.</dd>
                 </dl>
-            </section>
-
-            <!-- === 7b-iii. STUDIO LOCKER ===
-                 What the points are for. Built in app.js section 12 from the CATALOGUE table - the
-                 avatar is real inline SVG rather than a <use> of a sprite symbol, because external CSS
-                 cannot reach into a <use> shadow tree and a face needs skin, hair and two accessory
-                 colors at once. Buttons only: this view holds no form controls. -->
-            <section class="panel" id="locker-panel">
-                <h2>Studio Locker</h2>
-                <p class="helper-text">Everything here is bought with Stitch Points earned from writing patterns. Buying something never costs you a level &mdash; your rank counts what you have earned, not what you have left.</p>
-                <div class="locker-head">
-                    <div id="av-hero" class="av-mount av-mount-hero"></div>
-                    <div class="locker-purse">
-                        <span class="locker-purse-label">Stitch Points</span>
-                        <strong id="locker-balance">0</strong>
-                        <span id="locker-owned" class="locker-owned">0 of 0 owned</span>
-                    </div>
-                </div>
-                <!-- Free, and outside the catalog on purpose: points are earned by writing patterns,
-                     and nobody should have to write patterns to be depicted as themselves. Buttons
-                     rather than a select, so the skin tones can be the colors they name. -->
-                <div class="locker-choices">
-                    <div class="locker-choice">
-                        <span class="locker-choice-label">Base</span>
-                        <div class="locker-swatches">
-                            <button type="button" id="locker-base-basic" class="locker-pick is-on">Basic</button>
-                            <button type="button" id="locker-base-cutie" class="locker-pick">Cutie</button>
-                        </div>
-                    </div>
-                    <div class="locker-choice">
-                        <span class="locker-choice-label">Skin tone</span>
-                        <div class="locker-swatches">
-                            <button type="button" id="locker-skin-1" class="locker-skin skin-pick-1 is-on" aria-label="Skin tone one"></button>
-                            <button type="button" id="locker-skin-2" class="locker-skin skin-pick-2" aria-label="Skin tone two"></button>
-                            <button type="button" id="locker-skin-3" class="locker-skin skin-pick-3" aria-label="Skin tone three"></button>
-                            <button type="button" id="locker-skin-4" class="locker-skin skin-pick-4" aria-label="Skin tone four"></button>
-                        </div>
-                    </div>
-                    <div class="locker-choice">
-                        <span class="locker-choice-label">Hair color</span>
-                        <div class="locker-swatches">
-                            <button type="button" id="locker-hair-1" class="locker-skin hair-pick-1 is-on" aria-label="Strawberry blonde hair"></button>
-                            <button type="button" id="locker-hair-2" class="locker-skin hair-pick-2" aria-label="Light brown hair"></button>
-                            <button type="button" id="locker-hair-3" class="locker-skin hair-pick-3" aria-label="Black hair"></button>
-                            <button type="button" id="locker-hair-4" class="locker-skin hair-pick-4" aria-label="Red hair"></button>
-                        </div>
-                    </div>
-                    <div class="locker-choice">
-                        <span class="locker-choice-label">Pupil color</span>
-                        <div class="locker-swatches">
-                            <button type="button" id="locker-pupil-1" class="locker-skin pupil-pick-1 is-on" aria-label="White pupils"></button>
-                            <button type="button" id="locker-pupil-2" class="locker-skin pupil-pick-2" aria-label="Sky blue pupils"></button>
-                            <button type="button" id="locker-pupil-3" class="locker-skin pupil-pick-3" aria-label="Jade green pupils"></button>
-                            <button type="button" id="locker-pupil-4" class="locker-skin pupil-pick-4" aria-label="Amber pupils"></button>
-                        </div>
-                    </div>
-                </div>
-                <p id="locker-note" class="locker-note">Tap anything you own to wear it, or tap it again to take it off.</p>
-                <div id="locker-grid" class="locker-grid"></div>
             </section>
 
             <!-- === 7b-iii-b. CONSTRUCTION ===

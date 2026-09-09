@@ -71,26 +71,6 @@
        three. Literal midpoint of teal and ochre, keeping Basic -> Complex evenly spaced; white at 5.03:1. */
     --level-easy: #707152;
 
-    /* Avatar skin and hair: warm enough to sit beside the sand without reading as coral tints. */
-    --skin-1: #f7d3b5;  --skin-2: #e8b084;  --skin-3: #c58753;  --skin-4: #8f5b3a;
-    /* Strawberry blonde, light brown, black, red. The black is warmed - flat #000 reads as a hole. */
-    --hair-1: #f6a772;  --hair-2: #ae743f;  --hair-3: #241f1c;  --hair-4: #b74023;
-    /* Pupils only. They show through a hole in an ink almond, so each is read against --av-ink alone
-       and never against the face. A full iris was tried and withdrawn: it put colour next to skin,
-       where the hazel sat on the two darkest tones however it was mixed. */
-    --pupil-1: #faf7f2;  --pupil-2: #76c1ef;  --pupil-3: #69d4a7;  --pupil-4: #fac446;
-
-    /* The wardrobe palette, read only by the avatar drawing. Loud on purpose: an accessory is shown
-       alone on a white tile and has to carry it. */
-    --av-hibiscus: #f12f66;   /* hot pink-red   */
-    --av-mango:    #ff7d26;   /* orange         */
-    --av-sun:      #ffc93c;   /* golden yellow  */
-    --av-lagoon:   #0abdb8;   /* turquoise      */
-    --av-palm:     #2fae50;   /* leaf green     */
-    --av-orchid:   #9a56de;   /* purple         */
-    --av-sky:      #269de8;   /* blue           */
-    --av-ink: #3b332d;
-
     /* Neutral surfaces, tinted toward the sand background rather than cool grey. */
     --surface-subtle: #faf9f6;
     --surface-sunken: #f2eee5;
@@ -542,9 +522,8 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 .dock-btn[aria-expanded="true"] .ic { opacity: 1; }
 
 /* ---- Status pill ----
-   Row counter, level and streak in one lozenge, replacing three meter cards and a portrait. It is
-   not a control - nothing in it is pressable, and the place to change what the avatar wears is
-   still the Locker. */
+   Row counter, level and streak in one lozenge, replacing three meter cards. It is not a control -
+   nothing in it is pressable. */
 .status-pill {
     display: flex; align-items: center; gap: 11px;
     padding: 7px 15px 7px 8px;
@@ -2365,7 +2344,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .panel, .panel-card, header, .dash-card, .dash-tile,
     #pattern-analytics-dashboard, .gum,
     .status-pill, .stage-track, .dock.is-open, .dock-btn, .dock-close,
-    .publish-option, .locker-tile, .locker-pick, .locker-choice, .construction-pick,
+    .publish-option, .construction-pick,
     .help-topic, .lint-side, .recover-panel, .graph-frame, .gauge-output {
         background: var(--panel-bg); border-color: var(--border);
     }
@@ -2382,177 +2361,9 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 }
 
 /* ===================================================== */
-/* 11. STUDIO LOCKER                                     */
+/* 11. CONSTRUCTION                                      */
 /* ===================================================== */
-/* The avatar is inline SVG and every colour arrives from here. That is why it is inline: external
-   CSS does not match into a <use> shadow tree, which is also why the icon set can only be one
-   colour. A face needs skin, hair and two accessory colours at once. */
-
-/* ---- Colour duos ----
-   Two custom properties per duo, set on a <g> around each accessory and read by the shape roles
-   below. Six duos and six roles is twelve rules rather than thirty-six, and two items in different
-   colours can share a face without fighting.
-
-   THIS PALETTE IS THE AVATAR'S, NOT THE APP'S - loud on purpose, and used nowhere else. The rule the
-   first set broke: --duo-b was --brand-sand in three of six, and --brand-sand IS --bg-main, so outer
-   edges like a scarf stripe or a bucket brim vanished on a white tile. Every value is saturated, and
-   no duo pairs two colours of the same lightness. */
-.duo-hibiscus-sun  { --duo-a: var(--av-hibiscus); --duo-b: var(--av-sun); }
-.duo-lagoon-sun    { --duo-a: var(--av-lagoon);   --duo-b: var(--av-sun); }
-.duo-mango-lagoon  { --duo-a: var(--av-mango);    --duo-b: var(--av-lagoon); }
-.duo-palm-sun      { --duo-a: var(--av-palm);     --duo-b: var(--av-sun); }
-.duo-orchid-lagoon { --duo-a: var(--av-orchid);   --duo-b: var(--av-lagoon); }
-.duo-sky-hibiscus  { --duo-a: var(--av-sky);      --duo-b: var(--av-hibiscus); }
-
-/* ---- Skin, hair and eyes ---- */
-.skin-1 { --skin: var(--skin-1); } .skin-2 { --skin: var(--skin-2); }
-.skin-3 { --skin: var(--skin-3); } .skin-4 { --skin: var(--skin-4); }
-.hair-1 { --hair: var(--hair-1); } .hair-2 { --hair: var(--hair-2); }
-.hair-3 { --hair: var(--hair-3); } .hair-4 { --hair: var(--hair-4); }
-.pupil-1 { --pupil: var(--pupil-1); } .pupil-2 { --pupil: var(--pupil-2); }
-.pupil-3 { --pupil: var(--pupil-3); } .pupil-4 { --pupil: var(--pupil-4); }
-
-/* ---- Avatar shape roles ----
-   Every shape is a filled path; nothing is stroked. A stroke scaled by the viewBox is a weight that
-   changes with the mount size - 26px in the rail, 132px in the locker, off the same markup. */
-.av { display: block; width: 100%; height: 100%; overflow: visible; }
-.av-skin { fill: var(--skin); }
-.av-hair { fill: var(--hair); }
-/* The eye is an ink almond with a hole punched in it and the pupil showing through from behind,
-   which is why both eye drawings are ink and only the pupil takes a colour. */
-.av-eye { fill: var(--av-ink); }
-.av-pupil { fill: var(--pupil); }
-.av-smile { fill: var(--av-ink); }
-/* Cheeks and lashes are the whole of what tells Cutie from Basic. .av-lash is not a lash on its own -
-   the artwork fuses each flick into its almond, so it is the whole lashed eye, drawn instead of .av-eye. */
-.av-blush { fill: var(--brand-coral); opacity: 0.52; }
-.av-lash { fill: var(--av-ink); }
-.av-main { fill: var(--duo-a); }
-.av-trim { fill: var(--duo-b); }
-.av-frame { fill: var(--duo-a); }
-/* The one role that cannot come from the duo: the frill's shadow has to darken whatever colour it is
-   folded into rather than name one. */
-.av-shade { fill: var(--av-ink); opacity: 0.18; }
-
-/* ---- Where an avatar is mounted ---- */
-.av-mount { display: block; flex: none; }
-.av-mount-rail { width: 26px; height: 26px; }
-.av-mount-hero { width: 132px; height: 132px; flex: none; }
-/* The topbar portrait, down from 32px in a card of its own to a 26px chip at the head of the
-   status pill. It is set into the glass rather than sitting on it - the inset ring plus the pale
-   disc behind it reads as a recess, which is what keeps it from competing with the view title. */
-.av-mount-chip {
-    width: 26px; height: 26px; border-radius: var(--r-pill);
-    background: rgba(255, 255, 255, 0.55);
-    box-shadow: inset 0 0 0 1px var(--glass-border), inset 0 1px 3px rgba(42, 74, 62, 0.14);
-}
-.av-tile { width: 100%; height: 100%; }
-
-/* ---- The panel ---- */
-.locker-head {
-    display: flex; align-items: center; gap: var(--space-5); margin-bottom: var(--space-5);
-    background: var(--glass-thin); border: 1px solid var(--glass-edge);
-    border-radius: var(--radius); padding: var(--space-4) var(--space-5);
-}
-.locker-purse { display: flex; flex-direction: column; gap: 1px; }
-.locker-purse-label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
-.locker-purse strong {
-    font-size: 30px; font-weight: 640; letter-spacing: -0.028em;
-    color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.15;
-}
-.locker-owned { font-size: 11.5px; color: var(--text-muted); }
-
-.locker-note { margin: 0 0 var(--space-4) 0; font-size: 12px; color: var(--text-muted); min-height: 17px; }
-
-/* ---- The free choices ----
-   Gender and skin tone. Outside the catalogue because they cost nothing, above it because they change
-   what the catalogue looks like. */
-.locker-choices { display: flex; flex-wrap: wrap; gap: var(--space-5); margin-bottom: var(--space-3); }
-.locker-choice { display: flex; flex-direction: column; gap: 6px; }
-.locker-choice-label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
-.locker-swatches { display: flex; align-items: center; gap: 7px; }
-.locker-pick {
-    width: auto; background: var(--glass-thin); color: var(--text-primary);
-    border: 1px solid var(--glass-edge); border-radius: var(--radius-pill);
-    padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
-}
-.locker-pick:hover { background: var(--glass-bg-strong); color: var(--accent-ink); }
-.locker-pick.is-on { background: var(--brand-teal); color: var(--brand-white); border-color: transparent; }
-/* The swatch is the colour it sets, so the ring is the selection. The tone is held in a custom
-   property rather than set as the background, because the base button:hover paints every button the
-   accent - covering the one colour you were hovering to look at. */
-.locker-skin {
-    width: 26px; height: 26px; padding: 0; border-radius: 50%; cursor: pointer;
-    background: var(--tone); border: 2px solid var(--glass-border); box-shadow: var(--glass-sheen);
-}
-.locker-skin:hover { background: var(--tone); border-color: var(--brand-coral); }
-.locker-skin.is-on { border-color: var(--brand-coral); box-shadow: 0 0 0 3px rgba(232, 122, 93, 0.24); }
-.skin-pick-1 { --tone: var(--skin-1); }
-.skin-pick-2 { --tone: var(--skin-2); }
-.skin-pick-3 { --tone: var(--skin-3); }
-.skin-pick-4 { --tone: var(--skin-4); }
-/* The same control as the skin swatches, carrying the four hair colours instead. */
-.hair-pick-1 { --tone: var(--hair-1); }
-.hair-pick-2 { --tone: var(--hair-2); }
-.hair-pick-3 { --tone: var(--hair-3); }
-.hair-pick-4 { --tone: var(--hair-4); }
-/* And once more for pupils. The lightest is close to the panel behind it, so these keep a border. */
-.pupil-pick-1 { --tone: var(--pupil-1); border-color: var(--border); }
-.pupil-pick-2 { --tone: var(--pupil-2); }
-.pupil-pick-3 { --tone: var(--pupil-3); }
-.pupil-pick-4 { --tone: var(--pupil-4); }
-
-.locker-grid { display: flex; flex-direction: column; gap: var(--space-2); }
-.locker-group {
-    margin: var(--space-3) 0 0 0; font-size: 12px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
-}
-.locker-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--space-3); }
-
-/* ---- One item ---- */
-.locker-tile {
-    display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;
-    width: auto; background: var(--glass-thin); color: var(--text-primary);
-    border: 1px solid var(--glass-edge); border-radius: var(--radius); padding: var(--space-3);
-    cursor: pointer; box-shadow: var(--glass-sheen);
-    transition: transform 0.24s var(--spring), background-color 0.24s var(--ease-out),
-                border-color 0.24s var(--ease-out), box-shadow 0.24s var(--ease-out);
-}
-.locker-tile:hover {
-    background: var(--glass-bg-strong); border-color: rgba(86, 118, 106, 0.35);
-    transform: translateY(-2px); box-shadow: var(--glass-sheen), var(--glass-shadow);
-}
-.locker-tile:active { transform: translateY(0) scale(0.99); }
-.locker-art { display: block; width: 62px; height: 62px; }
-.locker-name { font-size: 11.5px; font-weight: 700; line-height: 1.3; }
-.locker-foot {
-    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.045em;
-    border-radius: var(--radius-pill); padding: 2px 9px; background: var(--glass-thin);
-    color: var(--brand-teal); white-space: nowrap;
-}
-/* State lives on the tile so the stylesheet decides what owned, worn and out-of-reach look like.
-   Only one can apply at a time. */
-.locker-tile.is-worn { border-color: var(--brand-coral); background: var(--glass-bg-strong); }
-.locker-tile.is-worn .locker-foot { background: var(--accent-ink); color: var(--brand-white); }
-.locker-tile.is-owned .locker-foot { background: var(--success-bg); color: var(--success-text); }
-/* Not hidden and not disabled - an item you cannot afford yet is the reason to keep writing, so it
-   stays legible and only the art is dimmed. */
-.locker-tile.is-locked .locker-art { opacity: 0.55; }
-.locker-tile.is-locked .locker-name { color: var(--text-muted); }
-
-@media (max-width: 700px) {
-    .locker-head { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
-    .locker-row { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .locker-tile { transition: none; }
-    .locker-tile:hover { transform: none; }
-    .locker-tile:active { transform: none; }
-}
-
-/* ============ CONSTRUCTION ============
-   One elevation, as everywhere else: the panels are the glass and everything inside them is a flat
+/* One elevation, as everywhere else: the panels are the glass and everything inside them is a flat
    tint. The accent appears only on the two pickers, which are the pressable things. */
 .construction-index { display: flex; flex-direction: column; gap: var(--space-3); }
 .construction-entry {
@@ -2577,7 +2388,6 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 }
 .construction-go:hover { background: transparent; color: var(--brand-teal); text-decoration: underline; }
 
-/* Same pill the locker uses; a second copy because the locker's sits inside a swatch row. */
 .construction-picks { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: var(--space-3); }
 .construction-pick {
     width: auto; background: var(--glass-thin); color: var(--text-primary);

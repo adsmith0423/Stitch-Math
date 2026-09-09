@@ -309,7 +309,7 @@
             "stitch-usage-panel", "stitch-usage-content",
             "print-area", "pdf-preview", "pub-refresh-preview",
             "pub-export-txt", "pub-export-pdf", "pub-export-markup", "pub-export-history", "pub-export-package",
-            "nav-dashboard", "nav-patterns", "nav-sizer", "nav-studio", "nav-locker",
+            "nav-dashboard", "nav-patterns", "nav-sizer", "nav-studio",
             "nav-testers", "nav-analytics", "nav-library", "nav-gauge",
             "nav-publish", "nav-settings", "nav-construction", "nav-toggle", "nav-scrim",
             // Construction (section 8c). Hosts only - everything inside is built at run time, so none of it
@@ -323,12 +323,6 @@
             "xp-title", "xp-level", "xp-bar", "xp-count", "streak-count", "streak-note",
             "roll-reel", "roll-stitch", "roll-term", "roll-tier", "roll-reward",
             "roll-note", "roll-again",
-            "locker-panel", "locker-grid", "locker-balance", "locker-owned", "locker-note",
-            "locker-base-basic", "locker-base-cutie",
-            "locker-skin-1", "locker-skin-2", "locker-skin-3", "locker-skin-4",
-            "locker-hair-1", "locker-hair-2", "locker-hair-3", "locker-hair-4",
-            "locker-pupil-1", "locker-pupil-2", "locker-pupil-3", "locker-pupil-4",
-            "av-hero", "av-topbar", "av-sidebar",
             "rec-patterns", "rec-exports", "rec-stitches", "rec-compiles", "rec-best",
             "rec-collected", "rec-collection-bar",
             "tile-patterns", "tile-compiler", "tile-sizer", "tile-studio",
@@ -8136,7 +8130,7 @@
                 const pick = button('construction-pick', A.MEASUREMENT_LABELS[point] || point,
                     `construction-pt-${sectionKey(point)}`);
                 pick.addEventListener('click', () => {
-                    // Tapping the chosen one again clears it, the way the locker takes a worn item off.
+                    // Tapping the chosen one again clears it.
                     constructionPoint = constructionPoint === point ? '' : point;
                     renderConstructionImpact();
                 });
@@ -8245,7 +8239,6 @@
         analytics: ['pattern-analytics-dashboard', 'output-section', 'complexity-panel'],
         gauge:     ['gauge-profile-panel', 'gauge-history-dashboard'],
         settings:  ['help-panel', 'settings-panel', 'about-panel'],
-        locker:    ['locker-panel'],
         // Engine capability with no other way in. Section 8c.
         construction:   ['construction-panel', 'construction-yoke-panel', 'construction-impact-panel'],
         // Project Management appears on Patterns as well: the same panel shown in two places, not a copy
@@ -8284,7 +8277,6 @@
         'nav-analytics':  { view: 'analytics', title: 'Analytics', sub: 'Pattern health and complexity' },
         'nav-gauge':      { view: 'gauge',     title: 'Gauge Profile', sub: 'Swatches, density and yardage' },
         'nav-publish':    { view: 'publish',   title: 'Publish / Export', sub: 'Save your work, or take it out of Stitch Math' },
-        'nav-locker':     { view: 'locker',    title: 'Studio Locker', sub: 'Spend your Stitch Points on something to wear' },
         'nav-construction':    { view: 'construction',   title: 'Construction', sub: 'Plan a yoke, and see what a measurement change disturbs' },
         'nav-settings':   { view: 'settings',  title: 'Settings',  sub: 'Every option, and how to use the app' }
     };
@@ -8304,7 +8296,7 @@
     const NAV_HUBS = {
         'hub-dashboard': ['nav-dashboard', 'nav-analytics'],
         'hub-studio':    ['nav-studio', 'nav-sizer', 'nav-construction'],
-        'hub-library':   ['nav-patterns', 'nav-library', 'nav-gauge', 'nav-locker'],
+        'hub-library':   ['nav-patterns', 'nav-library', 'nav-gauge'],
         'hub-community': ['nav-testers', 'nav-publish', 'nav-settings']
     };
     const HUB_IDS = Object.keys(NAV_HUBS);
@@ -8460,7 +8452,6 @@
         // project-panel is the same element shown on Patterns, not a copy - Publish only needs Load
         // Project, so the rest of its controls are hidden through this class rather than duplicated.
         shellEl('project-panel')?.classList.toggle('publish-scope', panels === 'publish');
-        if (panels === 'locker') renderLocker();
         // Reads the pattern's sections and the swatch's row gauge, both of which move while the tab is
         // closed, so it is rebuilt on arrival rather than once at boot.
         if (panels === 'construction') renderConstruction();
@@ -8881,16 +8872,16 @@
         const rail = shellEl('stage-rail');
         if (!rail) return;
 
-        // Off on every view the workflow does not describe - the Locker, Settings, Analytics, the
-        // Gauge profile. A five-step "write a pattern" strip above the Studio Locker would be
-        // pointing at work the page in front of you has nothing to do with.
+        // Off on every view the workflow does not describe - Settings, Analytics, the Gauge
+        // profile. A five-step "write a pattern" strip above the Gauge Profile would be pointing
+        // at work the page in front of you has nothing to do with.
         const onWorkflow = STAGE_NAV.indexOf(currentNav) >= 0;
         setHidden('stage-rail', !onWorkflow);
         if (!onWorkflow) { rail.replaceChildren(); return; }
 
         // Built element by element and each stage given an id, NOT assembled as an innerHTML string.
-        // Same reason the Locker's tiles are: a strip built from markup has to be found again with
-        // querySelectorAll to be wired, the stub the tests run under does not have it, and a control
+        // A strip built from markup has to be found again with querySelectorAll to be wired, the
+        // stub the tests run under does not have it, and a control
         // that cannot be clicked in a test is a control whose behaviour is unverified. Routing
         // across five views is the whole point of this rail, so it has to be clickable in a test.
         // The rail element itself spans the topbar so it lands on its own line; the visible pill is
@@ -9056,18 +9047,6 @@
         // shortcut runs the same function the original button runs: synthesising a click would work in a
         // browser and do nothing headlessly, so the shortcuts could never be tested.
         UI['roll-again']?.addEventListener('click', rerollStitch);
-        Object.keys(BASE_FACES).forEach(base => {
-            UI[`locker-base-${base}`]?.addEventListener('click', () => setBase(base));
-        });
-        for (let tone = 1; tone <= SKIN_TONES; tone++) {
-            UI[`locker-skin-${tone}`]?.addEventListener('click', () => setSkin(tone));
-        }
-        for (let tone = 1; tone <= HAIR_TONES; tone++) {
-            UI[`locker-hair-${tone}`]?.addEventListener('click', () => setHair(tone));
-        }
-        for (let tone = 1; tone <= PUPIL_TONES; tone++) {
-            UI[`locker-pupil-${tone}`]?.addEventListener('click', () => setPupil(tone));
-        }
         // Construction's construction picker. Everything else on that tab is built at run time and wires
         // itself as it is built; these three are in the markup.
         Object.keys(CONSTRUCTION_PLANNERS).forEach(key => {
@@ -9148,36 +9127,23 @@
             .toISOString().slice(0, 10);
     }
 
-    // The one item nobody buys. A designer who has never opened the locker still has a face, so the head
-    // slot is never empty and this is what fills it.
-    const DEFAULT_HEAD = 'head-swoop';
-
-    const SKIN_TONES = 4;
-    const HAIR_TONES = 4;
-    const PUPIL_TONES = 4;
-
     function readProgress() {
         const stored = getLocalStorage(state.progressKey);
         const roll = stored.roll || {};
         const dayExports = stored.dayExports || {};
         const object = (value) => (value && typeof value === 'object') ? value : {};
-        const equipped = object(stored.equipped);
         // Version 3 added the lifetime record and the stitch roll; 4 the locker; 5 how the designer
-        // chooses to look, which is free and so is not part of `owned`. Every field is additive and
-        // defaults to empty, so a version 1 store loads as a designer who has written nothing and owns
-        // nothing rather than needing a migration.
+        // chose to look. Versions 4 and 5 are gone again - the avatar and its wardrobe were removed -
+        // and the fields they wrote are simply no longer read. They are not deleted from storage
+        // either: a write merges over what is there, so a store that has them keeps them and the
+        // feature could return without anyone losing what they chose. Every field is additive and
+        // defaults to empty, so a version 1 store loads as a designer who has written nothing rather
+        // than needing a migration.
         return {
-            version: 5,
-            // Free, and deliberately not items: nobody should have to earn points to be depicted as
-            // themselves. `base` picks which of the two head models the face is drawn from; skin, hair
-            // and pupil are worn by every face in the catalogue, previews included.
-            base: normaliseBase(stored.base),
-            skin: (Number(stored.skin) >= 1 && Number(stored.skin) <= SKIN_TONES) ? Number(stored.skin) : 1,
-            hair: (Number(stored.hair) >= 1 && Number(stored.hair) <= HAIR_TONES) ? Number(stored.hair) : 1,
-            pupil: (Number(stored.pupil) >= 1 && Number(stored.pupil) <= PUPIL_TONES) ? Number(stored.pupil) : 1,
+            version: 6,
             points: Number(stored.points) || 0,
             // Points that have been spent. Kept because `points` is the balance and the level is a
-            // statement about work done - without this, buying a hat would walk the rank backwards.
+            // statement about work done - without this, a re-roll would walk the rank backwards.
             spent: Number(stored.spent) || 0,
             projects: Number(stored.projects) || 0,
             swatches: Number(stored.swatches) || 0,
@@ -9193,17 +9159,6 @@
             credited: object(stored.credited),
             creditOrder: Array.isArray(stored.creditOrder) ? stored.creditOrder : [],
             paidSaves: Array.isArray(stored.paidSaves) ? stored.paidSaves : [],
-            owned: object(stored.owned),
-            // One item id per slot, or '' for an empty slot. The head is never empty - renderAvatar
-            // falls back to the free one, so a store that has never seen the locker still draws a face.
-            // Built from the slot list rather than named one by one: written out by hand it was missing
-            // `hair`, so buying the yarn clip wrote a slot the very next read threw away - the item was
-            // owned, charged for, and never seen. A slot added to SLOT_ORDER is now carried automatically.
-            equipped: SLOT_ORDER.reduce((worn, slot) => {
-                // The head is the one slot that is never empty.
-                worn[slot] = equipped[slot] || (slot === 'head' ? DEFAULT_HEAD : '');
-                return worn;
-            }, {}),
             dayExports: { date: dayExports.date || '', count: Number(dayExports.count) || 0 },
             roll: {
                 date: roll.date || '', stitch: roll.stitch || '',
@@ -9551,7 +9506,7 @@
         const progress = readProgress();
         // Rank is a statement about work done, so it is computed from everything ever earned rather than
         // what is left in the purse. Spending is a choice about the balance, not an undoing of the writing
-        // that earned it, and an XP bar that ran backwards after buying a hat would read as a bug.
+        // that earned it, and an XP bar that ran backwards after a re-roll would read as a bug.
         const lifetime = progress.points + progress.spent;
         const level = Math.floor(lifetime / POINTS_PER_LEVEL) + 1;
         const into = lifetime % POINTS_PER_LEVEL;
@@ -9559,7 +9514,7 @@
 
         setText('points-total', progress.points.toLocaleString());
         setBarWidth('points-bar', (into / POINTS_PER_LEVEL) * 100);
-        setText('points-next', `Next reward at ${nextAt.toLocaleString()} pts`);
+        setText('points-next', `Next level at ${nextAt.toLocaleString()} pts`);
         // The record, not the balance: what the number was earned for is more interesting than the
         // number, and it is the only place the lifetime figures reach the rail.
         setText('points-note', progress.points
@@ -9584,508 +9539,6 @@
         // count of what is loaded right now, not a lifetime total, so it falls to zero on New File
         // along with the pattern it describes.
         setText('row-count', state.patternSteps.length.toLocaleString());
-
-        // The two small copies. The locker draws its own, larger.
-        const worn = avatarSvg(lookOf(progress), 'av-small');
-        setHtml('av-topbar', worn);
-        setHtml('av-sidebar', worn);
-    }
-
-    // ---- Avatar art ----------------------------------------------------------
-    /*
-     * The avatar is real inline SVG rather than a <use> of a sprite symbol, and it has to be. External
-     * CSS does not reach into a <use> shadow tree - precisely why the icon set is one colour and stroked,
-     * taking currentColor through inheritance. A face needs skin, hair, eyes and two accessory colours at
-     * once, so this follows the brand mark instead: classed shapes, every colour from the stylesheet.
-     *
-     * Two rules the drawing keeps:
-     *   - No ids, no gradients, no clip paths. The same drawing renders three times at once (locker,
-     *     topbar, sidebar) and a repeated id is a broken document.
-     *   - No inline style attributes. Colour arrives as a duo class on a <g> per item, setting two custom
-     *     properties that every shape below it reads.
-     *
-     * WHERE THE PATHS COME FROM. Everything below is generated from the per-layer SVG exports in
-     * Avatar-assets/. Each is cropped to its own bounding box, so none share a coordinate system as
-     * exported; they are put back onto one here by landmark, and every asset carries the translate that
-     * does it. The face IS that coordinate system: top of head y=0, centre line x=817.5, chin y=1297.
-     * Two numbers off it place almost everything else:
-     *   - Every hairstyle export contains the SAME dome path - the cap cut against the hairline - so
-     *     seven of the eight are registered by matching that one shape rather than by eye. Its left edge
-     *     lands at x=176 and its top at y=-2.
-     *   - No hat's lowest edge may fall below y=515. The eyes start at y=532, and a brim lower than that
-     *     reads as a hat pulled down over the face.
-     *
-     * The paint roles come from the layer names in the artwork (`_back`/`_base` is the main colour,
-     * `_front`/`_trim`/`_blocks` the second), so re-exporting a layer keeps working without a rename.
-     */
-
-    const AVATAR_VIEWBOX = '-200 -430 2040 2040';
-
-    const FACE_SKIN = '<g transform="translate(0 0)"><path class="av-skin" d="M817.5,1297C515.31,1297 256.12,1077.86 184.29,797.95C49.83,825.6 0,718.78 0,624.5C0,528.74 91.63,449 194.5,483C194.96,483.15 195.48,463 195.96,463C275.83,195.35 524.03,0 817.5,0C1110.97,0 1359.17,195.35 1439.04,463C1439.52,463 1440.04,483.15 1440.5,483C1543.37,449 1635,528.74 1635,624.5C1635,718.78 1585.17,825.6 1450.71,797.95C1378.88,1077.86 1119.69,1297 817.5,1297Z"/></g>';
-
-    const FACE_MOUTH = '<g transform="translate(651 974)"><path class="av-smile" d="M0.01,21.03C0,20.69 0,20.34 0,20L0.05,20C0.78,8.83 9.67,0 20.5,0C31.81,0 41,9.63 41,21.5C41,22.82 40.89,24.11 40.67,25.36C44.04,78.37 97.07,120.5 162,120.5C226.93,120.5 279.96,78.37 283.33,25.36C283.11,24.11 283,22.82 283,21.5C283,9.63 292.19,0 303.5,0C314.33,0 323.22,8.83 323.95,20L324,20C324,20.34 324,20.69 324,21.03C324,21.19 324,21.34 324,21.5C324,21.91 323.99,22.32 323.97,22.73C322.21,95.47 250.37,154 162,154C73.63,154 1.79,95.47 0.03,22.73C0.01,22.32 0,21.91 0,21.5C0,21.34 0,21.19 0.01,21.03Z"/></g>';
-
-    const FACE_EYES = '<g transform="translate(470 532)"><path class="av-eye" d="M685.22,90.93C685.73,95.85 686,100.88 686,106C686,164.5 651.27,212 608.5,212C565.73,212 531,164.5 531,106C531,47.5 565.73,0 608.5,0C622.47,0 635.58,5.07 646.9,13.93C651.68,17.67 656.14,22.08 660.21,27.08C662.1,29.39 663.89,31.82 665.61,34.37C669.46,40.11 672.86,46.44 675.72,53.24C677.8,58.19 679.6,63.4 681.09,68.81C683.02,75.86 684.42,83.26 685.22,90.93ZM651.6,62.17C651.86,60.65 652,59.09 652,57.5C652,42.32 639.68,30 624.5,30C609.32,30 597,42.32 597,57.5C597,72.68 609.32,85 624.5,85C635.76,85 645.45,78.21 649.7,68.51C650.58,66.51 651.22,64.39 651.6,62.17ZM77.5,0C120.27,0 155,47.5 155,106C155,164.5 120.27,212 77.5,212C34.73,212 0,164.5 0,106C0,47.5 34.73,0 77.5,0ZM93.5,30C78.32,30 66,42.32 66,57.5C66,72.68 78.32,85 93.5,85C108.68,85 121,72.68 121,57.5C121,42.32 108.68,30 93.5,30Z"/></g>';
-
-    const FACE_BLUSH = '<g transform="translate(293 779)"><path class="av-blush" d="M156,0C242.1,0 312,35.85 312,80C312,124.15 242.1,160 156,160C69.9,160 0,124.15 0,80C0,35.85 69.9,0 156,0ZM885,0C971.1,0 1041,35.85 1041,80C1041,124.15 971.1,160 885,160C798.9,160 729,124.15 729,80C729,35.85 798.9,0 885,0Z"/></g>';
-
-    const FACE_LASHED_EYES = '<g transform="translate(427.4 490.5)"><path class="av-lash" d="M43.77,132.99C39.28,133.18 34.72,132.63 30.23,131.25C7.34,124.22 -5,98.23 2.68,73.25C5.75,87.86 18.83,102.98 37.18,108.62C40.75,109.72 44.36,110.41 47.93,110.73C49.43,105.3 51.23,100.09 53.33,95.13C45.84,94.14 38.44,91.39 31.76,86.78C9.71,71.57 3.85,41.75 18.7,20.24C17.93,35.59 27.52,55.09 45.2,67.3C51.03,71.32 57.29,74.24 63.56,76.12C65.31,73.53 67.15,71.06 69.08,68.72C64.44,66.3 60.09,63.02 56.28,58.9C40.11,41.36 39.9,15.19 55.83,0.5C52.75,13.14 57.74,31.52 70.72,45.58C74.35,49.52 78.36,52.85 82.55,55.58C93.77,46.93 106.72,42 120.5,42C163.27,42 198,89.5 198,148C198,206.5 163.27,254 120.5,254C77.73,254 43,206.5 43,148C43,142.9 43.26,137.89 43.77,132.99ZM136.5,72C121.32,72 109,84.32 109,99.5C109,114.68 121.32,127 136.5,127C151.68,127 164,114.68 164,99.5C164,84.32 151.68,72 136.5,72ZM728.22,132.93C728.73,137.85 729,142.88 729,148C729,206.5 694.27,254 651.5,254C608.73,254 574,206.5 574,148C574,89.5 608.73,42 651.5,42C665.47,42 678.58,47.07 689.9,55.93C694.29,53.14 698.5,49.69 702.28,45.58C715.26,31.52 720.25,13.14 717.17,0.5C733.1,15.19 732.89,41.36 716.72,58.9C712.72,63.23 708.12,66.63 703.21,69.08C705.1,71.39 706.89,73.82 708.61,76.37C715.16,74.49 721.71,71.5 727.8,67.3C745.48,55.09 755.07,35.59 754.3,20.24C769.15,41.75 763.29,71.57 741.24,86.78C734.28,91.59 726.53,94.37 718.72,95.24C720.8,100.19 722.6,105.4 724.09,110.81C727.98,110.53 731.92,109.82 735.82,108.62C754.17,102.98 767.25,87.86 770.32,73.25C778,98.23 765.65,124.22 742.77,131.25C737.95,132.74 733.04,133.26 728.22,132.93ZM694.6,104.17C694.86,102.65 695,101.09 695,99.5C695,84.32 682.68,72 667.5,72C652.32,72 640,84.32 640,99.5C640,114.68 652.32,127 667.5,127C678.76,127 688.45,120.21 692.7,110.51C693.58,108.51 694.22,106.39 694.6,104.17Z"/></g>';
-
-    const FACE_PUPILS = '<g transform="translate(531 530)"><path class="av-pupil" d="M33.89,0C52.59,0 67.77,26.66 67.77,59.5C67.77,92.34 52.59,119 33.89,119C15.18,119 0,92.34 0,59.5C0,26.66 15.18,0 33.89,0ZM562.11,0C580.82,0 596,26.66 596,59.5C596,92.34 580.82,119 562.11,119C543.41,119 528.23,92.34 528.23,59.5C528.23,26.66 543.41,0 562.11,0Z"/></g>';
-
-    const HAIR_BACK = {
-        bob: '<g transform="translate(131 802.9)"><path class="av-hair" d="M1207.99,556C1095.91,594.71 263.73,594.71 151.65,556C90.01,534.72 20,427.95 7,343.77C-15.94,195.21 26,80.62 26,80.62C26.28,80.6 26.55,80.42 26.81,80.1C33.1,79.37 39.59,78.32 46.29,76.94C74.15,185.51 206,0 206,0L1090,0C1090,0 1278.17,214.01 1313.35,76.94C1320.05,78.32 1326.54,79.37 1332.83,80.1C1333.09,80.42 1333.36,80.6 1333.64,80.62C1333.64,80.62 1375.58,195.21 1352.64,343.77C1339.64,427.95 1269.63,534.72 1207.99,556Z"/></g>',
-        long: '<g transform="translate(125.1 802.9)"><path class="av-hair" d="M544.49,481.82C551.56,550.43 570.62,614.61 612.32,670.38C624.33,686.41 626.25,707.86 617.29,725.77C608.32,743.68 590.01,755 569.97,755C418.15,755 287.17,762.64 192.4,704C120,659.21 -8.69,571.88 1.31,403.13L51.31,6.5C51.63,6.47 51.93,6.2 52.22,5.71C52.85,5.61 53.85,4.31 55.16,2.03C57.02,1.7 58.89,1.33 60.78,0.94C93.29,127.62 294.17,70.89 390.04,158C470.05,230.69 437.45,455.44 544.49,481.82ZM841.15,481.82C947.83,455.53 980.94,230.31 1060.79,158C1157.08,70.8 1292.26,127.98 1324.86,0.94C1326.75,1.33 1328.63,1.7 1330.48,2.03C1331.79,4.31 1332.79,5.61 1333.42,5.71C1333.71,6.2 1334.01,6.47 1334.33,6.5L1384.33,403.13C1394.33,571.88 1265.64,659.21 1193.25,704C1098.47,762.64 967.49,755 815.67,755C795.64,755 777.32,743.68 768.36,725.77C759.39,707.86 761.31,686.41 773.32,670.38C815.02,614.61 834.09,550.43 841.15,481.82Z"/></g>',
-        pigtails: '<g transform="translate(-94.2 946)"><path class="av-hair" d="M554.15,245.79C555.37,256.36 556,267.11 556,278C556,431.43 431.43,556 278,556C124.57,556 0,431.43 0,278C0,124.57 124.57,0 278,0C297.9,0 317.31,2.1 336.03,6.08C363.25,56.23 445.84,49.26 484.66,91C520.09,129.1 510.88,216.7 554.15,245.79ZM1266.85,245.79C1308.05,218.1 1273.08,126.9 1307.21,91C1348.2,47.88 1456.55,58.43 1484.97,6.08C1503.69,2.1 1523.1,0 1543,0C1696.43,0 1821,124.57 1821,278C1821,431.43 1696.43,556 1543,556C1389.57,556 1265,431.43 1265,278C1265,267.11 1265.63,256.36 1266.85,245.79Z"/></g>',
-        bun: '<g transform="translate(555.8 -400)"><path class="av-hair" d="M0 255C0 114.17 114.17 0 255 0C395.83 0 510 114.17 510 255C510 395.83 395.83 510 255 510C114.17 510 0 395.83 0 255z"/></g>',
-    };
-
-    const HAIR_FRONT = {
-        swoop: '<g transform="translate(176.1 -2)"><path class="av-hair" d="M636.21,449.17C579.14,452.49 370.17,436.61 223.53,318.87C137.54,388.55 45.82,515.4 0.49,670.25C0.49,670.25 -0.01,635.98 0.68,613.63C10.8,287.29 256.71,41.92 570.75,4.53C591.39,2.07 617.53,0.34 637.48,0.07C637.48,0.06 637.48,0.05 637.48,0.04C657.98,-0.19 689,1.7 712.74,4.53C1026.78,41.92 1272.69,287.29 1282.81,613.63C1283.5,635.98 1283,670.25 1283,670.25C1237.67,515.4 1145.95,388.55 1059.95,318.87C912.2,437.51 701.16,452.72 646.01,449.09C642.67,449.15 639.4,449.17 636.21,449.17Z"/></g>',
-        bob: '<g transform="translate(176.1 -2)"><path class="av-hair" d="M636.21,449.17C579.14,452.49 370.17,436.61 223.53,318.87C137.54,388.55 45.82,515.4 0.49,670.25C0.49,670.25 -0.01,635.98 0.68,613.63C10.8,287.29 256.71,41.92 570.75,4.53C591.39,2.07 617.53,0.34 637.48,0.07C637.48,0.06 637.48,0.05 637.48,0.04C657.98,-0.19 689,1.7 712.74,4.53C1026.78,41.92 1272.69,287.29 1282.81,613.63C1283.5,635.98 1283,670.25 1283,670.25C1237.67,515.4 1145.95,388.55 1059.95,318.87C912.2,437.51 701.16,452.72 646.01,449.09C642.67,449.15 639.4,449.17 636.21,449.17Z"/></g>',
-        buzz: '<g transform="translate(176.9 -1.9)"><path class="av-hair" d="M641.5,269.15C640.66,269.16 639.83,269.17 638.99,269.17C456.24,269.17 290.24,308.15 189.66,359.87C189.66,359.87 1.81,672.97 1.49,670.25C0.45,661.5 0.99,635.98 1.68,613.63C11.76,287.29 256.71,41.92 569.52,4.53C589.98,1.64 612.91,0.07 638.51,0.07C639.51,0.07 640.5,0.08 641.5,0.08C642.5,0.08 643.49,0.07 644.49,0.07C670.09,0.07 693.02,1.64 713.48,4.53C1026.29,41.92 1271.24,287.29 1281.32,613.63C1282.01,635.98 1282.55,661.5 1281.51,670.25C1281.19,672.97 1093.34,359.87 1093.34,359.87C992.76,308.15 826.76,269.17 644.01,269.17C643.17,269.17 642.34,269.16 641.5,269.15Z"/></g>',
-        bun: '<g transform="translate(176.1 -2)"><path class="av-hair" d="M636.21,449.17C579.14,452.49 370.17,436.61 223.53,318.87C137.54,388.55 45.82,515.4 0.49,670.25C0.49,670.25 -0.01,635.98 0.68,613.63C10.8,287.29 256.71,41.92 570.75,4.53C591.39,2.07 617.53,0.34 637.48,0.07C637.48,0.06 637.48,0.05 637.48,0.04C657.98,-0.19 689,1.7 712.74,4.53C1026.78,41.92 1272.69,287.29 1282.81,613.63C1283.5,635.98 1283,670.25 1283,670.25C1237.67,515.4 1145.95,388.55 1059.95,318.87C912.2,437.51 701.16,452.72 646.01,449.09C642.67,449.15 639.4,449.17 636.21,449.17Z"/></g>',
-        curly: '<g transform="translate(157.3 -72)"><path class="av-hair" d="M34.78,562.67C-7.29,524.62 -11.68,446.91 27.31,378.64C58.28,324.41 108.3,290.74 154.7,287.65C152.41,253.36 159.42,219.2 176.93,188.54C216.12,119.91 297.18,87.68 380.63,99.51C399.45,42.25 464.3,0 541.31,0C584.78,0 624.37,13.46 654,35.49C683.63,13.46 723.22,0 766.69,0C843.7,0 908.55,42.25 927.37,99.51C1010.82,87.68 1091.88,119.91 1131.07,188.54C1148.58,219.2 1155.59,253.36 1153.3,287.65C1199.7,290.74 1249.72,324.41 1280.69,378.64C1316.05,440.55 1315.73,510.21 1284,551.04C1294.3,593.4 1300.39,637.71 1301.81,683.63C1301.81,683.64 1301.81,683.64 1301.81,683.64C1301.95,688.09 1298.85,691.98 1294.48,692.83C1290.12,693.68 1285.78,691.25 1284.24,687.08C1273,657.07 1260.1,628.37 1245.96,601.2C1240.54,590.9 1229.62,584.7 1218,585.31C1168.37,587.92 1112.09,553.24 1078.37,494.2C1070.55,480.52 1064.48,466.45 1060.1,452.4C1050.77,459.55 1040.81,466.18 1030.25,472.21C963.72,510.21 888.66,515.6 827.97,492.81C797.06,538.01 730.74,569.29 654,569.29C577.26,569.29 510.94,538.01 480.03,492.81C419.34,515.6 344.28,510.21 277.75,472.21C267.19,466.18 257.23,459.55 247.9,452.4C243.52,466.45 237.45,480.52 229.63,494.2C198.25,549.15 147.32,583 100.4,585.3C89.88,585.84 80.41,591.89 75.5,601.22C61.39,628.38 48.48,657.08 37.23,687.07C35.69,691.23 31.36,693.66 27.01,692.81C22.66,691.96 19.56,688.08 19.7,683.64C19.68,683.64 19.68,683.64 19.68,683.63C20.97,641.9 26.12,601.49 34.78,562.67Z"/></g>',
-        pigtails: '<g transform="translate(176.1 -2)"><path class="av-hair" d="M636.21,449.17C579.14,452.49 370.17,436.61 223.53,318.87C137.54,388.55 45.82,515.4 0.49,670.25C0.49,670.25 -0.01,635.98 0.68,613.63C10.8,287.29 256.71,41.92 570.75,4.53C591.39,2.07 617.53,0.34 637.48,0.07C637.48,0.06 637.48,0.05 637.48,0.04C657.98,-0.19 689,1.7 712.74,4.53C1026.78,41.92 1272.69,287.29 1282.81,613.63C1283.5,635.98 1283,670.25 1283,670.25C1237.67,515.4 1145.95,388.55 1059.95,318.87C912.2,437.51 701.16,452.72 646.01,449.09C642.67,449.15 639.4,449.17 636.21,449.17Z"/></g>',
-        wavy: '<g transform="translate(176.1 -2)"><path class="av-hair" d="M18.21,617.14C11.72,634.43 5.79,652.15 0.49,670.25C0.49,670.25 -0.01,635.98 0.68,613.63C1.97,571.9 7.12,531.49 15.78,492.68C74.81,227.94 296.87,37.14 570.75,4.53C591.39,2.07 617.53,0.34 637.48,0.07L637.48,0.04C657.98,-0.19 689,1.7 712.74,4.53C982.59,36.66 1202.14,222.36 1265,481.04C1275.3,523.4 1281.39,567.71 1282.81,613.63L1282.81,613.64C1283.5,635.99 1283,670.25 1283,670.25C1277.75,652.33 1271.89,634.79 1265.48,617.67C1265.39,617.48 1265.31,617.28 1265.24,617.08C1254,587.07 1241.1,558.37 1226.96,531.2C1221.54,520.9 1210.62,514.7 1199,515.31C1149.37,517.92 1093.09,483.24 1059.37,424.2C1051.55,410.52 1045.48,396.45 1041.1,382.4C1031.77,389.55 1021.81,396.18 1011.25,402.21C950.56,436.87 882.78,444.4 825.27,428.16C816.91,430.19 808.67,432.04 800.59,433.73C767.02,472.97 705.4,499.29 635,499.29C562.46,499.29 499.23,471.34 466.42,430.11C461.27,428.92 456.08,427.66 450.84,426.34C392.06,444.9 321.6,438.11 258.75,402.21C248.19,396.18 238.23,389.55 228.9,382.4C224.52,396.45 218.45,410.52 210.63,424.2C179.25,479.15 128.32,513 81.4,515.3C71.12,515.83 61.85,521.61 56.85,530.57C42.59,557.93 29.57,586.84 18.23,617.07L18.21,617.14Z"/></g>',
-        long: '<g transform="translate(176.1 -2)"><path class="av-hair" d="M636.21,449.17C579.14,452.49 370.17,436.61 223.53,318.87C137.54,388.55 45.82,515.4 0.49,670.25C0.49,670.25 -0.01,635.98 0.68,613.63C10.8,287.29 256.71,41.92 570.75,4.53C591.39,2.07 617.53,0.34 637.48,0.07C637.48,0.06 637.48,0.05 637.48,0.04C657.98,-0.19 689,1.7 712.74,4.53C1026.78,41.92 1272.69,287.29 1282.81,613.63C1283.5,635.98 1283,670.25 1283,670.25C1237.67,515.4 1145.95,388.55 1059.95,318.87C912.2,437.51 701.16,452.72 646.01,449.09C642.67,449.15 639.4,449.17 636.21,449.17Z"/></g>',
-    };
-
-    const ACCESSORY_ART = {
-        beanie: '<g transform="translate(537.5 -391)"><path class="av-trim" d="M213.88,34.41C225.47,14.9 250.9,0 279.5,0C308.1,0 333.53,14.9 345.12,34.41C364.97,23.28 394.48,23.02 419.25,37.24C444.02,51.47 458.55,77.02 458.78,99.68C481.57,99.91 507.25,114.36 521.55,139C535.86,163.64 535.6,192.99 524.4,212.73C544.02,224.26 559,249.55 559,278C559,306.45 544.02,331.74 524.4,343.27C535.6,363.01 535.86,392.36 521.55,417C507.25,441.64 481.57,456.09 458.78,456.32C458.55,478.98 444.02,504.53 419.25,518.75C394.48,532.98 364.97,532.72 345.12,521.59C333.53,541.1 308.1,556 279.5,556C250.9,556 225.47,541.1 213.88,521.59C194.03,532.72 164.52,532.98 139.75,518.75C114.98,504.53 100.45,478.98 100.22,456.32C77.43,456.09 51.75,441.64 37.45,417C23.14,392.36 23.4,363.01 34.6,343.27C14.98,331.74 0,306.45 0,278C0,249.55 14.98,224.26 34.6,212.73C23.4,192.99 23.14,163.64 37.45,139C51.75,114.36 77.43,99.91 100.22,99.68C100.45,77.02 114.98,51.47 139.75,37.24C164.52,23.02 194.03,23.28 213.88,34.41Z"/></g>'
-            + '<g transform="translate(173.2 -136.6)"><path class="av-main" d="M1293.35,537.34L0.65,537.34C21.08,235.74 304.39,0.38 647,0.38C989.61,0.38 1272.92,235.74 1293.35,537.34Z"/></g>'
-            + '<g transform="translate(117.5 360)"><path class="av-trim" d="M1400,77.5C1400,120.27 1365.27,155 1322.5,155L77.5,155C34.73,155 0,120.27 0,77.5C0,34.73 34.73,0 77.5,0L1322.5,0C1365.27,0 1400,34.73 1400,77.5Z"/></g>',
-        bucket: '<g transform="translate(3.4 -360.5) scale(0.95)"><path class="av-main" d="M861,645.71C466.57,657.05 166.13,803.27 42.51,874.3C33.5,879.63 12.16,926.71 4,919.96C-4.16,913.2 2.37,853.86 4.66,842.97C24.28,750.34 6.91,668.46 182.32,536.25L341.69,140.35C341.69,140.35 526.45,12.81 838.07,1.11L838.11,0.26C845.81,0.26 853.44,0.33 861,0.47C868.56,0.33 876.19,0.26 883.89,0.26L883.93,1.11C1195.55,12.81 1380.31,140.35 1380.31,140.35L1539.68,536.25C1715.09,668.46 1697.72,750.34 1717.34,842.97C1719.63,853.86 1726.16,913.2 1718,919.96C1709.84,926.71 1688.5,879.63 1679.49,874.3C1555.87,803.27 1255.43,657.05 861,645.71Z"/></g>'
-            + '<g transform="translate(3.4 -312.8) scale(0.95)"><path class="av-trim" d="M62.01,936.2C34.59,918.16 7.92,899.79 0,879.94C0,806.54 127.58,742.34 303.81,697.11C282.49,732.85 264.8,773.63 250.96,820C250.48,820 249.96,840.15 249.5,840C163.47,811.56 85.29,862.69 62.01,936.2ZM1442.95,709.04C1606.94,753.04 1714,808.22 1714,878.94C1707.82,894.43 1695.8,909.53 1678.57,924.06C1650.92,857.21 1576.71,813.16 1495.5,840C1495.04,840.15 1494.52,820 1494.04,820C1481.72,778.72 1464.44,741.86 1442.95,709.04ZM125.61,529.18C140.91,515.36 158.37,500.97 178.32,485.94L198.92,434.77C426.56,401.56 645.62,345.25 857,344.7C1084.89,344.11 1303.85,401.37 1514.99,434.53L1535.68,485.94C1555.63,500.97 1573.09,515.36 1588.39,529.18C1436.51,493.89 1177.85,432.55 857,429.53C536.15,432.55 277.49,493.89 125.61,529.18ZM435.54,169.68C435.54,131.85 445.16,101.14 457,101.14C468.84,101.14 478.46,131.85 478.46,169.68C505.08,140.7 534.06,122.82 543.13,129.77C552.21,136.72 537.95,165.89 511.33,194.87C552.12,188.3 586.91,191.61 588.96,202.26C591.02,212.91 559.57,226.89 518.78,233.46C554.65,252.38 578.97,275.33 573.05,284.7C567.13,294.06 533.2,286.31 497.32,267.4C511.49,302.95 513.96,334.81 502.83,338.5C491.7,342.2 471.17,316.35 457,280.8C442.83,316.35 422.3,342.2 411.17,338.5C400.04,334.81 402.51,302.95 416.68,267.4C380.8,286.31 346.87,294.06 340.95,284.7C335.03,275.33 359.35,252.38 395.22,233.46C354.43,226.89 322.98,212.91 325.04,202.26C327.09,191.61 361.88,188.3 402.67,194.87C376.05,165.89 361.8,136.72 370.87,129.77C379.94,122.82 408.92,140.7 435.54,169.68ZM835.54,68.68C835.54,30.85 845.16,0.14 857,0.14C868.84,0.14 878.46,30.85 878.46,68.68C905.08,39.7 934.06,21.82 943.13,28.77C952.21,35.72 937.95,64.89 911.33,93.87C952.12,87.3 986.91,90.61 988.96,101.26C991.02,111.91 959.57,125.89 918.78,132.46C954.65,151.38 978.97,174.33 973.05,183.7C967.13,193.06 933.2,185.31 897.33,166.4C911.49,201.95 913.96,233.81 902.83,237.5C891.7,241.2 871.17,215.35 857,179.8C842.83,215.35 822.3,241.2 811.17,237.5C800.04,233.81 802.51,201.95 816.67,166.4C780.8,185.31 746.87,193.06 740.95,183.7C735.03,174.33 759.35,151.38 795.22,132.46C754.43,125.89 722.98,111.91 725.04,101.26C727.09,90.61 761.88,87.3 802.67,93.87C776.05,64.89 761.79,35.72 770.87,28.77C779.94,21.82 808.92,39.7 835.54,68.68ZM1278.46,169.68C1305.08,140.7 1334.06,122.82 1343.13,129.77C1352.2,136.72 1337.95,165.89 1311.33,194.87C1352.12,188.3 1386.91,191.61 1388.96,202.26C1391.02,212.91 1359.57,226.89 1318.78,233.46C1354.65,252.38 1378.97,275.33 1373.05,284.7C1367.13,294.06 1333.2,286.31 1297.33,267.4C1311.49,302.95 1313.96,334.81 1302.83,338.5C1291.7,342.2 1271.17,316.35 1257,280.8C1242.83,316.35 1222.3,342.2 1211.17,338.5C1200.04,334.81 1202.51,302.95 1216.67,267.4C1180.8,286.31 1146.87,294.06 1140.95,284.7C1135.03,275.33 1159.35,252.38 1195.22,233.46C1154.43,226.89 1122.98,212.91 1125.04,202.26C1127.09,191.61 1161.88,188.3 1202.67,194.87C1176.05,165.89 1161.8,136.72 1170.87,129.77C1179.94,122.82 1208.92,140.7 1235.54,169.68C1235.54,131.85 1245.16,101.14 1257,101.14C1268.84,101.14 1278.46,131.85 1278.46,169.68Z"/></g>',
-        cap: '<g transform="translate(164.1 -169.8)"><path class="av-main" d="M147.87,641.69C103.73,658.59 59.61,677.76 15.51,699.22C5.53,658.88 0.5,617.71 0.5,576.42C0.5,258.41 293.27,0.23 653.89,0.23C919.71,0.23 1148.67,140.52 1250.67,341.64C1435.97,404 1458.08,566.02 1297.03,678.05C1295.59,685.13 1294,692.19 1292.26,699.22C1286.86,696.69 1281.46,694.18 1276.06,691.71C1275.48,692.07 1274.89,692.42 1274.31,692.78C826.54,490.89 401.74,540.99 120.25,661.92C129.36,655.12 138.56,648.37 147.87,641.69Z"/></g>'
-            + '<g transform="translate(164.1 -169.8)"><path class="av-trim" d="M45.62,677.96L10.73,677.96C3.92,644.46 0.5,610.48 0.5,576.42C0.5,566.82 0.77,557.27 1.29,547.78L92.83,547.78L92.83,478.16L9.98,478.16C18.85,432.73 33.75,389.12 53.94,347.98L92.83,347.98L92.83,281.12C106.21,261.41 120.89,242.45 136.77,224.35L195.76,224.35L195.76,165.75C211.04,152.49 227.05,139.89 243.74,128L310.97,128L310.97,85.97C352.76,63.19 397.67,44.44 445,30.35L445,128L544.9,128L544.9,22.05L475.31,22.05C512.48,12.74 551,6.27 590.54,2.9L654.9,2.9L654.9,0.23C699.47,0.29 743,4.29 785.07,11.86L785.07,32.8L675.08,32.8L675.08,132.53L768.92,132.53L768.92,36.17L881.4,36.17C896.39,41.09 911.12,46.48 925.57,52.32L899.1,52.32L899.1,148.18L991.1,148.18L991.1,82.9C1085.84,133.38 1164.9,204.47 1220.27,289.11L1129.17,289.11L1129.17,290.52C1475.26,308.78 1544.31,556.06 1291.88,699.22C1286.02,697.04 1280.16,694.89 1274.31,692.78C1493.06,560.59 1432.22,342.26 1129.17,318.06C1112.22,316.7 1094.52,315.96 1076.06,315.87C1050.53,315.74 1024.82,316.51 999,318.12C965.85,320.19 932.51,323.66 899.1,328.43C855.75,334.62 812.28,343 768.92,353.38C697.24,370.55 625.89,393.16 556,420.33C471.51,453.17 389.17,492.67 310.97,537.21C243.92,575.4 179.93,617.31 120.25,661.92C84.08,673.54 50.13,686.07 18.66,699.22C27.55,692.08 36.53,684.99 45.62,677.96ZM999,292.55L999,278.36L899.1,278.36L899.1,303.39C932.5,298.53 965.83,294.89 999,292.55ZM768.92,328.26L768.92,262.7L666,262.7L666,356.05C700.17,345.66 734.51,336.37 768.92,328.26ZM590.24,380.94L556,380.94L556,393.42C567.38,389.14 578.79,384.98 590.24,380.94ZM425.83,447.87L425.83,370.18L325.93,370.18L325.93,467.06L385.48,467.06C398.85,460.52 412.31,454.12 425.83,447.87ZM310.97,505.47L310.97,484.7L223,484.7L223,556.06C251.75,538.55 281.11,521.66 310.97,505.47ZM179.09,583.61L102.92,583.61L102.92,635.35C127.71,617.64 153.12,600.37 179.09,583.61ZM325.93,144.15L325.93,240.01L417.93,240.01L417.93,144.15L325.93,144.15ZM666,133.08L548.11,133.08L548.11,250.77L666,250.77L666,133.08ZM120.25,453.43L195.76,453.43L195.76,354.53L120.25,354.53L120.25,453.43ZM1108.99,166.35L1014.3,166.35L1014.3,259.21L1108.99,259.21L1108.99,166.35ZM223,258.18L223,354.53L310.97,354.53L310.97,258.18L223,258.18ZM796.17,166.35L796.17,262.7L884.13,262.7L884.13,166.35L796.17,166.35ZM535.82,351.04L535.82,258.18L441.14,258.18L441.14,351.04L535.82,351.04Z"/></g>',
-        ruffle: '<g transform="translate(171 -214.6)"><path class="av-main" d="M648,494.42L646,494.42C593.3,500.53 526.89,544.73 526.89,544.73C307.97,467.26 0.5,600.18 0.5,571.38C0.5,256.82 289.55,1.33 646,0.38L646,0.38C646.33,0.38 646.67,0.38 647,0.38C647.33,0.38 647.67,0.38 648,0.38L648,0.38C1004.45,1.33 1293.5,256.82 1293.5,571.38C1293.5,600.18 986.03,467.26 767.11,544.73C767.11,544.73 700.7,500.53 648,494.42Z"/></g>'
-            + '<g transform="translate(20.6 147.4)"><path class="av-trim" d="M797,139.65C745.88,163.89 749.79,323.47 680.4,351.25C579.84,391.51 560.62,251.42 510.2,258.16C439.14,267.66 450.86,388.06 378.05,415.41C325.7,435.07 279.96,376.6 236.36,292.97C179.16,369.89 206.61,392.09 155.01,435.37C86.71,492.66 -10.22,326.03 1,202.71C10.03,103.51 92.89,76.83 142.48,119.09C250.75,-86.18 340.61,160.35 370.39,171.67C410.38,186.87 348.06,78.72 437.2,19.85C556.67,-59.05 563.4,170.78 640.29,151.16C688.9,138.75 687.91,-4.07 798,0.43L798,0.53C908.09,-3.96 905.1,138.75 953.71,151.16C1030.6,170.78 1037.33,-59.05 1156.8,19.85C1245.94,78.72 1183.62,186.87 1223.61,171.67C1253.39,160.35 1343.26,-86.18 1451.52,119.09C1501.11,76.83 1583.97,103.51 1593,202.71C1604.22,326.03 1507.29,492.66 1438.98,435.37C1387.39,392.09 1414.84,369.89 1357.64,292.97C1314.04,376.6 1268.3,435.07 1215.95,415.41C1143.14,388.06 1154.86,267.66 1083.8,258.16C1033.38,251.42 1014.16,391.51 913.6,351.25C844.21,323.47 848.12,163.89 797,139.65Z"/></g>'
-            + '<g transform="translate(138.7 230.5)"><path class="av-shade" d="M1.1,140.35C0.28,138.62 -0.04,136.41 0.37,134.24L18.11,39.71C18.85,35.74 21.71,33.39 24.48,34.45C27.26,35.51 28.91,39.59 28.16,43.55L18.69,94.02C24.05,89.12 30.69,86.26 38.74,86.48C60.4,87.07 95.6,129.86 117.87,174.62C65.16,245.83 85.17,269.95 46.46,307.84C35.71,263.85 16.3,224.11 3.48,172.26C1.19,162.96 0.32,151.66 1.1,140.35ZM317.18,232.78C323.46,196.06 329.63,156.08 328.48,111.78C327.51,74.14 333.37,-0.49 367.74,0.1C401.08,0.68 445.88,63.57 459.87,94.47C486.16,152.53 517.16,187.3 547.73,198.65C564.89,205.02 581.27,205.63 594.06,205.19C585.46,217.56 575.17,227.14 562.4,232.25C461.84,272.51 442.62,132.42 392.2,139.16C349.29,144.9 336.56,191.08 317.18,232.78ZM1356.9,140.35C1357.68,151.66 1356.81,162.96 1354.52,172.26C1341.7,224.11 1322.29,263.85 1311.54,307.84C1272.84,269.95 1292.85,245.83 1240.13,174.62C1262.4,129.86 1297.6,87.07 1319.26,86.48C1327.31,86.26 1333.95,89.12 1339.31,94.02L1329.84,43.55C1329.09,39.59 1330.74,35.51 1333.52,34.45C1336.29,33.39 1339.15,35.74 1339.89,39.71L1357.63,134.24C1358.04,136.41 1357.72,138.62 1356.9,140.35ZM1040.82,232.78C1021.44,191.08 1008.71,144.9 965.8,139.16C915.38,132.42 896.16,272.51 795.6,232.25C782.83,227.14 772.54,217.56 763.94,205.19C776.73,205.63 793.11,205.02 810.27,198.65C840.84,187.3 871.84,152.53 898.13,94.47C912.12,63.57 956.92,0.68 990.26,0.1C1024.63,-0.49 1030.49,74.14 1029.52,111.78C1028.37,156.08 1034.54,196.06 1040.82,232.78Z"/></g>',
-        glasses: '<g transform="translate(158.2 409.1)"><path class="av-frame" d="M592.22,250.19C581.47,366.12 483.81,457 365.1,457C239.21,457 137,354.79 137,228.9C137,225.01 137.1,221.14 137.29,217.3L4.73,132.44C-0.69,129.31 -1.21,102.72 1.93,97.29C5.06,91.87 12,90.01 17.42,93.14L143,169.46L143,176.75C166.61,75.95 257.15,0.8 365.1,0.8C485.74,0.8 584.62,94.65 592.67,213.26C602.68,217.28 627.37,226.32 648.17,226.68C649.99,226.65 651.78,226.54 653.52,226.35C653.93,226.4 654.34,226.44 654.76,226.47C655.17,226.44 655.59,226.4 656,226.35C657.74,226.54 659.52,226.65 661.35,226.68C682.15,226.32 706.84,217.28 716.85,213.26C724.89,94.65 823.78,0.8 944.42,0.8C1052.37,0.8 1142.9,75.95 1166.52,176.75L1166.52,169.46L1292.09,93.14C1297.52,90.01 1304.46,91.87 1307.59,97.29C1310.72,102.72 1310.2,129.31 1304.78,132.44L1172.22,217.3C1172.42,221.14 1172.52,225.01 1172.52,228.9C1172.52,354.79 1070.31,457 944.42,457C825.7,457 728.05,366.12 717.3,250.19C705.53,254.57 679.99,262.95 657.57,262.64C656.63,262.65 655.69,262.65 654.76,262.63C653.83,262.65 652.89,262.65 651.95,262.64C629.52,262.95 603.99,254.57 592.22,250.19ZM365.1,37.8C259.63,37.8 174,123.43 174,228.9C174,334.37 259.63,420 365.1,420C470.57,420 556.2,334.37 556.2,228.9C556.2,123.43 470.57,37.8 365.1,37.8ZM944.42,37.8C838.95,37.8 753.32,123.43 753.32,228.9C753.32,334.37 838.95,420 944.42,420C1049.89,420 1135.52,334.37 1135.52,228.9C1135.52,123.43 1049.89,37.8 944.42,37.8Z"/></g>',
-        square: '<g transform="translate(157 467)"><path class="av-frame" d="M656,159.25C625.38,160.25 588.12,144.25 588.12,144.25C587.75,144.25 587.37,144.24 587,144.21L587,298.45C587,322.49 567.49,342 543.45,342L186.55,342C162.51,342 143,322.49 143,298.45L143,149.95L4.73,61.44C-0.69,58.31 -1.21,31.71 1.93,26.29C5.06,20.87 12,19.01 17.42,22.14L143,98.46L143,43.55C143,19.51 162.51,0 186.55,0L543.45,0C567.49,0 587,19.51 587,43.55L587,108.03C587.37,108.01 587.75,108 588.12,108C588.12,108 628.38,126 656,123C683.62,126 723.88,108 723.88,108C724.25,108 724.63,108.01 725,108.03L725,43.55C725,19.51 744.51,0 768.55,0L1125.45,0C1149.49,0 1169,19.51 1169,43.55L1169,98.46L1294.58,22.14C1300,19.01 1306.94,20.87 1310.07,26.29C1313.2,31.71 1312.69,58.31 1307.27,61.44L1169,149.95L1169,298.45C1169,322.49 1149.49,342 1125.45,342L768.55,342C744.51,342 725,322.49 725,298.45L725,144.21C724.63,144.24 724.25,144.25 723.88,144.25C723.88,144.25 686.62,160.25 656,159.25ZM754,62.58L754,279.42C754,299.19 770.06,315.25 789.83,315.25L1105.17,315.25C1124.94,315.25 1141,299.19 1141,279.42L1141,62.58C1141,42.81 1124.94,26.75 1105.17,26.75L789.83,26.75C770.06,26.75 754,42.81 754,62.58ZM558,62.58C558,42.81 541.94,26.75 522.17,26.75L206.83,26.75C187.06,26.75 171,42.81 171,62.58L171,279.42C171,299.19 187.06,315.25 206.83,315.25L522.17,315.25C541.94,315.25 558,299.19 558,279.42L558,62.58Z"/></g>',
-        cateye: '<g transform="translate(157 420.6)"><path class="av-frame" d="M662.12,311.23L649.88,311.23C633.23,311.23 608.79,310.21 592.82,297.27C520.27,412.82 386.74,461.81 271.4,418.11C184.68,385.25 132.69,304.82 127.2,210.84L4.73,132.44C-0.69,129.31 -1.21,102.72 1.93,97.29C5.06,91.87 12,90.01 17.42,93.14L128.62,160.73C132.59,125.66 142.81,89.62 159.83,54.16C165.71,41.91 171.58,29.58 178.54,17.9C178.54,17.9 246.33,-37.73 449,51.68C598.29,117.54 629.42,216.59 629.42,216.59C625.5,229.6 620.78,242.4 615.29,254.86C613.76,258.32 612.19,261.74 610.57,265.11C620.86,271.46 636.88,274.24 649.88,274.24L662.12,274.24C675.12,274.24 691.14,271.46 701.43,265.11C699.81,261.74 698.24,258.32 696.71,254.86C691.22,242.4 686.5,229.6 682.58,216.59C682.58,216.59 713.71,117.54 863,51.68C1065.67,-37.73 1133.46,17.9 1133.46,17.9C1140.42,29.58 1146.29,41.91 1152.17,54.16C1169.19,89.62 1179.41,125.66 1183.38,160.73L1294.58,93.14C1300,90.01 1306.94,91.87 1310.07,97.29C1313.2,102.72 1312.69,129.31 1307.27,132.44L1184.8,210.84C1179.31,304.82 1127.32,385.25 1040.6,418.11C925.26,461.81 791.73,412.82 719.18,297.27C703.21,310.21 678.77,311.23 662.12,311.23ZM593.99,218.57C593.99,218.57 566.86,132.23 436.72,74.82C260.05,-3.12 200.96,45.38 200.96,45.38C194.89,55.55 189.78,66.3 184.65,76.98C121.3,208.96 166.02,350.33 281.91,394.23C394,436.7 525.79,378.75 581.67,251.93C586.46,241.06 590.58,229.91 593.99,218.57ZM718.01,218.57C721.42,229.91 725.54,241.06 730.33,251.93C786.21,378.75 918,436.7 1030.09,394.23C1145.98,350.33 1190.7,208.96 1127.35,76.98C1122.22,66.3 1117.11,55.55 1111.04,45.38C1111.04,45.38 1051.95,-3.12 875.28,74.82C745.14,132.23 718.01,218.57 718.01,218.57Z"/></g>',
-        browline: '<g transform="translate(158.2 479.7)"><path class="av-frame" d="M654.76,151.19C630.15,151.19 604.93,137.83 604.93,137.83C604.46,137.83 604,137.82 603.54,137.79L602.18,142.24C567.84,226.26 480.96,315.98 379.33,315.98C273.74,315.98 184.09,221.52 152.71,132.32L4.73,41.44C-0.69,38.31 -1.21,11.71 1.93,6.29C5.06,0.87 12,-0.99 17.42,2.14L142.36,74.28L140.79,59.45C140.8,58.47 140.81,57.49 140.82,56.52C141.29,36.23 158,20.02 178.44,20.02C264.64,20.02 494.02,20.02 580.22,20.05C600.65,20.05 617.34,36.24 617.81,56.52C617.86,58.44 617.89,60.37 617.89,62.3C617.89,76.94 616.39,91.26 613.51,105.12L613.46,105.29C613.46,105.29 632.99,116.36 654.76,116.36C680.52,116.36 696.05,105.29 696.05,105.29L696,105.12C693.13,91.26 691.63,76.94 691.63,62.3C691.63,60.37 691.65,58.44 691.71,56.52C692.18,36.24 708.87,20.05 729.3,20.05C815.5,20.02 1044.87,20.02 1131.08,20.02C1151.52,20.02 1168.22,36.23 1168.69,56.52C1168.71,57.49 1168.72,58.47 1168.73,59.45L1167.15,74.28L1292.09,2.14C1297.52,-0.99 1304.46,0.87 1307.59,6.29C1310.72,11.71 1310.2,38.31 1304.78,41.44L1156.8,132.32C1125.43,221.52 1035.77,315.98 930.19,315.98C828.55,315.98 741.68,226.26 707.34,142.24L705.98,137.79C705.52,137.82 705.05,137.83 704.58,137.83C704.58,137.83 682.37,151.19 654.76,151.19ZM742,144.09C771,213.64 848.36,282.08 934.18,282.08C1030.76,282.08 1107.55,200.49 1127.12,117.07L1131.63,75.56C1131.62,74.75 1131.61,73.94 1131.6,73.13C1131.2,56.34 1117.09,52.92 1099.83,52.92C1027.03,52.92 833.34,52.92 760.54,52.94C743.29,52.94 729.19,56.35 728.8,73.13C728.75,74.73 728.73,76.32 728.73,77.92C728.73,90.04 730,101.89 732.42,113.36L742,144.09ZM567.52,144.09L577.09,113.36C579.52,101.89 580.79,90.04 580.79,77.92C580.79,76.32 580.76,74.73 580.72,73.13C580.32,56.35 566.23,52.94 548.98,52.94C476.18,52.92 282.48,52.92 209.69,52.92C192.42,52.92 178.32,56.34 177.92,73.13C177.91,73.94 177.9,74.75 177.89,75.56L182.4,117.07C201.97,200.49 278.76,282.08 375.33,282.08C461.16,282.08 538.52,213.64 567.52,144.09Z"/></g>',
-        // Registered higher and closer to centre than the base export placed it (was translate(156.2
-        // 1120)/(291.3 1189.2)): the scarf is drawn BEHIND the face, so most of its body is meant to
-        // read as tucked under the head, with only the wave-curl at its right end - the "tail" - poking
-        // out past the jaw. At the export's own placement almost the whole shape hung below the chin in
-        // open air, and the face's edge cut across the tail's narrow waist, which read as a floating,
-        // disconnected scrap rather than one continuous scarf.
-        scarf: '<g transform="translate(166.2 980)"><path class="av-main" d="M815.54,287.23C691.49,354.44 573.43,378.33 460.68,381.66C459.04,381.71 457.43,381.71 455.84,381.66C454.26,381.71 452.64,381.71 451,381.66C321.81,377.85 185.67,347.04 41.5,255C-13.99,151.82 -11.3,68.06 38.51,0.01C152.35,97.13 298.55,157 456.5,157C614.07,157 759.96,97.42 873.68,0.7C894.45,29.31 906.91,60.68 910.25,95.1C991.73,193.4 1136.5,213.87 1215,119.26L1323,291C1146.15,430.53 919.71,409.25 815.54,287.23Z"/></g>'
-            + '<g transform="translate(301.3 1049.2)"><path class="av-trim" d="M949.81,317.3C956.1,293.63 962.61,252.96 961.73,231.29C960.33,196.63 952.94,146.65 932.2,110.83C960.5,113.14 988.63,109.31 1014.5,98.73C1054.12,157.96 1084.05,225.64 1078.74,286.32C1035.9,304.01 992.27,314.11 949.81,317.3ZM756.08,278.73C726.95,262.89 701.31,242.56 680.54,218.23C698.63,208.43 716.84,197.71 735.18,186C767.2,126.48 779.85,73.41 775.25,26.1C797.91,53.43 825.46,74.75 855.12,89.25C852.03,171.83 814.33,237.61 756.08,278.73ZM440.17,301.65C449.18,254.84 456.58,205.82 459.61,157.78C461.43,128.77 461.85,100.07 461.28,72.14C521.53,58.3 578.83,35.79 631.82,6.1C632.36,44.83 631.99,83.96 630.21,122.26C628.18,166.25 622.78,209.54 616.24,249.54C556.15,275.55 497.49,292.01 440.17,301.65ZM0.89,0.21C53.72,31.07 111.02,54.73 171.39,69.67C170.75,98.38 171.13,127.92 173.01,157.78C176.01,205.26 183.27,253.7 192.14,300.01C134.69,289.63 75.91,272.27 15.69,245.23C9.46,206.44 4.37,164.68 2.41,122.26C0.54,82.02 0.23,40.87 0.89,0.21Z"/></g>',
-        clip: '<g transform="translate(1147.4 110) scale(0.62)"><path class="av-main" d="M0 250C0 111.93 111.93 0 250 0C388.07 0 500 111.93 500 250C500 388.07 388.07 500 250 500C111.93 500 0 388.07 0 250z"/></g>'
-            + '<g transform="translate(1196.6 119.1) scale(0.62)"><path class="av-trim" d="M310.84,221.17C253.18,130.37 143.87,66.31 16.46,55.89C6.8,55.1 -0.41,46.61 0.38,36.95C1.17,27.28 9.66,20.08 19.32,20.87C142.71,30.96 249.79,87.63 316.62,169.64C316.65,167.94 316.67,166.23 316.67,164.52C316.67,114.3 303.22,66.97 279.48,25.5C274.75,17.24 278.18,6.99 287.12,2.63C296.07,-1.74 307.17,1.43 311.9,9.68C338.34,55.88 353.33,108.59 353.33,164.52C353.33,182.28 351.82,199.71 348.91,216.72C374.99,262.64 389.59,314.08 389.59,368.29C389.59,377.99 381.72,385.86 372.03,385.86C362.33,385.86 354.46,377.99 354.46,368.29C354.46,333.46 347.7,300 335.24,268.76C299.35,369.02 213.1,448.01 104.44,479.85C94.8,482.68 84.48,477.74 81.42,468.84C78.36,459.94 83.7,450.42 93.35,447.59C203.87,415.21 288.49,328.45 310.84,221.17Z"/></g>',
-        hook: '<g transform="translate(1000.8 880.4)"><path class="av-main" d="M829.33,6.68C847.55,18.39 810.63,64.41 749.52,113.18C674.2,173.29 565.59,254.61 438.1,347.04C209.55,512.75 13.87,633.31 1.4,616.11C-11.08,598.9 164.35,450.41 392.9,284.7C517.22,194.57 648.8,112.69 732.14,63.38C733.64,62.5 734.28,60.67 733.67,59.05C733.05,57.42 731.36,56.48 729.65,56.81C686.91,65.37 659.59,62.12 656.67,51.25C653.25,38.46 665.09,25.84 721.29,10.78C777.49,-4.27 818.17,-0.48 829.33,6.68Z"/></g>'
-            + '<g transform="translate(1392.9 1029.7)"><path class="av-trim" d="M0.9,135.7C68.04,87.03 137.3,40.76 199.93,0.73L238.59,56.04C181.89,98.8 116.91,146.7 46.1,198.04L0.9,135.7Z"/></g>',
-        needles: '<g transform="translate(-102.3 861.3)"><path class="av-main" d="M815.82,588.82C819.52,591.57 820.32,596.79 817.61,600.53C814.9,604.26 809.68,605.12 805.92,602.44L0.8,30.24L22.54,0.3L815.82,588.82ZM1025.4,588.82L1818.68,0.3L1840.42,30.24L1035.3,602.44C1031.54,605.12 1026.32,604.26 1023.61,600.53C1020.89,596.79 1021.7,591.57 1025.4,588.82Z"/></g>'
-            + '<g transform="translate(-110.1 849)"><path class="av-trim" d="M51.5,0C79.92,0 103,23.08 103,51.5C103,79.92 79.92,103 51.5,103C23.08,103 0,79.92 0,51.5C0,23.08 23.08,0 51.5,0ZM1803.72,0C1832.14,0 1855.22,23.08 1855.22,51.5C1855.22,79.92 1832.14,103 1803.72,103C1775.29,103 1752.22,79.92 1752.22,51.5C1752.22,23.08 1775.29,0 1803.72,0Z"/></g>',
-    };
-
-    const ACCESSORY_BOX = {
-        beanie: '33.5 -475 1568 1074', bucket: '-94.75 -458.41 1832.19 1133.15',
-        cap: '78.03 -256.14 1615.98 872.14', ruffle: '-74.89 -309.85 1784.99 999.75',
-        glasses: '79.63 331.33 1466.66 613.34', square: '78.28 388.28 1469.44 499.44',
-        cateye: '78.28 342.69 1469.44 590.54', browline: '79.63 401.75 1466.66 472.5',
-        scarf: '77.37 1040.66 1481.18 546.09', clip: '1128.8 91.4 347.2 347.2',
-        hook: '951.58 830.81 933.18 717.32', needles: '-221.41 737.69 2077.84 838.93'
-    };
-    /* The two base heads. Everything is shared except the two things that tell them apart: the Cutie base
-       has lashes and rosy cheeks, the Basic base neither. Hair and accessories are not part of this -
-       every style is offered on both, because a bucket hat suits either face. */
-    const BASE_FACES = { basic: 'Basic', cutie: 'Cutie' };
-    /* The two were called masc and fem while the choice was framed as gender. Mapped rather than dropped,
-       so a store written before the rename keeps its choice instead of reverting to Basic. */
-    const LEGACY_BASES = { masc: 'basic', fem: 'cutie' };
-
-    function normaliseBase(stored) {
-        const named = LEGACY_BASES[stored] || stored;
-        return BASE_FACES[named] ? named : 'basic';
-    }
-
-    /*
-     * The face, in the artwork's own stacking order: skin, mouth, eyes, then the pupils ON TOP. The pupil
-     * art is a little wider than the hole punched in the eye, so laid over it the pupil is the whole disc
-     * rather than only what the hole lets through - which is what the artist draws, and reads as a
-     * rounder eye.
-     *
-     * The two bases differ by which eye drawing is used, not by anything laid on top. The artwork fuses
-     * each Cutie lash into the same path as its almond, so there is no lashes-only shape -
-     * FACE_LASHED_EYES *is* the eye, with the flicks on it. Both are ink; only the pupil takes a colour.
-     */
-    function faceArt(base) {
-        return FACE_SKIN + FACE_MOUTH
-            + (base === 'cutie' ? FACE_BLUSH + FACE_LASHED_EYES : FACE_EYES)
-            + FACE_PUPILS;
-    }
-
-    // ---- The catalogue -------------------------------------------------------
-    /* Priced into the same four rarity bands the stitch roll uses, so "Legendary" means one thing across
-       the app. Each accessory shape ships in three colour duos as three separate entries: the duo is what
-       you are buying as much as the shape is. */
-    const LOCKER_PRICES = { 1: 60, 3: 120, 4: 220, 5: 400 };
-    const SLOT_LABELS = { head: 'Face', hat: 'Hat', hair: 'Hair', face: 'Glasses', neck: 'Scarf', tool: 'Tool' };
-    const SLOT_ORDER = ['head', 'hat', 'hair', 'face', 'neck', 'tool'];
-
-    /* Six duos, all drawn from the brand palette. Named for what they read as. */
-    const DUOS = ['hibiscus-sun', 'lagoon-sun', 'mango-lagoon', 'palm-sun', 'orchid-lagoon', 'sky-hibiscus'];
-
-    /* Skin, hair colour and the base head are not here on purpose: all three are chosen once, free, and
-       worn by every face. What a head buys is a silhouette and nothing else - the colour it is drawn in is
-       picked beside the skin tone, so cut and colour are separate decisions rather than forty combinations. */
-    const HEAD_SPECS = [
-        { shape: 'swoop', label: 'Swoop', tier: 1 },
-        { shape: 'bob', label: 'Bob', tier: 1 },
-        { shape: 'buzz', label: 'Buzz', tier: 1 },
-        { shape: 'bun', label: 'Top Knot', tier: 3 },
-        { shape: 'curly', label: 'Curls', tier: 3 },
-        { shape: 'pigtails', label: 'Pigtails', tier: 4 },
-        { shape: 'wavy', label: 'Waves', tier: 4 },
-        { shape: 'long', label: 'Long', tier: 5 }
-    ];
-
-    const ACCESSORY_SPECS = [
-        { shape: 'glasses', slot: 'face', label: 'Round Frames', tier: 1, duos: [5, 1, 3] },
-        { shape: 'square', slot: 'face', label: 'Square Frames', tier: 1, duos: [5, 0, 2] },
-        { shape: 'cateye', slot: 'face', label: 'Cat-Eye Frames', tier: 1, duos: [0, 3, 4] },
-        { shape: 'browline', slot: 'face', label: 'Browline Frames', tier: 1, duos: [1, 5, 2] },
-        // The clip and the scarf are offered in every duo there is; both are small enough that the colour
-        // is most of what you are choosing between.
-        { shape: 'clip', slot: 'hair', label: 'Yarn Clip', tier: 1, duos: [0, 1, 2, 3, 4, 5] },
-        { shape: 'beanie', slot: 'hat', label: 'Knit Beanie', tier: 3, duos: [1, 0, 2] },
-        { shape: 'bucket', slot: 'hat', label: 'Bucket Hat', tier: 3, duos: [4, 1, 3] },
-        { shape: 'scarf', slot: 'neck', label: 'Striped Scarf', tier: 3, duos: [0, 1, 2, 3, 4, 5] },
-        { shape: 'cap', slot: 'hat', label: 'Granny-Square Cap', tier: 4, duos: [3, 4, 1] },
-        { shape: 'hook', slot: 'tool', label: 'Crochet Hook', tier: 4, duos: [0, 1, 5] },
-        { shape: 'ruffle', slot: 'hat', label: 'Ruffle Hat', tier: 5, duos: [0, 4, 2] },
-        { shape: 'needles', slot: 'tool', label: 'Knitting Needles', tier: 5, duos: [2, 5, 3] }
-    ];
-
-    /* Built once from the two spec tables, so a price band or a duo is changed in one place rather than
-       in forty entries. */
-    const CATALOGUE = (() => {
-        const catalogue = {};
-        HEAD_SPECS.forEach(spec => {
-            catalogue[`head-${spec.shape}`] = {
-                slot: 'head', shape: spec.shape, label: spec.label, tier: spec.tier,
-                // The starter face is the one thing in here that is not for sale.
-                price: `head-${spec.shape}` === DEFAULT_HEAD ? 0 : LOCKER_PRICES[spec.tier]
-            };
-        });
-        ACCESSORY_SPECS.forEach(spec => {
-            spec.duos.forEach(duoIndex => {
-                const duo = DUOS[duoIndex];
-                catalogue[`${spec.shape}-${duo}`] = {
-                    slot: spec.slot, shape: spec.shape, label: spec.label,
-                    tier: spec.tier, duo, price: LOCKER_PRICES[spec.tier]
-                };
-            });
-        });
-        return catalogue;
-    })();
-
-    /** The equipped avatar as one SVG string. Layered head-first so a hat covers hair and a tool sits
-     *  over everything; the duo class rides on a <g> per item, because two items in different colours
-     *  have to be able to disagree. */
-    /**
-     * The only way to build something for avatarSvg to draw.
-     *
-     * This exists because the same mistake has now been made twice: a caller wanting a variant look - the
-     * locker's preview of one head - rebuilt the object by naming the fields it knew about, and each time
-     * a new free choice was added to the store it was forgotten here. First the skin, then the hair
-     * colour; both times the preview quietly showed a face nobody was wearing.
-     *
-     * So callers say what to REPLACE and never what to carry over. Carrying over is this function's whole
-     * job, and it does it by copying the store wholesale rather than listing its parts.
-     */
-    function lookOf(progress, equipped) {
-        return Object.assign({}, progress, { equipped: equipped || progress.equipped });
-    }
-
-    function avatarSvg(look, sizeClass) {
-        const worn = (look && look.equipped) || {};
-        const head = CATALOGUE[worn.head] || CATALOGUE[DEFAULT_HEAD];
-        const skin = Number(look && look.skin);
-        const tone = (skin >= 1 && skin <= SKIN_TONES) ? skin : 1;
-        const dye = Number(look && look.hair);
-        const colour = (dye >= 1 && dye <= HAIR_TONES) ? dye : 1;
-        const ink = Number(look && look.pupil);
-        const pupil = (ink >= 1 && ink <= PUPIL_TONES) ? ink : 1;
-        const base = normaliseBase(look && look.base);
-        const layer = (slot) => {
-            const item = CATALOGUE[worn[slot]];
-            if (!item || !ACCESSORY_ART[item.shape]) return '';
-            return `<g class="duo-${item.duo}">${ACCESSORY_ART[item.shape]}</g>`;
-        };
-        // The silhouette is named on the root as well as drawn, so the markup says which head it is
-        // rather than leaving it to be inferred from the path data.
-        //
-        // THE STACKING ORDER IS THE ARTWORK'S, not one invented here: it is the layer stack of the
-        // Affinity file the assets are exported from, read bottom to top. Anything rearranged below will
-        // disagree with what the artist sees while drawing, so change it there and re-read it.
-        //
-        //   hair behind -> scarf -> face -> hair in front -> glasses -> hat -> tool -> clip
-        //
-        // Two are worth saying out loud because both were wrong before: the SCARF is behind the head, not
-        // over the jaw - it is a shape the head sits in front of, so worn over the face it read as a
-        // misaligned band across the chin; and the TOOL is near the top, over the hat, because a hook is
-        // held up in front of everything rather than tucked behind the hair. The yarn clip is topmost of
-        // all - it is pinned into whatever is up there.
-        return `<svg class="av ${escapeHtml(sizeClass)} skin-${tone} hair-${colour}`
-            + ` pupil-${pupil} base-${base} style-${head.shape}"`
-            + ` viewBox="${AVATAR_VIEWBOX}" role="img" aria-label="Your studio avatar">`
-            + (HAIR_BACK[head.shape] || '')
-            + layer('neck')
-            + faceArt(base)
-            + (HAIR_FRONT[head.shape] || '')
-            + layer('face') + layer('hat') + layer('tool') + layer('hair')
-            + '</svg>';
-    }
-
-    /** One accessory on its own, framed to fill the space it is given. */
-    function accessorySvg(item, sizeClass) {
-        return `<svg class="av ${escapeHtml(sizeClass)}" viewBox="${ACCESSORY_BOX[item.shape] || AVATAR_VIEWBOX}"`
-            + ` role="img" aria-label="${escapeHtml(item.label)}">`
-            + `<g class="duo-${item.duo}">${ACCESSORY_ART[item.shape]}</g></svg>`;
-    }
-
-    // ---- Buying and wearing --------------------------------------------------
-    /**
-     * A purchase, refused rather than half-applied: an item already owned, one that does not exist and one
-     * beyond the balance all abandon the write, so a refused buy is not a storage write either.
-     *
-     * `spent` moves in step with `points` so the level, which reads the sum, does not notice. Buying
-     * something is a choice about the balance, not a retraction of the work that filled it.
-     */
-    function buyItem(id) {
-        const item = CATALOGUE[id];
-        if (!item) return;
-        const before = readProgress();
-        if (before.owned[id]) return;
-
-        // Said out loud, and nothing redrawn. A refusal used to be completely silent while still
-        // rebuilding the whole grid, so pressing an item you could not afford did the one thing
-        // guaranteed to look like a bug: threw away the scroll position and changed nothing else.
-        if (before.points < item.price) {
-            setText('locker-note', `${item.label} costs ${item.price} points`
-                + ` — you are ${(item.price - before.points).toLocaleString()} short.`);
-            return;
-        }
-
-        writeProgress(progress => {
-            progress.points -= item.price;
-            progress.spent += item.price;
-            progress.owned[id] = true;
-            // Worn on purchase. Buying a thing you then cannot see is a strange moment.
-            progress.equipped[item.slot] = id;
-        });
-        setText('locker-note', `${item.label} is yours.`);
-        renderLocker();
-    }
-
-    /** Wears an owned item, or takes it off if it is already the one being worn. */
-    function equipItem(id) {
-        const item = CATALOGUE[id];
-        if (!item) return;
-        writeProgress(progress => {
-            // Asked through ownsItem rather than read off `owned` directly, so the testing unlock below
-            // reaches wearing an item and not merely showing it.
-            if (!ownsItem(progress, id)) return false;
-            const wearing = progress.equipped[item.slot] === id;
-            // The head slot is the one that cannot be emptied - a face is not optional.
-            if (wearing && item.slot === 'head') return false;
-            progress.equipped[item.slot] = wearing ? '' : id;
-        });
-        renderLocker();
-    }
-
-    /*
-     * ============================ TEMPORARY ============================
-     * Every reward item counts as owned, so the whole wardrobe can be tried on without earning it first.
-     * A review switch, not a feature - DELETE THIS FUNCTION and the `shopUnlocked() ||` in ownsItem to
-     * put the shop back.
-     *
-     * Read fresh on every call rather than captured in a const, because the suites need the shop locked
-     * to test that a purchase deducts, that an item beyond the balance is refused, and that nothing is
-     * bought twice - all vacuous while everything is free. `test-shell.js` sets the flag for those.
-     */
-    function shopUnlocked() {
-        return typeof window !== 'undefined' && window.STITCH_LOCK_SHOP !== true;
-    }
-
-    function ownsItem(progress, id) {
-        if (shopUnlocked()) return true;
-        return !!progress.owned[id] || CATALOGUE[id].price === 0;
-    }
-
-    // ---- The locker ----------------------------------------------------------
-    /* Every item in a slot, always. Hairstyles were briefly filtered by gender; they are not any more,
-       because narrowing the list was the app deciding which haircuts a person was allowed to want. The
-       base head is the choice; the wardrobe is open. */
-    function lockerIds(slot) {
-        return Object.keys(CATALOGUE).filter(id => CATALOGUE[id].slot === slot);
-    }
-
-    /* What the grid is currently drawn for. Rebuilding it on every purchase threw the scroll position
-       away, which on a page this tall is the reader's whole place in it - so the tiles are rebuilt only
-       when the set of them changes, and a purchase just refreshes the ones already on screen. */
-    let lockerShape = '';
-
-    function renderLocker() {
-        // The balance is the subject of this view, so the meters carrying it are redrawn on the way in
-        // rather than left showing whatever the last view left.
-        renderProgress();
-        const progress = readProgress();
-        setHtml('av-hero', avatarSvg(lookOf(progress), 'av-large'));
-        setText('locker-balance', progress.points.toLocaleString());
-
-        const owned = Object.keys(CATALOGUE).filter(id => ownsItem(progress, id)).length;
-        setText('locker-owned', `${owned} of ${Object.keys(CATALOGUE).length} owned`);
-        renderPresentation(progress);
-
-        const host = shellEl('locker-grid');
-        if (!host) return;
-
-        // All four are in the signature because all four are painted into every face in the grid, so a
-        // change to any means the previews are drawn again. A choice left out of this is a choice the
-        // head previews go on ignoring.
-        const shape = `${progress.base}|${progress.skin}|${progress.hair}|${progress.pupil}`;
-        if (shape === lockerShape && host.children && host.children.length) {
-            SLOT_ORDER.forEach(slot => lockerIds(slot)
-                .forEach(id => refreshLockerTile(progress, id)));
-            return;
-        }
-        lockerShape = shape;
-
-        host.replaceChildren();
-        SLOT_ORDER.forEach(slot => {
-            const ids = lockerIds(slot);
-            if (!ids.length) return;
-            const heading = elem('h3', 'locker-group', SLOT_LABELS[slot]);
-            const row = elem('div', 'locker-row');
-            ids.forEach(id => row.appendChild(lockerTile(progress, id)));
-            host.append(heading, row);
-        });
-    }
-
-    /**
-     * One item. The tile carries its own state as classes, so the stylesheet decides what owned, worn and
-     * out-of-reach look like.
-     *
-     * Built element by element rather than as a markup string, and carrying an id: a grid assembled with
-     * innerHTML has to be found again with querySelectorAll to be wired, and the stub the tests run under
-     * does not have it. That is why Recent Projects has never had a test that clicks a row, and a shop
-     * that cannot be clicked in a test is a shop whose every purchase rule is unverified.
-     */
-    function lockerTile(progress, id) {
-        const item = CATALOGUE[id];
-        const has = ownsItem(progress, id);
-        const worn = progress.equipped[item.slot] === id;
-        const affordable = progress.points >= item.price;
-
-        const tile = button('locker-tile ' + tileState(worn, has, affordable), null,
-            `locker-item-${id}`);
-        UI[tile.id] = tile;
-
-        // A face is shown as a face; everything else is shown as itself. Drawing a floating head under all
-        // thirty accessories made the head the subject of every tile and the thing being sold the detail.
-        const art = elem('span', 'locker-art');
-        art.id = `locker-art-${id}`;
-        UI[art.id] = art;
-        art.innerHTML = item.slot === 'head'
-            // Only the head is swapped in; every free choice comes across on its own.
-            ? avatarSvg(lookOf(progress, { head: id }), 'av-tile')
-            : accessorySvg(item, 'av-tile');
-
-        const name = elem('span', 'locker-name', item.label);
-
-        const foot = elem('span', `locker-foot tier-${item.tier}`);
-        foot.id = `locker-foot-${id}`;
-        UI[foot.id] = foot;
-        foot.textContent = tileFoot(item, worn, has);
-
-        tile.addEventListener('click', () => {
-            if (ownsItem(readProgress(), id)) equipItem(id);
-            else buyItem(id);
-        });
-        tile.append(art, name, foot);
-        return tile;
-    }
-
-    function tileState(worn, has, affordable) {
-        return worn ? 'is-worn' : has ? 'is-owned' : affordable ? 'is-affordable' : 'is-locked';
-    }
-
-    function tileFoot(item, worn, has) {
-        return worn ? 'Wearing' : has ? 'Owned' : `${item.price} pts`;
-    }
-
-    /* Everything about a tile that a purchase can change, without rebuilding it. The art is untouched
-       because nothing here alters it. */
-    function refreshLockerTile(progress, id) {
-        const tile = UI[`locker-item-${id}`];
-        const foot = UI[`locker-foot-${id}`];
-        if (!tile || !foot) return;
-        const item = CATALOGUE[id];
-        const has = ownsItem(progress, id);
-        const worn = progress.equipped[item.slot] === id;
-        tile.className = 'locker-tile ' + tileState(worn, has, progress.points >= item.price);
-        foot.textContent = tileFoot(item, worn, has);
-    }
-
-    /** The free half of the locker: who the avatar is, rather than what it is wearing. */
-    function renderPresentation(progress) {
-        Object.keys(BASE_FACES).forEach(base => {
-            const swatch = UI[`locker-base-${base}`];
-            if (swatch && swatch.classList) swatch.classList.toggle('is-on', progress.base === base);
-        });
-        for (let tone = 1; tone <= SKIN_TONES; tone++) {
-            const swatch = UI[`locker-skin-${tone}`];
-            if (swatch && swatch.classList) swatch.classList.toggle('is-on', progress.skin === tone);
-        }
-        for (let tone = 1; tone <= HAIR_TONES; tone++) {
-            const swatch = UI[`locker-hair-${tone}`];
-            if (swatch && swatch.classList) swatch.classList.toggle('is-on', progress.hair === tone);
-        }
-        for (let tone = 1; tone <= PUPIL_TONES; tone++) {
-            const swatch = UI[`locker-pupil-${tone}`];
-            if (swatch && swatch.classList) swatch.classList.toggle('is-on', progress.pupil === tone);
-        }
-    }
-
-    /* Both free, and both deliberately outside `owned`. Points are earned by writing patterns, and being
-       depicted as yourself is not something anyone should have to write patterns for. */
-    function setBase(base) {
-        if (!BASE_FACES[base]) return;
-        writeProgress(progress => {
-            if (progress.base === base) return false;
-            progress.base = base;
-        });
-        renderLocker();
-    }
-
-    function setSkin(tone) {
-        writeProgress(progress => {
-            if (progress.skin === tone) return false;
-            progress.skin = tone;
-        });
-        renderLocker();
-    }
-
-    function setHair(tone) {
-        writeProgress(progress => {
-            if (progress.hair === tone) return false;
-            progress.hair = tone;
-        });
-        renderLocker();
-    }
-
-    function setPupil(tone) {
-        writeProgress(progress => {
-            if (progress.pupil === tone) return false;
-            progress.pupil = tone;
-        });
-        renderLocker();
     }
 
     // ---- Dashboard -----------------------------------------------------------
