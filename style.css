@@ -4,7 +4,15 @@
 :root {
     --brand-white: #ffffff;
     --brand-sand: #e9e5db;
-    --brand-coral: #da805b;
+    /* Deep Forest Sage. The structural colour - the rail, the deepest ink, the shadow tint. It is
+       NOT --primary: sage is the frame, teal is what you press. */
+    --brand-sage: #2A4A3E;
+    /* Soft Cream, the warm frosted canvas the whole workspace sits on. */
+    --brand-cream: #F9F5F0;
+    --brand-coral: #E87A5D;
+    /* Soft Peach. Only ever the light end of a coral gradient or a wash - never a surface on its
+       own, where it turns the cream muddy. */
+    --brand-peach: #F2C4A8;
     --brand-teal: #56766a;
     --brand-charcoal: #373d3a;
     /* The linter's third severity, style - a teaching note rather than a math or syntax alert, so it
@@ -17,8 +25,15 @@
     --text-muted: #6a7772;
     --primary: var(--brand-teal);
     --primary-hover: #446256;
+    /* Two corals, and the split is load-bearing.
+       --accent is the DISPLAY tone: fills, glows, gradient stops, decorative marks. At 2.9:1 on
+       white it cannot legally carry text, and the old single-coral palette did exactly that on
+       every solid button in the app.
+       --accent-ink is the TEXT tone, 4.54:1 on white: coral type on cream, and any solid coral
+       surface with white text on it. Reach for --accent-ink whenever a glyph is involved. */
     --accent: var(--brand-coral);
-    --accent-hover: #bf6b48;
+    --accent-ink: #C2543A;
+    --accent-hover: #AD4630;
     --border: #d5d0c4;
     --radius: 16px;
 
@@ -90,13 +105,13 @@
        lit surface and the navigation as the frame. */
     --sidebar-w: 258px;
     --sidebar-rail: 76px;
-    --sidebar-bg: #2e4b41;
-    --sidebar-bg-deep: #253e35;
+    --sidebar-bg: var(--brand-sage);
+    --sidebar-bg-deep: #1F382E;
     --sidebar-ink: #e9efe9;
     --sidebar-ink-dim: #9cb4a9;
 
     /* Cream workspace, warmer than the sand page behind it. */
-    --shell-bg: #fcf8ef;
+    --shell-bg: var(--brand-cream);
     --card-radius: 22px;
     --shell-pad: 24px;
 
@@ -112,32 +127,95 @@
     --glass-thin: rgba(255, 255, 255, 0.38);
     /* The hairline is TEAL. White on a mostly-white pane is invisible on a light ground; a faint dark
        hairline outside plus the white sheen inside reads as the thickness of a sheet. */
-    --glass-border: rgba(46, 75, 65, 0.13);
-    --glass-edge: rgba(46, 75, 65, 0.08);
+    --glass-border: rgba(42, 74, 62, 0.13);
+    --glass-edge: rgba(42, 74, 62, 0.08);
     --glass-blur: saturate(190%) blur(30px);
     --glass-blur-light: saturate(170%) blur(18px);
     /* Two shadows, contact and cast, both kept small. A 32/44px penumbra is a drop shadow under a
        card, not the way glass sits on a surface it is nearly touching. */
     --glass-shadow:
-        0 0.5px 1px rgba(46, 75, 65, 0.05),
-        0 8px 24px -12px rgba(46, 75, 65, 0.20);
+        0 0.5px 1px rgba(42, 74, 62, 0.05),
+        0 8px 24px -12px rgba(42, 74, 62, 0.20);
     --glass-shadow-lifted:
-        0 1px 2px rgba(46, 75, 65, 0.06),
-        0 16px 36px -16px rgba(46, 75, 65, 0.28);
+        0 1px 2px rgba(42, 74, 62, 0.06),
+        0 16px 36px -16px rgba(42, 74, 62, 0.28);
     /* Lit line on top, shaded line at the foot. One edge is a highlight; the pair is thickness. */
     --glass-sheen:
         inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(46, 75, 65, 0.045);
+        inset 0 -1px 0 rgba(42, 74, 62, 0.045);
 
     /* Dark glass, for the sidebar - the one surface that inverts the palette. */
-    --glass-dark: rgba(37, 62, 53, 0.62);
+    --glass-dark: rgba(31, 56, 46, 0.62);
     --glass-dark-border: rgba(233, 239, 233, 0.14);
     --glass-dark-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+
+    /* ---- Gummy ----
+       The glass tokens above describe a frosted PANE. These describe what gives it thickness, so
+       it reads as a pressable object rather than a sheet: a specular arc along the top edge, an
+       ambient glow bouncing around inside the body, and TWO drop shadows - a tight contact shadow
+       pinning it to the surface and a wide diffuse one lifting it off. One shadow reads as a
+       sticker; the pair reads as an object with a near side and a far side.
+       Every shadow colour here is sage-tinted, never grey. Grey shadow on a warm cream ground is
+       the single thing that dates a soft UI - it reads as dirt rather than as depth. */
+
+    /* Specular top edge, interior ambient glow, shaded foot. */
+    --gum-sheen:
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        inset 0 8px 20px -12px rgba(255, 255, 255, 0.55),
+        inset 0 -1px 0 rgba(42, 74, 62, 0.06);
+    /* Contact, then cast. */
+    --gum-shadow:
+        0 1px 2px rgba(42, 74, 62, 0.06),
+        0 10px 24px -12px rgba(42, 74, 62, 0.22);
+    --gum-shadow-lift:
+        0 2px 4px rgba(42, 74, 62, 0.07),
+        0 20px 44px -18px rgba(42, 74, 62, 0.30);
+    /* Pressed: the cast shadow collapses entirely and light comes from above instead. Losing the
+       cast shadow is what sells the press - dimming it only reads as a colour change. */
+    --gum-shadow-press:
+        inset 0 2px 6px rgba(42, 74, 62, 0.20),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+    /* Coral and sage variants, for action buttons and the rail. The sheen is weaker on a saturated
+       ground: at 0.92 over coral the highlight turns the top of the button pink. */
+    --gum-sheen-coral:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 8px 18px -12px rgba(255, 255, 255, 0.45);
+    --gum-shadow-coral:
+        0 1px 2px rgba(173, 70, 48, 0.20),
+        0 10px 22px -10px rgba(173, 70, 48, 0.45);
+    --gum-sheen-dark:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 10px 24px -14px rgba(255, 255, 255, 0.10);
+
+    /* ---- Liquid tubes ----
+       For XP and points. The track is a hollow capillary - dark inset at the top, a lit rim at the
+       foot - and the fill is lit liquid inside it. The fill takes TWO stacked gradients: a vertical
+       light ramp that gives the liquid a curved surface, over the horizontal hue ramp. One gradient
+       alone is a coloured rectangle however much it glows. */
+    --tube-track:
+        inset 0 1px 2px rgba(42, 74, 62, 0.22),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.55);
+    --tube-fill-coral:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.10) 45%, rgba(0, 0, 0, 0.06) 100%),
+        linear-gradient(90deg, var(--brand-coral), var(--brand-peach));
+    --tube-fill-sage:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(0, 0, 0, 0.08) 100%),
+        linear-gradient(90deg, var(--primary), #6f9384);
+    --tube-glow-coral: 0 0 12px -2px rgba(232, 122, 93, 0.65);
+    --tube-glow-sage:  0 0 12px -2px rgba(86, 118, 106, 0.55);
 
     /* A pill for anything pressable, a softer corner for chips. Panels keep --radius. */
     --radius-pill: 999px;
     --radius-sm: 12px;
     --radius-xs: 9px;
+
+    /* Gummy radii. Larger than the legacy --radius (16px), which stays for panels not yet migrated.
+       --r-pill and --r-gum-sm alias the two above so new markup only has to learn one scale. */
+    --r-gum: var(--card-radius);   /* 22px - cards and panels          */
+    --r-gum-lg: 28px;              /* docks, hero surfaces, the rail   */
+    --r-gum-sm: 16px;              /* inputs, chips, nav sub-items     */
+    --r-pill: var(--radius-pill);
 
     /* Springs. The overshoot is what makes a control feel pressable; --ease-out only settles. */
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -149,10 +227,10 @@
        visible edges and land as decoration, while the same alpha over overlapping 900-1500px ellipses
        lands as atmosphere. Halving the alphas was tried first and only flattened the page. --wash-depth
        is a hueless vertical ramp: glass needs variation behind it more than colour. */
-    --wash-coral: rgba(218, 128, 91, 0.20);
+    --wash-coral: rgba(232, 122, 93, 0.20);
     --wash-teal: rgba(86, 118, 106, 0.19);
     --wash-sun: rgba(231, 191, 123, 0.16);
-    --wash-depth: rgba(46, 75, 65, 0.15);
+    --wash-depth: rgba(42, 74, 62, 0.15);
 }
 
 /* -apple-system leads, Inter falls back. Antialiasing keeps that face from looking heavy over a
@@ -204,6 +282,35 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
     overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
+/* ---- Gummy surfaces ----
+   Three composable classes so new markup never hand-rolls a shadow stack. .gum is a pane you read
+   THROUGH - it blurs what is behind it. .gum-thin is furniture with nothing behind it worth
+   reading: chips, rails, pills. .gum-press is orthogonal to both and goes on anything pressable.
+   Existing components keep their own rules; these exist for what the redesign adds. */
+/* The panels and the open docks ARE this - they are listed here rather than repeating the five
+   declarations, so there is one definition of what a gummy pane is. Section 2 then adds only what
+   is a panel's own: its padding, its sizing and its hover. */
+.gum, .panel, .panel-card, .dock.is-open {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-gum);
+    box-shadow: var(--gum-sheen), var(--gum-shadow);
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.gum-thin, .dock-btn, .dock-close, .status-pill, .stage-track {
+    background: var(--glass-thin);
+    border: 1px solid var(--glass-edge);
+    border-radius: var(--r-pill);
+    box-shadow: var(--gum-sheen);
+    -webkit-backdrop-filter: var(--glass-blur-light); backdrop-filter: var(--glass-blur-light);
+}
+.gum-press {
+    transition: transform 0.2s var(--spring), box-shadow 0.22s var(--ease-out),
+                background-color 0.22s var(--ease-out), color 0.22s var(--ease-out);
+}
+.gum-press:hover { transform: translateY(-1px); box-shadow: var(--gum-sheen), var(--gum-shadow-lift); }
+.gum-press:active { transform: scale(0.97); box-shadow: var(--gum-shadow-press); }
+
 /* ===================================================== */
 /* 1b. APP SHELL - SIDEBAR, TOPBAR, DRAWER               */
 /* ===================================================== */
@@ -230,11 +337,11 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
     position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
     display: flex; flex-direction: column; gap: 16px; padding: 18px 13px;
     background:
-        linear-gradient(180deg, rgba(46, 75, 65, 0.72) 0%, rgba(37, 62, 53, 0.82) 100%),
+        linear-gradient(180deg, rgba(42, 74, 62, 0.72) 0%, rgba(31, 56, 46, 0.82) 100%),
         var(--glass-dark);
     -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
     border-right: 1px solid var(--glass-dark-border);
-    box-shadow: var(--glass-dark-sheen), 1px 0 24px -16px rgba(37, 62, 53, 0.45);
+    box-shadow: var(--glass-dark-sheen), 1px 0 24px -16px rgba(31, 56, 46, 0.45);
     color: var(--sidebar-ink); z-index: 60;
 }
 
@@ -254,8 +361,63 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 }
 .brand-words span { display: block; font-size: 10px; line-height: 1.35; color: var(--sidebar-ink-dim); }
 
-/* ---- Navigation ---- */
-.sidebar-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; min-height: 0; }
+/* ---- Navigation ----
+   Four hubs, each followed by its own list of destinations. The gap between GROUPS is larger than
+   the gap inside one, which is most of what makes the four read as four. */
+.sidebar-nav {
+    /* flex: none, so the nav is exactly as tall as its four groups and no taller. It used to be
+       flex: 1 and grew to fill the rail, which pushed Stitch Points to the very bottom and left a
+       tall gap in between - and once it was a growing box with a hard height, it needed a scrollbar
+       of its own the moment an open group did not fit.
+       #app-sidebar already scrolls as one column, so a genuinely short window scrolls the whole
+       rail rather than a track inside it. One scroll region, not two nested. */
+    display: flex; flex-direction: column; gap: 6px; flex: none;
+}
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+
+.nav-hub {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    background: transparent; background-image: none; color: var(--sidebar-ink);
+    border: 1px solid transparent; border-radius: var(--r-gum-sm);
+    padding: 10px 12px; font-size: 13px; font-weight: 700; text-align: left; cursor: pointer;
+    letter-spacing: -0.008em;
+    box-shadow: none;
+    transition: background-color 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out),
+                color 0.22s var(--ease-out);
+}
+.nav-hub:hover { background: rgba(233, 239, 233, 0.10); transform: none; box-shadow: none; }
+/* An open hub is a lit gummy lozenge - the same treatment the active destination gets, one step
+   quieter, so the pair reads as "this group, and this one inside it" rather than as two things
+   competing to look selected. */
+.nav-hub.is-open {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.09));
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: var(--gum-sheen-dark);
+    color: var(--brand-white);
+}
+.nav-hub:active { transform: scale(0.985); box-shadow: var(--gum-shadow-press); }
+.nav-hub .nav-chevron { transition: transform 0.28s var(--ease-out); }
+.nav-hub.is-open .nav-chevron { transform: rotate(90deg); color: var(--brand-white); opacity: 0.7; }
+.nav-hub.is-open .nav-icon { opacity: 1; }
+
+/* 0fr -> 1fr rather than height: 0 -> auto, which does not animate. The inner div carries the
+   overflow: a grid row can be given a fractional height, but its content still has to be told to
+   be clipped while that height is smaller than it is. */
+.nav-sub {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s var(--ease-out);
+}
+.nav-hub.is-open + .nav-sub { grid-template-rows: 1fr; }
+.nav-sub > div { overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+/* Indented under the hub, and a hairline runs down the group so the indent reads as containment
+   rather than as a stray margin. */
+.nav-sub .nav-item {
+    font-size: 12.5px; font-weight: 600; padding: 7px 12px;
+    margin-left: 19px; border-left: 1px solid rgba(233, 239, 233, 0.16);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.nav-sub .nav-item.is-active { border-left-color: rgba(255, 255, 255, 0.45); }
+
 .nav-item {
     display: flex; align-items: center; gap: 11px; width: 100%;
     background: transparent; color: var(--sidebar-ink); border: 1px solid transparent;
@@ -284,6 +446,13 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
    Every figure comes from the progress store in app.js section 12, which only records things that
    actually happened in this browser. */
 .sidebar-points {
+    /* Sits 70px below the last menu item, and never shrinks.
+       54px, not 70: #app-sidebar is a flex column with gap: 16px, which already puts 16px between
+       the nav and this box. 54 + 16 is the 70 that is actually measured on screen.
+       Deliberately NOT margin-top: auto. An auto margin would float this to the foot of the rail
+       and the drop would be however much window was left over - a different distance on every
+       screen. A fixed offset is the one thing that reads the same on all of them. */
+    flex: none; margin-top: 54px;
     background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(233, 239, 233, 0.16);
     border-radius: var(--radius); padding: 12px;
     box-shadow: var(--glass-dark-sheen);
@@ -291,11 +460,41 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 .points-head { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .points-title { flex: 1; font-weight: 700; color: var(--sidebar-ink); }
 .points-head strong { color: var(--brand-sand); font-size: 14px; font-weight: 800; }
-.points-track { height: 7px; border-radius: var(--radius-pill); background: rgba(0, 0, 0, 0.25); margin: 9px 0 7px 0; overflow: hidden; }
+/* ---- Liquid tubes ----
+   One component behind three names. .tube/.tube-fill is what new markup uses; .points-* and
+   .meter-* keep their names because app.js sets style.width on those ids and the shell suite reads
+   them, so renaming would be churn for nothing.
+   A tube is a hollow capillary with lit liquid in it. What makes it read as fluid rather than as a
+   filled rectangle is the ::after specular line riding on top of the fill - without it the two
+   stacked gradients are just a nicer bar. position: relative on the fill anchors that line. */
+.tube, .points-track, .meter-track {
+    display: block; position: relative;
+    height: 9px; border-radius: var(--r-pill); overflow: hidden;
+    background: rgba(42, 74, 62, 0.10);
+    box-shadow: var(--tube-track);
+}
+.tube-fill, .points-bar, .meter-bar {
+    display: block; position: relative; height: 100%; width: 0;
+    border-radius: var(--r-pill);
+    background: var(--tube-fill-sage);
+    box-shadow: var(--tube-glow-sage);
+    transition: width 0.6s var(--ease-out);
+}
+.tube-fill::after, .points-bar::after, .meter-bar::after {
+    content: ''; position: absolute; top: 1px; left: 2px; right: 2px; height: 2px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.12));
+}
+/* Coral liquid, for the rail - a sage tube would vanish into the sage ground it sits on. */
 .points-bar {
-    display: block; height: 100%; width: 0; border-radius: var(--radius-pill);
-    background: linear-gradient(90deg, var(--brand-coral), var(--brand-sand));
-    transition: width 0.5s ease;
+    background: var(--tube-fill-coral);
+    box-shadow: var(--tube-glow-coral);
+}
+/* The rail's track is cut into a dark ground, so it needs a dark well and a lit lower lip rather
+   than the light-ground version above. */
+.points-track {
+    background: rgba(0, 0, 0, 0.28); margin: 9px 0 7px 0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12);
 }
 .points-next { margin: 0; font-size: 10.5px; color: var(--sidebar-ink-dim); }
 .points-note {
@@ -320,28 +519,214 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 }
 .topbar-title p { margin: 2px 0 0 0; color: var(--text-muted); font-size: 13.5px; }
 .topbar-meters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.meter-card {
-    display: flex; align-items: center; gap: 10px; background: var(--glass-bg);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-pill); padding: 8px 16px;
-    -webkit-backdrop-filter: var(--glass-blur-light); backdrop-filter: var(--glass-blur-light);
-    box-shadow: var(--glass-sheen), var(--glass-shadow);
+.meter-track { min-width: 90px; }
+
+/* ---- Dock buttons ----
+   The two floating panels live here rather than in the sidebar, because they are things you reach
+   for WHILE working rather than places you go. */
+.dock-btn {
+    display: inline-flex; align-items: center; gap: 7px; width: auto;
+    padding: 9px 14px; font-size: 12.5px; font-weight: 650; white-space: nowrap;
+    color: var(--text-primary); background-image: none;
 }
-.meter-icon { width: 17px; height: 17px; color: var(--brand-teal); opacity: 0.7; }
-.meter-body { display: flex; flex-direction: column; gap: 0; min-width: 0; }
-.meter-body strong { font-size: 12.5px; font-weight: 700; }
-.meter-sub { font-size: 11px; color: var(--text-muted); }
-.meter-track { height: 7px; border-radius: var(--radius-pill); background: var(--surface-sunken); overflow: hidden; min-width: 90px; }
-.meter-bar { display: block; height: 100%; width: 0; border-radius: var(--radius-pill); background: var(--brand-teal); transition: width 0.5s ease; }
-.meter-count { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
-.meter-xp .meter-track { width: 150px; margin-top: 4px; }
-.meter-streak .meter-body strong { color: var(--brand-coral); }
+.dock-btn .ic { width: 16px; height: 16px; flex: none; color: var(--primary); opacity: 0.85; }
+.dock-btn-label { min-width: 0; }
+.dock-btn:hover { background: var(--glass-bg-strong); color: var(--text-primary); }
+/* Held open, the trigger reads as pressed rather than as hovered: the cast shadow is gone and the
+   fill is teal, matching the panel it is holding open. */
+.dock-btn[aria-expanded="true"] {
+    background: var(--success-bg); color: var(--primary);
+    border-color: rgba(86, 118, 106, 0.30);
+    box-shadow: var(--gum-shadow-press);
+}
+.dock-btn[aria-expanded="true"] .ic { opacity: 1; }
+
+/* ---- Status pill ----
+   Row counter, level and streak in one lozenge, replacing three meter cards and a portrait. It is
+   not a control - nothing in it is pressable, and the place to change what the avatar wears is
+   still the Locker. */
+.status-pill {
+    display: flex; align-items: center; gap: 11px;
+    padding: 7px 15px 7px 8px;
+    box-shadow: var(--gum-sheen), var(--gum-shadow);
+}
+.status-seg { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.status-seg strong { font-size: 12.5px; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.status-unit { font-size: 11px; color: var(--text-muted); }
+.status-ic { width: 15px; height: 15px; flex: none; color: var(--primary); opacity: 0.72; }
+.status-ic-flame { color: var(--accent-ink); opacity: 0.85; }
+/* Hairline separators. Inset top and bottom so they read as scored into the pill rather than as
+   full-height dividers chopping it into three. */
+.status-div { width: 1px; align-self: stretch; margin: 3px 0; background: var(--glass-border); flex: none; }
+/* The level and its tube stack, so the tube sits directly under the word it belongs to. */
+.status-stack { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.status-stack .tube { width: 74px; height: 7px; }
+
+/* ---- Floating docks ----
+   The whole mechanism is these two states of one element.
+
+   CLOSED: display: contents. The wrapper is not laid out at all, so its panels are children of the
+   column or grid above it for every purpose that matters - they flow, they wrap, they take the
+   grid's gaps. This is what lets a panel be dockable without being moved, which the shell forbids:
+   every id stays exactly where it has always been in the document, and setHidden goes on working
+   on it untouched.
+
+   OPEN: the same element becomes a fixed pane. Non-modal on purpose, and there is no scrim - the
+   point of a dock is that you keep working behind it. */
+.dock { display: contents; }
+.dock > .dock-head { display: none; }
+.dock > .dock-body { display: contents; }
+
+/* ---- Dock host chain ----
+   An open dock is position: fixed, so it draws at viewport coordinates wherever it sits - but a
+   fixed element inside a display: none ancestor draws nothing at all, and both docks live inside
+   something a view can hide. The Stitch Library's panels are in the workspace; the Compiler
+   Overview is a dashboard card, and #dashboard-view is hidden on all eleven other views.
+   So while a dock is open its containers are put back on screen and immediately emptied: only the
+   path down to the dock renders. Every rule is scoped to .hidden, so opening a dock on the view
+   that already owns its panels leaves the page behind it exactly as it was - which is the whole
+   point of a dock over a dialog.
+   Written out per dock rather than found with :has(), which would ask the same question of every
+   element on the page to reach two known answers. */
+#app-shell.dock-library-open #workspace.hidden,
+#app-shell.dock-library-open #right-column.hidden { display: block !important; }
+/* Emptying only ever happens INSIDE a container this block just forced back on screen. Without the
+   .hidden on the ancestor, opening the Library over the Studio - where the right column is visible
+   and full of the pattern you are writing - would blank it behind the pane. */
+#app-shell.dock-library-open #workspace.hidden > *:not(#right-column) { display: none !important; }
+#app-shell.dock-library-open #workspace.hidden #right-column > *:not(#dock-library),
+#app-shell.dock-library-open #right-column.hidden > *:not(#dock-library) { display: none !important; }
+
+#app-shell.dock-compiler-open #dashboard-view.hidden { display: block !important; }
+#app-shell.dock-compiler-open #dashboard-view.hidden > *:not(.dash-grid) { display: none !important; }
+#app-shell.dock-compiler-open #dashboard-view.hidden > .dash-grid { display: block !important; }
+#app-shell.dock-compiler-open #dashboard-view.hidden .dash-grid > *:not(#dock-compiler) { display: none !important; }
+
+.dock.is-open {
+    display: flex; flex-direction: column;
+    position: fixed; top: 16px; right: 16px; bottom: 16px;
+    width: min(460px, calc(100vw - 32px));
+    z-index: 70; padding: var(--space-4); gap: var(--space-3);
+    /* Pane comes from .gum; a floating one takes the larger corner and the lifted shadow. */
+    border-radius: var(--r-gum-lg);
+    box-shadow: var(--gum-sheen), var(--gum-shadow-lift);
+    animation: dock-in 0.32s var(--ease-out);
+}
+.dock.is-open > .dock-head {
+    display: flex; align-items: center; gap: 9px; flex: none;
+    padding-bottom: var(--space-3); border-bottom: 1px solid var(--glass-edge);
+}
+/* The panels scroll; the head stays put. min-height: 0 because a flex child will not shrink below
+   its content otherwise and the overflow never engages. */
+.dock.is-open > .dock-body {
+    display: flex; flex-direction: column; gap: var(--space-3);
+    overflow-y: auto; min-height: 0; flex: 1;
+}
+/* Inside a dock the panes are already on glass, so a second frosted layer over the first turns the
+   text milky. They keep their shape and give up their own backdrop. */
+.dock.is-open .panel {
+    background: var(--glass-thin); box-shadow: var(--gum-sheen);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.dock.is-open .dash-card { background: none; border: 0; box-shadow: none; padding: 0;
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* The dock head already names it, and the card's own h3 repeated it two lines below. The Library
+   keeps its panel headings, because there are two panels in there and they need telling apart. */
+#dock-compiler.is-open .dash-card-head h3 { display: none; }
+/* 215px of findings beside a graph works in a dashboard card and not in a 460px pane. */
+#dock-compiler.is-open .compiler-split { grid-template-columns: minmax(0, 1fr); }
+.dock-head-ic { width: 17px; height: 17px; flex: none; color: var(--primary); }
+.dock-title { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.dock-close {
+    width: 28px; height: 28px; flex: none; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 19px; line-height: 1; font-weight: 500;
+    background-image: none; color: var(--text-muted);
+}
+.dock-close:hover { background: var(--glass-bg-strong); color: var(--text-primary); box-shadow: var(--gum-sheen); }
+
+@keyframes dock-in { from { opacity: 0; transform: translateX(26px) scale(0.98); } }
+
+/* On a phone the dock is a sheet off the bottom rather than a panel off the side: there is no room
+   beside the content to float over, and a thumb reaches the bottom of the screen. */
+@media (max-width: 700px) {
+    .dock.is-open {
+        top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 78vh;
+        animation: dock-up 0.32s var(--ease-out);
+    }
+    @keyframes dock-up { from { opacity: 0; transform: translateY(26px) scale(0.99); } }
+}
+
+/* ---- Workflow stage rail ----
+   Two elements. .stage-rail spans the topbar - flex-basis 100% with a late order - so it drops onto
+   its own line below the title and the meters however narrow the bar gets. .stage-track is the
+   visible pill inside it, sized to its five stages. It has to be two: a flex item takes its main
+   size from flex-basis, so the 100% that buys the line break is exactly what would stop the pill
+   shrinking to its content. */
+.stage-rail {
+    flex-basis: 100%; order: 10;
+    display: flex; margin-top: 14px; min-width: 0;
+}
+.stage-track {
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 6px 8px; max-width: 100%;
+    box-shadow: var(--gum-sheen), var(--gum-shadow);
+}
+.stage {
+    display: inline-flex; align-items: center; gap: 8px; width: auto;
+    padding: 6px 14px 6px 8px; border-radius: var(--r-pill);
+    background: transparent; background-image: none; box-shadow: none;
+    color: var(--text-muted); font-size: 12.5px; font-weight: 650; white-space: nowrap;
+    border: 1px solid transparent;
+    transition: background-color 0.22s var(--ease-out), color 0.22s var(--ease-out),
+                box-shadow 0.22s var(--ease-out), transform 0.2s var(--spring);
+}
+.stage:hover { background: var(--glass-bg-strong); color: var(--text-primary); transform: none; box-shadow: none; }
+.stage:active { transform: scale(0.97); box-shadow: var(--gum-shadow-press); }
+/* The marker: a numbered well before the stage has anything in it, a filled coral gummy disc once
+   it does. Coral rather than teal because a tick is a result, and results are the accent's job. */
+.stage-dot {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 21px; height: 21px; border-radius: var(--r-pill);
+    background: rgba(42, 74, 62, 0.09);
+    box-shadow: inset 0 1px 2px rgba(42, 74, 62, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.7);
+    font-size: 10.5px; font-weight: 800; color: var(--text-muted);
+    transition: background-color 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out);
+}
+.stage-tick { width: 12px; height: 12px; color: var(--brand-white); }
+.stage.is-done .stage-dot {
+    background: linear-gradient(180deg, var(--brand-coral), var(--accent-ink));
+    box-shadow: var(--gum-sheen-coral), 0 2px 6px -2px rgba(173, 70, 48, 0.6);
+    color: var(--brand-white);
+}
+.stage.is-done { color: var(--text-primary); }
+/* Where you are: a lit pane with a soft sage halo. The halo is what separates "current" from
+   "done" - both are emphasised, but only one of them is glowing. */
+.stage.is-here {
+    background: var(--glass-fill); color: var(--text-primary);
+    border-color: var(--glass-border);
+    box-shadow: var(--gum-sheen), 0 0 0 3px rgba(86, 118, 106, 0.13), var(--gum-shadow);
+}
+.stage.is-here .stage-dot {
+    box-shadow: inset 0 1px 2px rgba(42, 74, 62, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.7),
+                var(--tube-glow-sage);
+}
+.stage.is-here.is-done .stage-dot {
+    box-shadow: var(--gum-sheen-coral), 0 2px 6px -2px rgba(173, 70, 48, 0.6), var(--tube-glow-coral);
+}
+/* The thread between stages. Short and faint - it says "these are a sequence", and anything
+   heavier turns five buttons into a progress bar the stages are not allowed to be. */
+.stage-link { width: 12px; height: 2px; border-radius: var(--r-pill); background: var(--glass-border); flex: none; }
+.stage-label { min-width: 0; }
+.stage-num { line-height: 1; }
+
 .btn-new-project {
-    width: auto; background: var(--brand-coral); color: var(--brand-white); border: 0;
+    width: auto; background: var(--accent-ink); color: var(--brand-white); border: 0;
     border-radius: var(--radius-pill); padding: 11px 20px; font-weight: 700; font-size: 13.5px;
     cursor: pointer; white-space: nowrap;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 18px -8px rgba(191, 107, 72, 0.65);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 18px -8px rgba(173, 70, 48, 0.65);
 }
-.btn-new-project:hover { background: var(--accent-hover); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 14px 26px -10px rgba(191, 107, 72, 0.6); }
+.btn-new-project:hover { background: var(--accent-hover); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 14px 26px -10px rgba(173, 70, 48, 0.6); }
 
 /* ---- Workspace framing ----
    Every view is one column, so the base two-column grid in section 2 is overridden here rather than
@@ -376,16 +761,15 @@ main {
 
 /* One rule for every panel. .panel-card used to be a hand-kept copy - two rules to keep in
    sync is a standing invitation to drift. */
+/* The pane itself - fill, hairline, corner, sheen and blur - is defined once with .gum in section
+   1c, which this is listed in. What is left here is what belongs to a panel alone. */
 .panel, .panel-card {
-    background: var(--glass-fill); padding: var(--panel-pad);
-    border-radius: var(--card-radius); border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-sheen), var(--glass-shadow);
-    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    padding: var(--panel-pad);
     width: 100%; box-sizing: border-box;
     transition: box-shadow 0.28s var(--ease-out), transform 0.28s var(--ease-out);
 }
 /* A pane lifts under the pointer. Settle curve, not the spring: panels are not pressable. */
-.panel:hover, .panel-card:hover { box-shadow: var(--glass-sheen), var(--glass-shadow-lifted); }
+.panel:hover, .panel-card:hover { box-shadow: var(--gum-sheen), var(--gum-shadow-lift); }
 /* Panel headings. .panel-header h3 was a second copy of this treatment; only the gap below differs,
    because the gauge card puts a description under its heading and that paragraph carries it. */
 /* Sentence case on a hairline, not caps on a 2px rule. Caps cost the reader the word shapes and are
@@ -403,12 +787,15 @@ main {
 /* ===================================================== */
 /* One input treatment for the whole app. The gauge panel's tighter inline override is now simply
    the value, so the two form styles became one. */
-/* The fill stays opaque: a field is where the eye rests longest, and text over a moving ground is
-   the one place glass costs more than it gives. The bubbling is in the corner and the focus ring. */
+/* The fill stays opaque, and that is a decision rather than an oversight: a field is where the eye
+   rests longest, and text over a moving ground is the one place glass costs more than it gives.
+   So a field gets the GUMMY half of the language and none of the glass - a deeper corner, a
+   pillowed inset that makes the well read as pressed INTO the panel rather than sitting on it, and
+   a lit hairline along the bottom lip. No backdrop-filter anywhere near an input. */
 textarea, input[type="text"], input[type="number"], select {
     width: 100%; padding: 10px 12px; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); background-color: var(--surface-subtle); color: var(--text-primary);
-    box-shadow: inset 0 1px 2px rgba(46, 75, 65, 0.05);
+    border-radius: var(--r-gum-sm); background-color: var(--surface-subtle); color: var(--text-primary);
+    box-shadow: inset 0 2px 4px rgba(42, 74, 62, 0.07), inset 0 -1px 0 rgba(255, 255, 255, 0.85);
     transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out),
                 box-shadow 0.2s var(--ease-out);
     font-size: 14px; box-sizing: border-box;
@@ -423,7 +810,15 @@ input[type="number"]::placeholder {
     color: var(--primary);
     opacity: 1;
 }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background-color: var(--panel-bg); box-shadow: 0 0 0 4px rgba(86, 118, 106, 0.18), inset 0 1px 2px rgba(46, 75, 65, 0.04); }
+/* On focus the well fills and rises: the inset pillow relaxes, a soft teal halo appears outside,
+   and the field lifts off the panel by a hair. The ring is teal rather than coral because coral is
+   the app's destructive/invalid colour and a focused field is neither. */
+input:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--primary); background-color: var(--panel-bg);
+    box-shadow: 0 0 0 4px rgba(86, 118, 106, 0.20),
+                0 2px 8px -4px rgba(42, 74, 62, 0.28),
+                inset 0 1px 2px rgba(42, 74, 62, 0.03);
+}
 
 /* ---- Stacked form fields ----
    The gauge panel's four repeating shapes - a row of columns, a labelled column, a value plus unit
@@ -445,7 +840,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 
 /* Live swatch-conversion readout: dashed, so it reads as output rather than input. */
 .gauge-output {
-    padding: 10px 14px; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; border: 1px dashed var(--glass-border); border-radius: var(--r-gum-sm);
     background: var(--glass-thin); font-size: 13px; line-height: 1.5; color: var(--text-primary);
 }
 
@@ -480,13 +875,17 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 /* ---- Controls inside generated rows ----
    app.js writes these into table cells. They were inline style strings, Remove written out twice. */
 .link-button {
-    background: none; color: var(--accent); padding: 0; width: auto;
+    background: none; color: var(--accent-ink); padding: 0; width: auto;
     font-size: 12px; font-weight: 700;
 }
 .row-button {
     width: auto; padding: 6px 12px; font-size: 12px;
     background: var(--brand-sand); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(42, 74, 62, 0.10);
 }
+.row-button:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 3px 8px -3px rgba(42, 74, 62, 0.30); }
+.row-button:active { box-shadow: var(--gum-shadow-press); }
 .row-button.is-primary { background: var(--brand-teal); color: var(--brand-white); border-color: var(--brand-teal); }
 .row-button.is-small { padding: 3px 8px; font-size: 11px; }
 .row-actions { display: flex; flex-direction: column; gap: var(--space-1); align-items: flex-end; }
@@ -548,12 +947,12 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .form-group label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
 .helper-text { font-size: 0.9em; color: var(--text-muted); margin-bottom: 12px; }
-.feedback-text { color: var(--accent); font-weight: 600; font-size: 14px; margin-bottom: 10px; min-height: 20px; }
+.feedback-text { color: var(--accent-ink); font-weight: 600; font-size: 14px; margin-bottom: 10px; min-height: 20px; }
 /* A long custom stitch definition must break rather than push the panel past its column. */
-.list-container { margin-bottom: 15px; padding: 12px 14px; background: var(--glass-thin); border-radius: var(--radius); border: 1px dashed var(--border); overflow-wrap: anywhere; }
+.list-container { margin-bottom: 15px; padding: 12px 14px; background: var(--glass-thin); border-radius: var(--r-gum-sm); border: 1px dashed var(--glass-border); overflow-wrap: anywhere; }
 .list-container ul { padding-left: 18px; margin: 5px 0; }
 /* Collapsed by default: reference the user needs once, and the paste box is what they came for. */
-.heading-rules { margin-bottom: 14px; padding: 10px 14px; background: var(--glass-thin); border-radius: var(--radius); border: 1px dashed var(--border); }
+.heading-rules { margin-bottom: 14px; padding: 10px 14px; background: var(--glass-thin); border-radius: var(--r-gum-sm); border: 1px dashed var(--glass-border); }
 .heading-rules summary { font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
 .heading-rules > *:last-child { margin-bottom: 0; }
 .heading-rules ul { padding-left: 18px; margin: 5px 0 12px; }
@@ -593,25 +992,42 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 /* ===================================================== */
 /* 4. BUTTONS                                            */
 /* ===================================================== */
-/* Pills lit from above: a lightened top half, a white hairline inside the top edge, and a shadow
-   tinted with the button's own colour rather than grey. */
+/* Gummy pills. Three layers do the work, and all three are needed:
+     - a vertical light ramp in background-image, so the face of the pill is curved rather than flat
+     - --gum-sheen-coral inside: a specular arc on the top edge plus an ambient glow in the body.
+       The weak (0.55) coral sheen is used on every variant, not the 0.92 --gum-sheen: over a
+       saturated fill the bright one tints the top of the button pink
+     - a dual drop shadow outside, tinted with the button's own colour rather than grey
+   Pressing collapses the cast shadow to nothing and lights the pill from directly above, which is
+   what makes it read as travel rather than as a colour change. */
 button {
     background-color: var(--primary); color: var(--brand-white); border: none;
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 62%);
     padding: 12px 20px; font-weight: 600; border-radius: var(--radius-pill);
     cursor: pointer; width: 100%; font-size: 14px; letter-spacing: -0.01em;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 14px -8px rgba(46, 75, 65, 0.55);
+    box-shadow: var(--gum-sheen-coral),
+                0 1px 2px rgba(42, 74, 62, 0.18),
+                0 8px 18px -8px rgba(42, 74, 62, 0.50);
     transition: background-color 0.22s var(--ease-out), transform 0.2s var(--spring),
                 box-shadow 0.22s var(--ease-out), filter 0.22s var(--ease-out);
 }
-button:hover { background-color: var(--primary-hover); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 22px -10px rgba(46, 75, 65, 0.5); }
+button:hover {
+    background-color: var(--primary-hover); transform: translateY(-1px);
+    box-shadow: var(--gum-sheen-coral),
+                0 2px 4px rgba(42, 74, 62, 0.18),
+                0 16px 30px -12px rgba(42, 74, 62, 0.48);
+}
 /* Presses in rather than just darkening - the travel sells it, and it is where --spring is felt. */
-button:active { transform: scale(0.96); box-shadow: inset 0 2px 5px rgba(46, 75, 65, 0.28); }
-button:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(86, 118, 106, 0.28), 0 6px 14px -8px rgba(46, 75, 65, 0.55); }
+button:active { transform: scale(0.96); box-shadow: var(--gum-shadow-press); }
+button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(86, 118, 106, 0.32), var(--gum-sheen-coral),
+                0 8px 18px -8px rgba(42, 74, 62, 0.50);
+}
 
 .btn-dark { background-color: var(--brand-teal); }
 .btn-dark:hover { background-color: var(--primary-hover); }
-.btn-secondary { background-color: var(--accent); }
+.btn-secondary { background-color: var(--accent-ink); }
 .btn-secondary:hover { background-color: var(--accent-hover); }
 
 /* Load File is tan with a teal border, which is what separates it from New File. Scoped to the
@@ -622,8 +1038,28 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(86, 118, 106, 0
 .btn-success:hover { background-color: var(--primary-hover); }
 .btn-info { background-color: var(--brand-sand); color: var(--text-primary); border: 1px solid var(--border); }
 .btn-info:hover { background-color: var(--border); }
-.btn-danger { background-color: var(--accent); }
+.btn-danger { background-color: var(--accent-ink); }
 .btn-danger:hover { background-color: var(--accent-hover); }
+
+/* A shadow is the colour of the thing casting it. The coral pills carry a coral-tinted cast, the
+   pale ones a much lighter sage one - the full-strength sage shadow under a sand button reads as
+   grime, because there is no dark fill above it to justify the weight. */
+.btn-secondary, .btn-danger, .publish-cta {
+    box-shadow: var(--gum-sheen-coral), var(--gum-shadow-coral);
+}
+.btn-secondary:hover, .btn-danger:hover, .publish-cta:hover {
+    box-shadow: var(--gum-sheen-coral),
+                0 2px 4px rgba(173, 70, 48, 0.22),
+                0 16px 30px -12px rgba(173, 70, 48, 0.42);
+}
+#load-btn, .btn-info, .form-controls button,
+.pattern-actions .btn-success, .pattern-actions .btn-info {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), var(--gum-shadow);
+}
+#load-btn:hover, .btn-info:hover, .form-controls button:hover,
+.pattern-actions .btn-success:hover, .pattern-actions .btn-info:hover {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), var(--gum-shadow-lift);
+}
 
 .form-controls { display: flex; gap: 12px; flex-wrap: wrap; }
 .form-controls button { background-color: var(--brand-sand); color: var(--text-primary); flex: 1; }
@@ -948,7 +1384,7 @@ mark.unknown-token {
 .health-checks .check-detail-list li + li { margin-top: 2px; }
 .health-checks .check-pass .check-icon { color: var(--brand-teal); }
 .health-checks .check-warn .check-icon { color: var(--warning-text); }
-.health-checks .check-fail .check-icon { color: var(--accent); }
+.health-checks .check-fail .check-icon { color: var(--accent-ink); }
 
 .health-counts { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; }
 
@@ -1012,7 +1448,7 @@ mark.unknown-token {
 .badge-incomplete { border-left-color: var(--brand-gold); }
 .badge-incomplete .badge-icon, .badge-incomplete .badge-headline { color: var(--brand-gold); }
 .badge-invalid    { border-left-color: var(--brand-coral); }
-.badge-invalid    .badge-icon, .badge-invalid .badge-headline { color: var(--brand-coral); }
+.badge-invalid    .badge-icon, .badge-invalid .badge-headline { color: var(--accent-ink); }
 .badge-empty      { border-left-color: var(--border); }
 .badge-empty      .badge-icon, .badge-empty .badge-headline { color: var(--text-muted); }
 
@@ -1038,7 +1474,7 @@ mark.unknown-token {
 .outline-count { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; text-align: right; }
 .outline-delta { font-variant-numeric: tabular-nums; color: var(--text-muted); text-align: right; width: 5em; }
 .outline-delta.is-up   { color: var(--brand-teal); }
-.outline-delta.is-down { color: var(--brand-coral); }
+.outline-delta.is-down { color: var(--accent-ink); }
 
 /* ===================================================== */
 /* 5c-ii. PATTERN SKELETONS                              */
@@ -1130,7 +1566,7 @@ mark.unknown-token {
     pointer-events: auto; cursor: pointer; background: none; border: 0; padding: 0;
 }
 .lint-gutter-mark svg { width: 14px; height: 14px; }
-.lint-gutter-math { color: var(--brand-coral); }
+.lint-gutter-math { color: var(--accent-ink); }
 .lint-gutter-syntax { color: var(--brand-teal); }
 .lint-gutter-style { color: var(--brand-gold); }
 
@@ -1182,7 +1618,7 @@ mark.unknown-token {
     background: none; border: 0; padding: 12px 14px; cursor: pointer;
     font-size: 12px; font-weight: 650; color: var(--text-primary); text-align: left;
 }
-.lint-side-icon { width: 17px; height: 17px; flex: none; color: var(--brand-coral); }
+.lint-side-icon { width: 17px; height: 17px; flex: none; color: var(--accent-ink); }
 .lint-side-tally { flex: 1; min-width: 0; white-space: nowrap; }
 .lint-side.is-collapsed .lint-side-tally { display: none; }
 .lint-side.is-collapsed .lint-side-body { display: none; }
@@ -1195,7 +1631,7 @@ mark.unknown-token {
 .lint-side.is-collapsed.has-findings .lint-side-badge {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
-    background: var(--brand-coral); color: var(--brand-white);
+    background: var(--accent-ink); color: var(--brand-white);
     font-size: 11px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
 }
 .lint-side-body { padding: 0 14px 14px 14px; max-height: 420px; overflow-y: auto; }
@@ -1209,7 +1645,7 @@ mark.unknown-token {
 .lint-depends {
     font-size: 10.5px; line-height: 1.45; margin: 0 0 8px 0; padding: 6px 8px;
     border-radius: 8px; border-left: 2px solid var(--brand-coral);
-    background: rgba(218, 128, 91, 0.09); color: var(--text-muted);
+    background: rgba(232, 122, 93, 0.09); color: var(--text-muted);
 }
 .lint-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .lint-empty { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0; }
@@ -1488,13 +1924,13 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 /* Tabular figures, so a row of six counts lines up on the digit. */
 .tile-value { font-size: 30px; font-weight: 640; line-height: 1.12; letter-spacing: -0.028em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .tile-note { font-size: 11.5px; color: var(--text-muted); }
-.tile-link { font-size: 11.5px; font-weight: 600; color: var(--brand-coral); margin-top: 9px; }
+.tile-link { font-size: 11.5px; font-weight: 600; color: var(--accent-ink); margin-top: 9px; }
 /* One material, six tiles; the only difference left is the colour of the 19px glyph. Six differently
    tinted cards is what made the row read as a novelty dashboard. That is the argument for where the
    tropical belongs: an accent the size of a full stop, not the fill of a card. */
 .tile-patterns  .tile-art { color: var(--brand-teal); }
 .tile-compiler  .tile-art { color: var(--cat-shaping); }
-.tile-sizer     .tile-art { color: var(--brand-coral); }
+.tile-sizer     .tile-art { color: var(--accent-ink); }
 .tile-studio    .tile-art { color: var(--level-easy); }
 .tile-testers   .tile-art { color: var(--brand-teal); }
 .tile-analytics .tile-art { color: var(--cat-special); }
@@ -1527,7 +1963,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     width: auto; background: none; border: 0; padding: 0;
     color: var(--brand-teal); font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
-.dash-link:hover { background: none; color: var(--brand-coral); text-decoration: underline; }
+.dash-link:hover { background: none; color: var(--accent-ink); text-decoration: underline; }
 .dash-empty { margin: 0; font-size: 12px; font-style: italic; color: var(--text-muted); line-height: 1.5; }
 
 /* Grouped by how tall each card actually gets. The compiler leads a row of three, the six summaries
@@ -1617,7 +2053,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     display: flex; align-items: center; justify-content: center;
     height: 62px; margin-bottom: 8px; overflow: hidden;
     border-radius: var(--radius-sm); background: var(--surface-sunken);
-    box-shadow: inset 0 1px 3px rgba(37, 62, 53, 0.10);
+    box-shadow: inset 0 1px 3px rgba(31, 56, 46, 0.10);
 }
 .roll-stitch {
     font-size: 27px; font-weight: 640; letter-spacing: -0.03em;
@@ -1642,7 +2078,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     background: var(--glass-thin); color: var(--brand-teal);
 }
 .roll-tier.tier-3 { color: var(--level-easy); }
-.roll-tier.tier-4 { color: var(--brand-coral); }
+.roll-tier.tier-4 { color: var(--accent-ink); }
 .roll-tier.tier-5 { color: var(--warning-text); background: var(--warning-bg); }
 .roll-note { margin: 0 0 12px 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.45; }
 /* The only dashboard button that takes something away, so outlined rather than filled. */
@@ -1652,7 +2088,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
     margin-bottom: 14px;
 }
-.roll-again:hover:not(:disabled) { background: var(--surface-sunken); color: var(--brand-coral); }
+.roll-again:hover:not(:disabled) { background: var(--surface-sunken); color: var(--accent-ink); }
 .roll-again:disabled { opacity: 0.45; cursor: default; }
 
 .quest-text { margin: 0 0 8px 0; font-size: 12px; font-weight: 500; color: var(--text-muted); line-height: 1.45; }
@@ -1698,8 +2134,16 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 .stat-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; font-size: 12.5px; }
 .stat-line span { color: var(--text-muted); min-width: 0; }
 .stat-line strong { font-weight: 700; white-space: nowrap; }
-.mini-track { grid-column: 1 / -1; height: 6px; border-radius: var(--radius-pill); background: var(--surface-sunken); overflow: hidden; }
-.mini-bar { display: block; height: 100%; width: 0; border-radius: var(--radius-pill); background: var(--brand-teal); transition: width 0.5s ease; }
+/* The same tube, one size down, inside a stat line. */
+.mini-track {
+    grid-column: 1 / -1; position: relative; height: 6px; border-radius: var(--r-pill);
+    background: rgba(42, 74, 62, 0.10); overflow: hidden; box-shadow: var(--tube-track);
+}
+.mini-bar {
+    display: block; position: relative; height: 100%; width: 0; border-radius: var(--r-pill);
+    background: var(--tube-fill-sage); box-shadow: var(--tube-glow-sage);
+    transition: width 0.6s var(--ease-out);
+}
 .mini-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 .mini-table th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--text-muted); padding: 4px 6px; border-bottom: 1px solid var(--border); }
 .mini-table td { padding: 4px 6px; border-bottom: 1px solid var(--border); }
@@ -1729,7 +2173,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     transition: background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
 }
 .publish-option:hover { background: var(--glass-bg-strong); border-color: rgba(86, 118, 106, 0.30); }
-.publish-cta { background: var(--brand-coral); border: 0; border-radius: var(--radius-pill); padding: 12px; font-weight: 600; font-size: 13.5px; }
+.publish-cta { background: var(--accent-ink); border: 0; border-radius: var(--radius-pill); padding: 12px; font-weight: 600; font-size: 13.5px; }
 .publish-cta:hover { background: var(--accent-hover); }
 
 /* ---- Footer strip ----
@@ -1759,9 +2203,27 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .sidebar-brand { justify-content: center; padding-bottom: 12px; }
     .brand-words { display: none; }
     .nav-item { justify-content: center; padding: 12px 0; }
-    .nav-label { display: none; }
+    /* Hidden from the eye, not from the accessible name. display: none takes the label out of the
+       accessibility tree too, which left every button in the icon rail announcing as "button" -
+       twelve of them, all identical. Moving it out of view instead keeps the name and costs the
+       layout nothing. */
+    .nav-label {
+        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+        overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+    }
     .nav-chevron { display: none; }
     .sidebar-points { display: none; }
+    /* The rail keeps the accordion rather than growing a hover flyout. Four hub icons plus the
+       open group's two-to-four is at most eight, against the flat twelve this replaced - so the
+       rail got shorter, and no new interaction had to be invented for a 76px column where a
+       flyout would be unreachable by touch anyway. The indent rule goes: at icon size there is no
+       room to indent, and the group already reads by position. */
+    .nav-hub { justify-content: center; padding: 12px 0; }
+    .nav-sub .nav-item { margin-left: 0; border-left: 0; border-radius: var(--radius-sm); }
+    /* An open group is banded, since the hub label that named it is no longer on screen. */
+    .nav-hub.is-open + .nav-sub > div {
+        background: rgba(0, 0, 0, 0.16); border-radius: var(--radius-sm); padding: 3px 0;
+    }
     .compiler-split { grid-template-columns: minmax(0, 1fr); }
     .card-recent { grid-column: span 6; }
     .card-compiler { grid-column: span 12; }
@@ -1781,17 +2243,28 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     #app-shell { grid-template-columns: minmax(0, 1fr); }
     #app-sidebar {
         position: fixed; top: 0; left: 0; bottom: 0; height: auto; width: var(--sidebar-w);
-        transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 0 0 40px rgba(37, 62, 53, 0.35);
+        transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 0 0 40px rgba(31, 56, 46, 0.35);
     }
     #app-shell.nav-open #app-sidebar { transform: translateX(0); }
     /* Frosted, so the workspace behind an open drawer reads as set back rather than merely dimmed. */
-    #app-shell.nav-open .nav-scrim { display: block; position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50; width: auto; background: rgba(37, 62, 53, 0.32); -webkit-backdrop-filter: saturate(120%) blur(6px); backdrop-filter: saturate(120%) blur(6px); border: 0; border-radius: 0; padding: 0; }
+    #app-shell.nav-open .nav-scrim { display: block; position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50; width: auto; background: rgba(31, 56, 46, 0.32); -webkit-backdrop-filter: saturate(120%) blur(6px); backdrop-filter: saturate(120%) blur(6px); border: 0; border-radius: 0; padding: 0; }
     .sidebar-brand { justify-content: flex-start; }
     .brand-words { display: block; }
     .nav-item { justify-content: flex-start; padding: 10px 12px; }
-    .nav-label { display: block; }
+    /* The drawer has room for words again, so the label comes back out of hiding. */
+    .nav-label {
+        position: static; width: auto; height: auto; margin: 0;
+        overflow: visible; clip: auto; clip-path: none; white-space: normal;
+    }
     .nav-chevron { display: block; }
     .sidebar-points { display: block; }
+    /* The drawer is full width again, so the labelled accordion comes back with it. */
+    .nav-hub { justify-content: flex-start; padding: 10px 12px; }
+    .nav-sub .nav-item {
+        margin-left: 19px; border-left: 1px solid rgba(233, 239, 233, 0.16);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .nav-hub.is-open + .nav-sub > div { background: none; padding: 0; }
     .nav-toggle {
         display: inline-flex; align-items: center; justify-content: center; width: auto;
         background: var(--glass-bg); color: var(--brand-teal); border: 1px solid var(--glass-border);
@@ -1821,9 +2294,20 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 @media (max-width: 700px) {
     .dash-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .topbar-meters { width: 100%; }
-    .meter-xp { flex: 1; }
     .btn-new-project { flex: 1; }
     .dash-footer-strip { justify-content: flex-start; font-size: 11.5px; }
+    /* The topbar carries two dock triggers, the status pill and New Project. On a phone the two
+       triggers drop to their icons and the pill takes the row - the label on a button that already
+       has a book on it is the cheapest thing here to lose. */
+    .dock-btn-label { display: none; }
+    .dock-btn { padding: 9px 11px; }
+    .status-pill { flex: 1; justify-content: center; }
+    /* Five labelled stages do not fit a phone. The strip keeps the numbers and the ticks, which is
+       still a legible five-step progress read, and the current stage keeps its word. */
+    .stage-label { display: none; }
+    .stage.is-here .stage-label { display: inline; }
+    .stage { padding: 6px 8px; }
+    .stage-link { width: 7px; }
     /* Two, for the same reason the tiles above go to two: both divide six evenly. */
     .record-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -1852,16 +2336,49 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .recent-row:hover { transform: none; }
     /* The one animation that is about something - but the stitch is legible standing still. */
     .roll-reel.is-rolling .roll-stitch { animation: none; }
+
+    /* The redesign's own motion. The accordion is the important one: grid-template-rows animating
+       from 0fr is a height change, which is exactly the kind of movement this query is asked to
+       stop. It still opens and closes, it just arrives already open. */
+    .nav-sub { transition: none; }
+    .nav-hub { transition: none; }
+    .nav-hub:active { transform: none; }
+    .nav-hub .nav-chevron { transition: none; }
+    .gum-press { transition: none; }
+    .gum-press:hover { transform: none; }
+    .gum-press:active { transform: none; }
+    .tube-fill { transition: none; }
+    .stage { transition: none; }
+    .stage:active { transform: none; }
+    .stage-dot { transition: none; }
+    .dock.is-open { animation: none; }
+    .dock-btn { transition: none; }
 }
 
 /* Where a pane cannot be frosted it is filled instead, or the ground washes smear under the body
    copy. Safari needs the -webkit- spelling, so the query asks about both. */
+/* Without a blur, a translucent fill is not frosted glass - it is a pale rectangle with the page
+   showing through the text. Every surface that leans on backdrop-filter has to name itself here and
+   fall back to an opaque one. The list used to cover seven selectors out of roughly thirty-five,
+   which meant most of the app was legible in this branch by luck rather than by design. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .panel, .panel-card, header, .dash-card, .dash-tile,
-    #pattern-analytics-dashboard, .meter-card {
+    #pattern-analytics-dashboard, .gum,
+    .status-pill, .stage-track, .dock.is-open, .dock-btn, .dock-close,
+    .publish-option, .locker-tile, .locker-pick, .locker-choice, .construction-pick,
+    .help-topic, .lint-side, .recover-panel, .graph-frame, .gauge-output {
         background: var(--panel-bg); border-color: var(--border);
     }
+    /* Furniture: opaque, but tinted rather than white, or a row of chips over the cream reads as a
+       row of holes punched in the page. */
+    .gum-thin, .stage.is-here, .dash-schematic-frame, .recent-swatch {
+        background: var(--surface-subtle); border-color: var(--border);
+    }
     #app-sidebar { background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-deep) 100%); }
+    /* Inside a dock the panes gave up their own backdrop on the assumption the dock had one. It
+       does not here, so they take a plain surface instead of the near-invisible --glass-thin. */
+    .dock.is-open .panel { background: var(--surface-subtle); }
+    #app-shell.nav-open .nav-scrim { background: rgba(31, 56, 46, 0.55); }
 }
 
 /* ===================================================== */
@@ -1921,8 +2438,14 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 .av-mount { display: block; flex: none; }
 .av-mount-rail { width: 26px; height: 26px; }
 .av-mount-hero { width: 132px; height: 132px; flex: none; }
-.meter-avatar { padding: 5px 9px; }
-.meter-avatar .av-mount { width: 32px; height: 32px; }
+/* The topbar portrait, down from 32px in a card of its own to a 26px chip at the head of the
+   status pill. It is set into the glass rather than sitting on it - the inset ring plus the pale
+   disc behind it reads as a recess, which is what keeps it from competing with the view title. */
+.av-mount-chip {
+    width: 26px; height: 26px; border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 0 0 1px var(--glass-border), inset 0 1px 3px rgba(42, 74, 62, 0.14);
+}
 .av-tile { width: 100%; height: 100%; }
 
 /* ---- The panel ---- */
@@ -1953,7 +2476,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     border: 1px solid var(--glass-edge); border-radius: var(--radius-pill);
     padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
 }
-.locker-pick:hover { background: var(--glass-bg-strong); color: var(--brand-coral); }
+.locker-pick:hover { background: var(--glass-bg-strong); color: var(--accent-ink); }
 .locker-pick.is-on { background: var(--brand-teal); color: var(--brand-white); border-color: transparent; }
 /* The swatch is the colour it sets, so the ring is the selection. The tone is held in a custom
    property rather than set as the background, because the base button:hover paints every button the
@@ -1963,7 +2486,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     background: var(--tone); border: 2px solid var(--glass-border); box-shadow: var(--glass-sheen);
 }
 .locker-skin:hover { background: var(--tone); border-color: var(--brand-coral); }
-.locker-skin.is-on { border-color: var(--brand-coral); box-shadow: 0 0 0 3px rgba(218, 128, 91, 0.24); }
+.locker-skin.is-on { border-color: var(--brand-coral); box-shadow: 0 0 0 3px rgba(232, 122, 93, 0.24); }
 .skin-pick-1 { --tone: var(--skin-1); }
 .skin-pick-2 { --tone: var(--skin-2); }
 .skin-pick-3 { --tone: var(--skin-3); }
@@ -2010,7 +2533,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 /* State lives on the tile so the stylesheet decides what owned, worn and out-of-reach look like.
    Only one can apply at a time. */
 .locker-tile.is-worn { border-color: var(--brand-coral); background: var(--glass-bg-strong); }
-.locker-tile.is-worn .locker-foot { background: var(--brand-coral); color: var(--brand-white); }
+.locker-tile.is-worn .locker-foot { background: var(--accent-ink); color: var(--brand-white); }
 .locker-tile.is-owned .locker-foot { background: var(--success-bg); color: var(--success-text); }
 /* Not hidden and not disabled - an item you cannot afford yet is the reason to keep writing, so it
    stays legible and only the art is dimmed. */
@@ -2049,7 +2572,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
    simply be empty and say nothing about why. */
 .construction-call-gone { background: var(--danger-bg); color: var(--danger-text); }
 .construction-go {
-    width: auto; background: transparent; color: var(--brand-coral);
+    width: auto; background: transparent; color: var(--accent-ink);
     border: none; padding: 0; font-size: 12px; font-weight: 700; cursor: pointer;
 }
 .construction-go:hover { background: transparent; color: var(--brand-teal); text-decoration: underline; }
@@ -2061,7 +2584,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     border: 1px solid var(--glass-edge); border-radius: var(--radius-pill);
     padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
 }
-.construction-pick:hover { background: var(--glass-bg-strong); color: var(--brand-coral); }
+.construction-pick:hover { background: var(--glass-bg-strong); color: var(--accent-ink); }
 .construction-pick.is-on { background: var(--brand-teal); color: var(--brand-white); border-color: transparent; }
 
 /* Why this construction has a planner at all, in the engine's own words. */
@@ -2130,7 +2653,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
    the only message here that means "do not trust what you are reading". */
 .fatal-error {
     margin: 0; padding: 12px 18px;
-    background: var(--brand-coral); color: var(--brand-white);
+    background: var(--accent-ink); color: var(--brand-white);
     font-size: 13px; font-weight: 600; line-height: 1.5;
 }
 .fatal-error.hidden { display: none; }

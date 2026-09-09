@@ -52,11 +52,183 @@ NAV_IDS.forEach(function (id) {
 ck('twelve of them', (HTML.match(/class="nav-item"/g) || []).length, 12);
 no('Compiler is no longer a destination of its own', /id="nav-compiler"/.test(HTML));
 no('Schematics is retired', /id="nav-schematics"/.test(HTML));
-// Stitch Library now sits between Patterns and Studio.
-ok('Patterns leads into Stitch Library',
+// The twelve are grouped into four hubs now, so document order follows the grouping rather than
+// the old flat run. Within Library & Assets, Pattern Files still leads into the Stitch Library.
+ok('Pattern Files leads into Stitch Library',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-library"'));
-ok('which leads into Studio',
-   HTML.indexOf('id="nav-library"') < HTML.indexOf('id="nav-studio"'));
+ok('and Studio comes before both, being its own hub',
+   HTML.indexOf('id="nav-studio"') < HTML.indexOf('id="nav-patterns"'));
+
+print('\n1b. Four hubs, and every destination lives in exactly one');
+var HUB_IDS = ['hub-dashboard', 'hub-studio', 'hub-library', 'hub-community'];
+HUB_IDS.forEach(function (id) {
+    ok(id + ' is in the markup', HTML.indexOf('id="' + id + '"') !== -1);
+    var tag = (HTML.match(new RegExp('<(\\w+)[^>]*\\bid="' + id + '"')) || [, ''])[1];
+    ck(id + ' is a button', tag, 'button');
+});
+ck('four of them', (HTML.match(/class="nav-hub"/g) || []).length, 4);
+ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 4);
+// A hub is not a destination. If one ever gained a NAV_TARGETS entry it would own a route and a
+// view, and the rail would have sixteen places to go rather than twelve.
+HUB_IDS.forEach(function (id) {
+    no(id + ' is not itself a destination', HTML.indexOf('id="' + id + '" class="nav-item"') !== -1);
+});
+// The grouping lives in app.js. Read it back and prove it covers the twelve exactly once - a
+// thirteenth view added with a route and no hub would otherwise be reachable by URL and invisible
+// in the rail, which is the failure this pins.
+var shellSrc = readFile('app.js');
+var hubBody = shellSrc.slice(shellSrc.indexOf('const NAV_HUBS = {'),
+                             shellSrc.indexOf('const HUB_IDS'));
+var grouped = (hubBody.match(/'nav-[a-z]+'/g) || []).map(function (s) { return s.slice(1, -1); });
+ck('NAV_HUBS lists twelve destinations', grouped.length, 12);
+NAV_IDS.forEach(function (id) {
+    ck(id + ' has exactly one hub', grouped.filter(function (g) { return g === id; }).length, 1);
+});
+
+print('\n1c. Navigating opens the hub that owns where you went, and closes the rest');
+function openHubs() {
+    return HUB_IDS.filter(function (h) { return $(h).classList.contains('is-open'); });
+}
+NAV_IDS.forEach(function (id) {
+    nav(id);
+    var open = openHubs();
+    ck(id + ' leaves exactly one hub open', open.length, 1);
+    ck('and it is announced as expanded', $(open[0]).getAttribute('aria-expanded'), 'true');
+});
+// Where you are decides which hub is open, so the two cannot drift apart. Spot-check the mapping
+// rather than trusting that "exactly one" happened to be the right one.
+nav('nav-locker');
+ck('the Locker opens Library & Assets', openHubs()[0], 'hub-library');
+nav('nav-construction');
+ck('Construction opens Studio', openHubs()[0], 'hub-studio');
+nav('nav-analytics');
+ck('Analytics opens Dashboard', openHubs()[0], 'hub-dashboard');
+// A hub press is a navigation, not just a disclosure: it lands on the group's first entry.
+$('hub-community').fire('click');
+ok('pressing a hub goes to its first entry', $('nav-testers').classList.contains('is-active'));
+ck('and opens that hub', openHubs()[0], 'hub-community');
+ck('while the others close', $('hub-studio').getAttribute('aria-expanded'), 'false');
+
+print('\n1d. The workflow rail crosses the five views a pattern is written across');
+var STAGE_NAV = ['nav-patterns', 'nav-studio', 'nav-sizer', 'nav-testers', 'nav-publish'];
+function stage(navId) { return $('stage-' + navId); }
+function railShown() { return !hidden('stage-rail'); }
+
+// On for the workflow, off everywhere else. A five-step "write a pattern" strip above the Studio
+// Locker would be pointing at work that page has nothing to do with.
+STAGE_NAV.forEach(function (id) {
+    nav(id);
+    ok(id + ' shows the rail', railShown());
+});
+['nav-dashboard', 'nav-analytics', 'nav-gauge', 'nav-locker', 'nav-construction', 'nav-settings',
+ 'nav-library'].forEach(function (id) {
+    nav(id);
+    no(id + ' does not', railShown());
+});
+
+// Every stage is a real destination, and reaching one marks it as the current step.
+nav('nav-studio');
+STAGE_NAV.forEach(function (id) {
+    ok('stage for ' + id + ' is drawn', !!stage(id).className);
+    ok('and carries the stage class', stage(id).className.indexOf('stage') >= 0);
+});
+ck('the stage you are on is the current step', stage('nav-studio').getAttribute('aria-current'), 'step');
+no('and the others are not', stage('nav-sizer').getAttribute('aria-current') === 'step');
+
+// Clicking a stage navigates. This is the whole point of the rail, so it is clicked rather than
+// inspected - which is why the strip is built element by element and not from an innerHTML string.
+stage('nav-sizer').fire('click');
+ok('a stage press switches view', shown('grader-section'));
+ok('and marks the sidebar entry active', $('nav-sizer').classList.contains('is-active'));
+ok('and opens the hub that owns it', $('hub-studio').classList.contains('is-open'));
+ck('and moves the current step', stage('nav-sizer').getAttribute('aria-current'), 'step');
+
+print('\n1d-ii. A stage ticks itself off what the pattern actually has, and reports nothing else');
+// The ticks are read from live state every redraw, never recorded, so they must follow the pattern
+// rather than the visits. Walking all five above must NOT have ticked anything.
+$('clear-all-btn').fire('click');
+nav('nav-studio');
+no('an empty pattern has not been drafted', stage('nav-studio').className.indexOf('is-done') >= 0);
+no('nor graded', stage('nav-sizer').className.indexOf('is-done') >= 0);
+no('nor tested', stage('nav-testers').className.indexOf('is-done') >= 0);
+no('nor is it ready to hand over', stage('nav-publish').className.indexOf('is-done') >= 0);
+
+load(CLEAN);
+ok('a compiled pattern ticks Draft', stage('nav-studio').className.indexOf('is-done') >= 0);
+ok('and a clean one is ready to export', stage('nav-publish').className.indexOf('is-done') >= 0);
+no('but grading is still untouched', stage('nav-sizer').className.indexOf('is-done') >= 0);
+// Un-ticks itself when the thing it reported is gone - which is what "read, never recorded" buys.
+$('clear-all-btn').fire('click');
+no('clearing the pattern un-ticks Draft', stage('nav-studio').className.indexOf('is-done') >= 0);
+
+print('\n1e. The two floating docks');
+function dockOpen(id) { return $(id).classList.contains('is-open'); }
+
+nav('nav-studio');
+no('the Stitch Library starts closed', dockOpen('dock-library'));
+no('and so does the Compiler', dockOpen('dock-compiler'));
+
+$('dock-btn-library').fire('click');
+ok('the trigger opens it', dockOpen('dock-library'));
+ck('and says so', $('dock-btn-library').getAttribute('aria-expanded'), 'true');
+ok('without leaving the view you were on', shown('input-section'));
+// Not modal, and not a navigation. The workspace behind it is untouched - that is the difference
+// between a dock and the confirm dialog.
+no('the nav drawer scrim is not involved', $('app-shell').classList.contains('nav-open'));
+ck('the sidebar entry does not move', $('nav-studio').getAttribute('aria-current'), 'page');
+
+$('dock-btn-library').fire('click');
+no('the same trigger closes it', dockOpen('dock-library'));
+ck('and says so', $('dock-btn-library').getAttribute('aria-expanded'), 'false');
+
+// One at a time: two panes over the workspace would overlap each other and bury the work.
+$('dock-btn-library').fire('click');
+$('dock-btn-compiler').fire('click');
+ok('opening the second opens it', dockOpen('dock-compiler'));
+no('and closes the first', dockOpen('dock-library'));
+ck('the first trigger is no longer held', $('dock-btn-library').getAttribute('aria-expanded'), 'false');
+
+$('dock-close-compiler').fire('click');
+no('the close button closes it', dockOpen('dock-compiler'));
+
+// The dialog role exists exactly while the pane does. Closed, the wrapper is display: contents and
+// its panels are just part of the page - a role left on it would have a screen reader announcing a
+// dialog around the Stitch Library at all times, including on the view that owns those panels.
+no('a closed dock is not a dialog', !!$('dock-compiler').getAttribute('role'));
+$('dock-btn-compiler').fire('click');
+ck('an open one is', $('dock-compiler').getAttribute('role'), 'dialog');
+$('dock-btn-compiler').fire('click');
+no('and it stops being one on close', !!$('dock-compiler').getAttribute('role'));
+
+// Navigating puts the panels back where the view expects them. Left open, the Stitch Library's
+// panels would be in the floating pane while Pattern Files showed a gap where they belong.
+$('dock-btn-library').fire('click');
+nav('nav-patterns');
+no('navigating closes an open dock', dockOpen('dock-library'));
+ok('and the panels are back in the column', shown('stitch-usage-panel'));
+
+print('\n1e-ii. The compiler dock is live from anywhere, not a snapshot of the Dashboard');
+// This is why floating it is worth anything. The shell hides panels rather than tearing them down,
+// so renderDashCompiler keeps writing into these ids from any view - the dock shows what the last
+// compile actually found while you are standing on the Gauge profile.
+nav('nav-studio');
+load(CLEAN);
+var findings = $('dash-findings').innerHTML;
+var passed = $('dash-passed').textContent;
+ok('a compile fills the compiler card', findings.length > 0);
+ck('and counts the rows that passed', passed, '3');
+nav('nav-gauge');
+$('dock-btn-compiler').fire('click');
+ok('the dock opens on a view that is not the Dashboard', dockOpen('dock-compiler'));
+ck('and carries the live findings', $('dash-findings').innerHTML, findings);
+ck('and the live counts', $('dash-passed').textContent, '3');
+// And it keeps up: compile something different and the open dock reflects it without reopening.
+nav('nav-studio');
+load(['Row 1: ch 6, sc in 2nd ch from hook and in each ch across (5)']);
+nav('nav-gauge');
+$('dock-btn-compiler').fire('click');
+ck('a later compile is reflected', $('dash-passed').textContent, '1');
+$('dock-close-compiler').fire('click');
 
 print('\n2. Every legacy panel still exists and has a home');
 PANELS.forEach(function (id) {

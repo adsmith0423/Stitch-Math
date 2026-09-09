@@ -116,23 +116,53 @@
             </div>
         </div>
 
+        <!-- Four hubs over twelve destinations. The twelve are unchanged - same ids, same class,
+             same targets - they are just grouped now, because a flat list of twelve gave no clue
+             which of them belonged together or which you needed next.
+             A hub is not a destination: clicking one opens it AND goes to its first entry, so a
+             press always puts something on screen. Only one hub is open at a time; navigating to
+             any destination opens the hub that owns it, so the rail always shows where you are.
+             See NAV_HUBS in app.js section 12 - the grouping is declared once, there. -->
         <nav class="sidebar-nav" aria-label="Sections">
-            <button type="button" id="nav-dashboard" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-home"></use></svg><span class="nav-label">Dashboard</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-patterns"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-yarn"></use></svg><span class="nav-label">Patterns</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-library"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg><span class="nav-label">Stitch Library</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+
+            <div class="nav-group">
+                <button type="button" id="hub-dashboard" class="nav-hub" aria-expanded="false" aria-controls="sub-dashboard"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-home"></use></svg><span class="nav-label">Dashboard</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+                <div class="nav-sub" id="sub-dashboard"><div>
+                    <button type="button" id="nav-dashboard" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-home"></use></svg><span class="nav-label">Overview</span></button>
+                    <button type="button" id="nav-analytics" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-chart"></use></svg><span class="nav-label">Analytics</span></button>
+                </div></div>
+            </div>
+
             <!-- Studio is where a pattern is written AND compiled. These were two entries onto the
-                 same panels until they were merged. -->
-            <button type="button" id="nav-studio"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-pencil"></use></svg><span class="nav-label">Studio</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-sizer"     class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-ruler"></use></svg><span class="nav-label">Sizer / Grader</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-testers"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg><span class="nav-label">Testers &amp; Feedback</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-analytics" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-chart"></use></svg><span class="nav-label">Analytics</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-gauge"     class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-swatch"></use></svg><span class="nav-label">Gauge Profile</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-publish"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-upload"></use></svg><span class="nav-label">Publish / Export</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-locker"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-face"></use></svg><span class="nav-label">Studio Locker</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <!-- Engines built, tested and documented that nothing else in the app calls. See the
-                 panels near the end of this file. -->
-            <button type="button" id="nav-construction"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-frame"></use></svg><span class="nav-label">Construction</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-            <button type="button" id="nav-settings"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-gear"></use></svg><span class="nav-label">Settings</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+                 same panels until they were merged. Construction is an engine with no other way
+                 in; grading is the step straight after drafting, so both sit here. -->
+            <div class="nav-group">
+                <button type="button" id="hub-studio" class="nav-hub" aria-expanded="false" aria-controls="sub-studio"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-pencil"></use></svg><span class="nav-label">Studio</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+                <div class="nav-sub" id="sub-studio"><div>
+                    <button type="button" id="nav-studio"       class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-pencil"></use></svg><span class="nav-label">Active Editor</span></button>
+                    <button type="button" id="nav-sizer"        class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-ruler"></use></svg><span class="nav-label">Sizer / Grader</span></button>
+                    <button type="button" id="nav-construction" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-frame"></use></svg><span class="nav-label">Construction</span></button>
+                </div></div>
+            </div>
+
+            <div class="nav-group">
+                <button type="button" id="hub-library" class="nav-hub" aria-expanded="false" aria-controls="sub-library"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg><span class="nav-label">Library &amp; Assets</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+                <div class="nav-sub" id="sub-library"><div>
+                    <button type="button" id="nav-patterns" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-yarn"></use></svg><span class="nav-label">Pattern Files</span></button>
+                    <button type="button" id="nav-library"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg><span class="nav-label">Stitch Library</span></button>
+                    <button type="button" id="nav-gauge"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-swatch"></use></svg><span class="nav-label">Gauge Profile</span></button>
+                    <button type="button" id="nav-locker"   class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-face"></use></svg><span class="nav-label">Studio Locker</span></button>
+                </div></div>
+            </div>
+
+            <div class="nav-group">
+                <button type="button" id="hub-community" class="nav-hub" aria-expanded="false" aria-controls="sub-community"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg><span class="nav-label">Community &amp; Output</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+                <div class="nav-sub" id="sub-community"><div>
+                    <button type="button" id="nav-testers"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg><span class="nav-label">Testers &amp; Feedback</span></button>
+                    <button type="button" id="nav-publish"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-upload"></use></svg><span class="nav-label">Publish / Export</span></button>
+                    <button type="button" id="nav-settings" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-gear"></use></svg><span class="nav-label">Settings</span></button>
+                </div></div>
+            </div>
         </nav>
 
         <!-- Points, level and streak are computed from what actually happened in this browser -
@@ -163,31 +193,61 @@
                 <p id="view-subtitle">Your creative command center</p>
             </div>
             <div class="topbar-meters">
-                <!-- Filled by renderProgress. A span rather than a button: the sidebar and topbar
-                     show what is worn, and the place to change it is the Locker view. -->
-                <div class="meter-card meter-avatar">
-                    <span id="av-topbar" class="av-mount"></span>
-                </div>
-                <div class="meter-card meter-xp">
-                    <svg class="ic meter-icon" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg>
-                    <div class="meter-body">
-                        <strong id="xp-title">Pattern Explorer</strong>
-                        <span id="xp-level" class="meter-sub">Level 1</span>
-                        <div class="meter-track"><span id="xp-bar" class="meter-bar"></span></div>
-                    </div>
-                    <span id="xp-count" class="meter-count">0 / 100 XP</span>
-                </div>
-                <div class="meter-card meter-streak">
-                    <svg class="ic meter-icon" aria-hidden="true" focusable="false"><use href="#ic-flame"></use></svg>
-                    <div class="meter-body">
+                <!-- The two floating panels. Both open a dock over the workspace rather than
+                     navigating, so whatever is being written stays on screen behind them. -->
+                <button type="button" id="dock-btn-library" class="dock-btn gum-press" aria-expanded="false" aria-controls="dock-library" title="Stitch Library">
+                    <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg>
+                    <span class="dock-btn-label">Stitches</span>
+                </button>
+                <button type="button" id="dock-btn-compiler" class="dock-btn gum-press" aria-expanded="false" aria-controls="dock-compiler" title="Compiler Overview">
+                    <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
+                    <span class="dock-btn-label">Compiler</span>
+                </button>
+
+                <!-- Status pill. This replaced three separate meter cards and a 32px portrait.
+                     The avatar is still here, at 22px and leading the pill rather than owning a
+                     card of its own: the Locker has to show you what you bought SOMEWHERE the
+                     whole time, but it does not have to be the loudest thing in the topbar.
+                     xp-title and xp-count are still rendered - the rank name and the exact figure
+                     move to the tooltip and to assistive tech respectively, so nothing that
+                     renderProgress computes is dropped, only de-emphasised. -->
+                <div id="status-pill" class="status-pill" title="Progress">
+                    <span id="av-topbar" class="av-mount av-mount-chip"></span>
+                    <span class="status-seg">
+                        <svg class="ic status-ic" aria-hidden="true" focusable="false"><use href="#ic-frame"></use></svg>
+                        <strong id="row-count">0</strong><span class="status-unit">rows</span>
+                    </span>
+                    <span class="status-div" aria-hidden="true"></span>
+                    <span class="status-seg status-seg-xp">
+                        <svg class="ic status-ic" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg>
+                        <span class="status-stack">
+                            <strong id="xp-level">Level 1</strong>
+                            <span class="tube"><span id="xp-bar" class="tube-fill"></span></span>
+                        </span>
+                    </span>
+                    <span class="status-div" aria-hidden="true"></span>
+                    <span class="status-seg">
+                        <svg class="ic status-ic status-ic-flame" aria-hidden="true" focusable="false"><use href="#ic-flame"></use></svg>
                         <strong id="streak-count">No streak yet</strong>
-                        <span id="streak-note" class="meter-sub">Write daily</span>
-                    </div>
+                    </span>
+                    <span id="xp-title" class="visually-hidden">Pattern Explorer</span>
+                    <span id="xp-count" class="visually-hidden">0 / 100 XP</span>
+                    <span id="streak-note" class="visually-hidden">Write daily</span>
                 </div>
+
                 <button type="button" id="btn-new-project" class="btn-new-project">
                     <svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-plus"></use></svg> New Project
                 </button>
             </div>
+
+            <!-- The pattern-writing workflow, and the one piece of navigation that follows the JOB
+                 rather than the app's structure. Writing a pattern crosses five views - metadata,
+                 the editor, the grader, tester feedback, the export - and nothing used to say so.
+                 Rendered by renderStageRail, app.js section 12. Hidden on the views it does not
+                 describe, so it never appears above the Locker or Settings.
+                 Every stage stays clickable at all times: nothing here gates anything, the ticks
+                 only report what the pattern already has. -->
+            <nav id="stage-rail" class="stage-rail hidden" aria-label="Pattern workflow"></nav>
         </div>
 
         <!-- === DASHBOARD VIEW ===============================
@@ -245,6 +305,21 @@
                 <!-- The compiler card is the tall one, so it leads and stands two rows deep; the four
                      short cards beside it stack two-by-two in the space it makes. Ordered by height,
                      because a short card next to a tall one is a hole in the grid. -->
+                <!-- The Compiler Overview, and its dock. Same trick as the Stitch Library above:
+                     closed, this wrapper is display: contents and the card sits in the dashboard
+                     grid untouched; open, it floats over whatever view you are on.
+                     Worth floating because renderDashCompiler writes into these ids whether or not
+                     anyone is looking at the Dashboard - the shell hides panels rather than tearing
+                     them down - so the dock shows live findings from the Gauge profile, the grader,
+                     anywhere. It is the last compile, wherever you happen to be standing. -->
+                <div id="dock-compiler" class="dock" aria-label="Compiler Overview">
+                <div class="dock-head">
+                    <svg class="ic dock-head-ic" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
+                    <strong class="dock-title">Compiler Overview</strong>
+                    <button type="button" id="dock-close-compiler" class="dock-close" aria-label="Close the Compiler Overview">×</button>
+                </div>
+                <div class="dock-body">
+
                 <section class="dash-card card-compiler">
                     <div class="dash-card-head">
                         <h3>Compiler Overview</h3>
@@ -268,6 +343,9 @@
                         </div>
                     </div>
                 </section>
+
+                </div><!-- /.dock-body -->
+                </div><!-- /#dock-compiler -->
 
                 <section class="dash-card card-recent">
                     <div class="dash-card-head">
@@ -742,9 +820,26 @@
                 </div>
             </section>
 
-            <!-- === 7-iii. STITCHES USED IN THIS PATTERN ===
-                 Read from the pattern rather than declared. The counts come from the same aggregation
-                 the analytics and yardage figures use, so this and the Dashboard cannot disagree. -->
+            <!-- === 7-iii/iv. THE STITCH LIBRARY, AND ITS DOCK ===
+                 The two stitch panels can be read either in place on Pattern Files, or floated over
+                 whatever you are working on - looking a stitch up should not cost you the screen
+                 you were writing on.
+
+                 They are NOT moved to do that. The shell's one rule is that a panel is hidden,
+                 never relocated, so every id the app renders into is in the document at all times.
+                 So the dock is not somewhere panels are sent; it is where they already live. Closed,
+                 .dock is display: contents and the wrapper vanishes from layout, leaving the panels
+                 flowing in this column exactly as they always did. Open, the same element becomes a
+                 fixed glass slide-over. Nothing moves at any point, and VIEW_PANELS never learns
+                 the dock exists. See openDock in app.js section 12. -->
+            <div id="dock-library" class="dock" aria-label="Stitch Library">
+            <div class="dock-head">
+                <svg class="ic dock-head-ic" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg>
+                <strong class="dock-title">Stitch Library</strong>
+                <button type="button" id="dock-close-library" class="dock-close" aria-label="Close the Stitch Library">×</button>
+            </div>
+            <div class="dock-body">
+
             <section class="panel" id="stitch-usage-panel">
                 <h2>Stitches Used In This Pattern</h2>
                 <div id="stitch-usage-content"></div>
@@ -788,6 +883,9 @@
                 </div>
 
             </section>
+
+            </div><!-- /.dock-body -->
+            </div><!-- /#dock-library -->
 
             <!-- === 7b-iii. HELP === -->
             <section class="panel" id="help-panel">

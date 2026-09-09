@@ -5256,6 +5256,13 @@
     function finishRenderUI(pass) {
         const labelPrefix = pass.validation.labelPrefix;
         const totalSteps = state.patternSteps.length;
+        // The status pill's row counter. Set here rather than only in renderProgress because the
+        // pattern changes far more often than the progress store does - every parse, undo, clear
+        // and load passes through this tail, and a counter that only moved when points were earned
+        // would sit there stale for most of a writing session.
+        setText('row-count', totalSteps.toLocaleString());
+        // Same reason: the parse that just ran is what decides whether Draft and Export are ticked.
+        refreshStageRail();
         if (totalSteps === 0) {
             UI['cumulative-status'].innerHTML = `<p class="placeholder-text">No pattern steps configured.<br>Add a ${labelPrefix.toLowerCase()} to begin validation.</p>`;
         } else {
@@ -8284,6 +8291,67 @@
 
     const NAV_IDS = Object.keys(NAV_TARGETS);
 
+    /*
+     * Which hub owns each destination. Twelve entries in a flat rail said nothing about which of
+     * them belonged together, so they are grouped into four - but grouped is all they are. Every id
+     * below is still its own view with its own route; nothing was merged and nothing was hidden.
+     *
+     * This table is the ONLY place the grouping is written down. HUB_OF is derived from it rather
+     * than kept beside it, and the assertion under it fails the boot if a destination exists with
+     * no hub to live in - which is exactly how a thirteenth view would otherwise end up reachable
+     * by URL and invisible in the rail.
+     */
+    const NAV_HUBS = {
+        'hub-dashboard': ['nav-dashboard', 'nav-analytics'],
+        'hub-studio':    ['nav-studio', 'nav-sizer', 'nav-construction'],
+        'hub-library':   ['nav-patterns', 'nav-library', 'nav-gauge', 'nav-locker'],
+        'hub-community': ['nav-testers', 'nav-publish', 'nav-settings']
+    };
+    const HUB_IDS = Object.keys(NAV_HUBS);
+    const HUB_OF = HUB_IDS.reduce((map, hub) => {
+        NAV_HUBS[hub].forEach(navId => { map[navId] = hub; });
+        return map;
+    }, {});
+
+    /*
+     * The pattern-writing workflow.
+     *
+     * The rail above is organised by what the app IS; this is organised by what you are DOING, and
+     * the two are different shapes. Writing one pattern crosses five views - fill in the metadata,
+     * draft and compile it, grade it to a size range, hear back from testers, export it - and until
+     * now nothing said so. A first-time designer had twelve equal-looking entries and no clue that
+     * four of them were a sequence.
+     *
+     * Two rules, both load-bearing:
+     *
+     *   - `done` is READ, never recorded. Each predicate below asks the live state a question it
+     *     already knows the answer to; there is no separate progress flag to be written, migrated,
+     *     or to drift out of step with the pattern. Delete a pattern's rows and Draft un-ticks
+     *     itself, because the tick was never a fact of its own.
+     *
+     *   - Nothing is GATED. Every stage is clickable whenever the rail is on screen, the same way
+     *     every sidebar entry always was. A tick reports; it does not unlock. Real work does not
+     *     go in this order - people grade before testing, export a draft to read it on paper, and
+     *     come back to the metadata last - and a rail that enforced the sequence would be wrong
+     *     more often than it was right.
+     */
+    const STAGES = [
+        {
+            nav: 'nav-patterns', label: 'Setup',
+            // The file has been identified as somebody's, by name or by any of the metadata.
+            done: () => !!(UI['project-name']?.value || '').trim()
+                || !!(state.metadata.designer || state.metadata.hook || state.metadata.yarnWeight)
+        },
+        { nav: 'nav-studio',  label: 'Draft & Compile', done: () => state.patternSteps.length > 0 },
+        { nav: 'nav-sizer',   label: 'Grade',  done: () => Object.keys(state.grading.sections).length > 0 },
+        { nav: 'nav-testers', label: 'Test',   done: () => state.grading.testers.length > 0 },
+        // Ready to export is not the same as exported: a pattern that compiles with no failed or
+        // blocked rows is one you can hand over. isCleanPass is the same test the stitch roll and
+        // the daily quest pay out on, so the rail cannot disagree with them about what "clean" is.
+        { nav: 'nav-publish', label: 'Export', done: () => isCleanPass(state.analytics.lastPass) }
+    ];
+    const STAGE_NAV = STAGES.map(stage => stage.nav);
+
     // ---- Hash routing -------------------------------------------------------
     /*
      * Twelve views and, until now, one address. A reload dropped you on the Dashboard mid-task, the
@@ -8355,9 +8423,15 @@
     }
 
     /** Switches which panels are on screen. Never touches panel contents. */
+    /* The view showView last resolved to. Held so closeDock can restore panel visibility by asking
+       showView again rather than by remembering what it changed - there is one authority on which
+       panels are on screen, and a dock must not become a second. */
+    let currentViewName = 'dashboard';
+
     function showView(view) {
         const panels = VIEW_PANELS[view] ? view : 'dashboard';
         const shown = VIEW_PANELS[panels];
+        currentViewName = panels;
 
         ALL_PANELS.forEach(id => setHidden(id, shown.indexOf(id) < 0));
         setHidden('dashboard-view', panels !== 'dashboard');
@@ -8679,13 +8753,203 @@
         }
     }
 
+    /*
+     * Opens one hub and closes the other three. An accordion rather than four independent
+     * disclosures: with all four open the rail is the same twelve-item list it was before, only
+     * taller, and the grouping stops doing any work.
+     *
+     * The open/closed state is not stored. It is derived from wherever you currently are, every
+     * time - navigateTo calls this with the hub owning the destination - so the rail cannot drift
+     * out of step with the view, and there is no fifth thing in localStorage to migrate.
+     */
+    function expandHub(hubId) {
+        HUB_IDS.forEach(id => {
+            const hub = shellEl(id);
+            if (!hub) return;
+            const open = id === hubId;
+            hub.classList.toggle('is-open', open);
+            hub.setAttribute('aria-expanded', String(open));
+        });
+    }
+
+    /*
+     * Draws the workflow rail, or hides it.
+     *
+     * Rebuilt rather than patched, because it is five nodes read off state that is already computed
+     * - the cost is nothing and a diffing version would be more code than the thing it updates.
+     *
+     * `currentNav` is passed in rather than read back off the DOM: this runs from navigateTo, which
+     * knows where it is going before the classes that would say so have been written.
+     */
+    /* ---- Floating docks -------------------------------------------------------
+     * Two panels you reach for WHILE working rather than places you go: the Stitch Library and the
+     * Compiler Overview. Both float over the current view instead of replacing it, because looking
+     * a stitch up or checking what last failed should not cost you the screen you were writing on.
+     *
+     * Nothing here moves a panel. Each dock wrapper is already the panels' home in the document -
+     * closed it is display: contents and disappears from layout, open it becomes a fixed pane. The
+     * shell's invariant holds untouched: every id is in the page at all times, so renderDashCompiler
+     * goes on writing live findings into the compiler dock from whichever view you are standing on.
+     *
+     * Deliberately NOT modal, and there is no scrim. A dock you cannot work behind is a dialog.
+     */
+    const DOCKS = {
+        'dock-library': {
+            trigger: 'dock-btn-library', close: 'dock-close-library',
+            shellClass: 'dock-library-open',
+            // The panels this dock carries. They belong to the Patterns view, so on any other view
+            // showView has hidden them - a dock that opened onto its own hidden panels is an empty
+            // pane, which is exactly what the first build of this did.
+            panels: ['stitch-usage-panel', 'custom-stitch-section']
+        },
+        'dock-compiler': {
+            trigger: 'dock-btn-compiler', close: 'dock-close-compiler',
+            shellClass: 'dock-compiler-open',
+            // Nothing to unhide: the compiler card is not a VIEW_PANELS panel. What hides it is its
+            // ANCESTOR, #dashboard-view, and an ancestor is the stylesheet's problem - see the
+            // dock host rules in section 1b.
+            panels: []
+        }
+    };
+    const DOCK_IDS = Object.keys(DOCKS);
+
+    /** Which dock is open, or null. One at a time: two 460px panes over a workspace is a workspace
+     *  nobody can see, and they would overlap each other besides. */
+    let openDockId = null;
+
+    function setDockState(dockId, open) {
+        // A position: fixed pane inside a display: none parent draws nothing, and both docks live
+        // inside something a view can hide - the workspace, the dashboard. This class is what the
+        // stylesheet keys the host chain off; it re-renders those containers and empties them, so
+        // the dock is the only thing in them that draws. Scoped to .hidden containers only, so
+        // opening a dock on the view that already owns it changes nothing behind it.
+        const shell = shellEl('app-shell');
+        if (shell) shell.classList.toggle(DOCKS[dockId].shellClass, open);
+        // And the dock's own panels, which the current view may have hidden outright.
+        if (open) DOCKS[dockId].panels.forEach(id => setHidden(id, false));
+
+        const dock = shellEl(dockId);
+        if (dock) {
+            dock.classList.toggle('is-open', open);
+            // role="dialog" is set here rather than written into the markup, and that is not
+            // tidiness. Closed, the wrapper is display: contents and its panels are simply part of
+            // the page - a permanent dialog role would wrap them in a dialog that is not there,
+            // and a screen reader would announce one around the Stitch Library at all times.
+            // The role exists exactly while the pane does.
+            if (open) dock.setAttribute('role', 'dialog');
+            else dock.removeAttribute('role');
+        }
+        const trigger = shellEl(DOCKS[dockId].trigger);
+        if (trigger) trigger.setAttribute('aria-expanded', String(open));
+    }
+
+    function closeDock(options) {
+        if (!openDockId) return;
+        const wasOpen = openDockId;
+        setDockState(wasOpen, false);
+        openDockId = null;
+        // Hand visibility back to the one thing that decides it. Re-asking showView is why closing
+        // a dock cannot leave a panel on screen that the current view does not want - there is no
+        // list here of what was changed, so there is no list to get wrong.
+        if (DOCKS[wasOpen].panels.length) showView(currentViewName);
+        // Focus goes back where it came from, or a keyboard user is returned to the top of the
+        // document having lost their place. Skipped when the close was itself a navigation, which
+        // has its own opinion about where focus should be.
+        if (!(options || {}).silent) shellEl(DOCKS[wasOpen].trigger)?.focus();
+    }
+
+    function openDock(dockId) {
+        if (!DOCKS[dockId]) return;
+        if (openDockId && openDockId !== dockId) closeDock({ silent: true });
+        setDockState(dockId, true);
+        openDockId = dockId;
+        shellEl(DOCKS[dockId].close)?.focus();
+    }
+
+    function toggleDock(dockId) {
+        if (openDockId === dockId) closeDock();
+        else openDock(dockId);
+    }
+
+    /* Where the rail last drew. Held so refreshStageRail can redraw after a compile without the
+       caller - which is deep in the matrix renderer and has no business knowing about navigation -
+       having to say where it is. */
+    let stageRailNav = null;
+
+    function renderStageRail(currentNav) {
+        stageRailNav = currentNav;
+        const rail = shellEl('stage-rail');
+        if (!rail) return;
+
+        // Off on every view the workflow does not describe - the Locker, Settings, Analytics, the
+        // Gauge profile. A five-step "write a pattern" strip above the Studio Locker would be
+        // pointing at work the page in front of you has nothing to do with.
+        const onWorkflow = STAGE_NAV.indexOf(currentNav) >= 0;
+        setHidden('stage-rail', !onWorkflow);
+        if (!onWorkflow) { rail.replaceChildren(); return; }
+
+        // Built element by element and each stage given an id, NOT assembled as an innerHTML string.
+        // Same reason the Locker's tiles are: a strip built from markup has to be found again with
+        // querySelectorAll to be wired, the stub the tests run under does not have it, and a control
+        // that cannot be clicked in a test is a control whose behaviour is unverified. Routing
+        // across five views is the whole point of this rail, so it has to be clickable in a test.
+        // The rail element itself spans the topbar so it lands on its own line; the visible pill is
+        // an inner track that hugs its five stages. Two elements because one cannot do both - a flex
+        // item's main size comes from flex-basis, so the 100% that forces the line break also
+        // defeats width: fit-content, and the pill stretches to the full width with a long empty
+        // tail beside it.
+        rail.replaceChildren();
+        const track = elem('div', 'stage-track');
+        rail.appendChild(track);
+
+        STAGES.forEach((stage, i) => {
+            if (i > 0) track.appendChild(elem('span', 'stage-link'));
+
+            const done = !!stage.done();
+            const here = stage.nav === currentNav;
+            const cls = 'stage' + (done ? ' is-done' : '') + (here ? ' is-here' : '');
+            const el = button(cls, null, `stage-${stage.nav}`, () => navigateTo(stage.nav));
+            UI[el.id] = el;
+
+            // The number is replaced by a tick once the stage has something in it, so the strip
+            // reads as a checklist rather than as five numbered buttons.
+            const dot = elem('span', 'stage-dot');
+            if (done) dot.innerHTML = '<svg class="ic stage-tick" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg>';
+            else dot.appendChild(elem('span', 'stage-num', String(i + 1)));
+
+            el.appendChild(dot);
+            el.appendChild(elem('span', 'stage-label', stage.label));
+            // aria-current marks where you are. "done" is said in words as well, because a tick
+            // drawn in SVG announces as nothing at all.
+            if (here) el.setAttribute('aria-current', 'step');
+            if (done) el.appendChild(elem('span', 'visually-hidden', ' (done)'));
+
+            track.appendChild(el);
+        });
+    }
+
+    /* Redraw where we already are. Called after a compile, when Draft and Export may have just
+       earned their ticks and the rail would otherwise keep showing the state before the parse. */
+    function refreshStageRail() {
+        if (stageRailNav) renderStageRail(stageRailNav);
+    }
+
     /** The one entry point for navigation, from the sidebar or from a dashboard link. */
     function navigateTo(navId, options) {
         const target = NAV_TARGETS[navId];
         if (!target) return;
         const opts = options || {};
 
+        // A dock holds panels that also belong to a view. Leave one open across a navigation onto
+        // that view and the panels are in the floating pane while the column they came from shows a
+        // gap where they should be. Closing here is the whole fix, and it is also what you want
+        // anyway: you asked to go somewhere, so the thing floating over the last place should go.
+        // Silent because focus is about to be decided by the navigation itself.
+        closeDock({ silent: true });
+
         showView(target.view);
+        expandHub(HUB_OF[navId]);
+        renderStageRail(navId);
 
         NAV_IDS.forEach(id => {
             const tab = shellEl(id);
@@ -8739,6 +9003,26 @@
         NAV_IDS.forEach(id => {
             const tab = shellEl(id);
             if (tab) tab.addEventListener('click', () => navigateTo(id));
+        });
+
+        // A hub press opens the group and goes to its first entry. Opening alone was tried and is
+        // worse: a press that only reveals more buttons is a press that did nothing, and it leaves
+        // the rail claiming a hub is open while the workspace still shows a different one. Going
+        // somewhere also means expandHub is reached through the single navigateTo path rather than
+        // being a second way for the rail to change state.
+        HUB_IDS.forEach(id => {
+            const hub = shellEl(id);
+            if (hub) hub.addEventListener('click', () => navigateTo(NAV_HUBS[id][0]));
+        });
+
+        DOCK_IDS.forEach(id => {
+            shellEl(DOCKS[id].trigger)?.addEventListener('click', () => toggleDock(id));
+            shellEl(DOCKS[id].close)?.addEventListener('click', () => closeDock());
+        });
+        // Escape closes the dock. Registered on the document rather than the pane because focus is
+        // free to be anywhere - the whole point is that you can keep typing behind it.
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && openDockId) closeDock();
         });
 
         UI['nav-toggle']?.addEventListener('click', () => {
@@ -9294,6 +9578,12 @@
         setText('streak-note', progress.streak > 1
             ? `×${streakMultiplier(progress.streak).toFixed(2).replace(/0$/, '')} on rolls`
             : 'Write daily');
+
+        // Rows in the pattern currently open, on the status pill beside the level and the streak.
+        // The same figure the Studio dashboard tile reads, and from the same place - this is a
+        // count of what is loaded right now, not a lifetime total, so it falls to zero on New File
+        // along with the pattern it describes.
+        setText('row-count', state.patternSteps.length.toLocaleString());
 
         // The two small copies. The locker draws its own, larger.
         const worn = avatarSvg(lookOf(progress), 'av-small');
