@@ -439,7 +439,8 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 }
 .points-head { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .points-title { flex: 1; font-weight: 700; color: var(--sidebar-ink); }
-.points-head strong { color: var(--brand-sand); font-size: 14px; font-weight: 800; }
+/* The rank name, not a figure, so it is set as a name: no tabular numerals and room to be long. */
+.points-head strong { color: var(--brand-sand); font-size: 13px; font-weight: 800; text-align: right; }
 /* ---- Liquid tubes ----
    One component behind three names. .tube/.tube-fill is what new markup uses; .points-* and
    .meter-* keep their names because app.js sets style.width on those ids and the shell suite reads
@@ -2358,6 +2359,132 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
        does not here, so they take a plain surface instead of the near-invisible --glass-thin. */
     .dock.is-open .panel { background: var(--surface-subtle); }
     #app-shell.nav-open .nav-scrim { background: rgba(31, 56, 46, 0.55); }
+}
+
+
+/* ===================================================== */
+/* 10. DAILY PRACTICE, THE CABINET AND LESSONS           */
+/* ===================================================== */
+/* The progress layer's own surfaces. All of them are hidden together by the practice-mode switch -
+   through the same .hidden class everything else in the shell uses, so there is no second mechanism
+   here and nothing to keep in step. */
+
+/* ---- The streak, as days rather than as a score ----
+   Seven dots, oldest first. A bare number makes one missed day feel like a zero; this says what
+   actually happened, which is a week with a gap in it. */
+.streak-strip {
+    display: flex; align-items: center; gap: var(--space-3);
+    margin-bottom: var(--space-4); flex-wrap: wrap;
+}
+.streak-dots { display: flex; gap: 6px; }
+.streak-dot {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+.streak-dot.is-worked { background: var(--brand-teal); box-shadow: none; }
+/* A day the bank covered. Not a failure and not a day of work either, so it is neither colour: the
+   teal outline says the run continued, the hollow middle says nothing was worked. */
+.streak-dot.is-rested { background: transparent; box-shadow: inset 0 0 0 2.5px var(--brand-teal); }
+.streak-dot.is-missed { background: var(--surface-sunken); }
+.streak-dots-note { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+/* ---- The three slots ---- */
+.practice-slot {
+    background: var(--surface-sunken); border-radius: var(--radius-sm);
+    padding: var(--space-4); margin-bottom: var(--space-3);
+}
+.practice-slot-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-3); margin-bottom: var(--space-2);
+}
+.practice-slot h3 { margin: 0; font-size: 13.5px; font-weight: 650; }
+.practice-state {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.045em;
+    border-radius: var(--radius-pill); padding: 3px 9px; white-space: nowrap;
+    background: var(--glass-thin); color: var(--text-muted);
+}
+.practice-available { margin: 0 0 6px 0; font-size: 12.5px; color: var(--text-muted); }
+/* The row itself, set like the pattern text it is: monospace, on its own ground, so it reads as
+   something quoted rather than as more of the app's prose. */
+.practice-instruction {
+    margin: 0 0 var(--space-3) 0; padding: 10px 14px;
+    font-family: monospace; font-size: 13px; line-height: 1.5;
+    color: var(--text-primary); background: var(--panel-bg);
+    border-radius: var(--radius-xs); box-shadow: inset 0 0 0 1px var(--border);
+    overflow-x: auto;
+}
+.practice-entry { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.practice-entry label { font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
+.practice-entry input[type="number"] { width: 92px; flex: none; }
+.practice-buttons { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.practice-verdict { margin: var(--space-3) 0 0 0; font-size: 13px; font-weight: 650; }
+.practice-verdict:empty { margin: 0; }
+/* The lesson, which is shown whether the answer was right or wrong. A wrong answer is the moment
+   somebody is most willing to read it, and spending that on a red cross throws it away - so this is
+   never styled as an error. */
+.practice-teaches {
+    margin: 6px 0 0 0; font-size: 12.5px; line-height: 1.55; color: var(--text-muted);
+    border-left: 3px solid var(--brand-teal); padding-left: 10px;
+}
+.practice-teaches:empty { margin: 0; border: 0; padding: 0; }
+.practice-swatch-note { margin: 0 0 var(--space-3) 0; font-size: 12.5px; line-height: 1.55; color: var(--text-muted); }
+
+/* The reel and its labels came from the Dashboard card the roll used to live in. They are unchanged;
+   only the ground under them is now a slot rather than a card, so the button loses its full width. */
+.practice-slot .roll-again { width: auto; margin-bottom: 0; }
+
+/* The source control for the mode switch, sitting under the thing it hides. Settings mirrors it, and
+   the mirror is the way back once this copy has gone with the panel. */
+.practice-switch {
+    display: flex; align-items: center; gap: 9px;
+    margin-top: var(--space-4); padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-muted); cursor: pointer;
+}
+
+/* ---- The stitch cabinet ----
+   A grid of every stitch the roll can ask for. The locked ones are the point: a collection you cannot
+   see the holes in is a progress bar. */
+.cabinet-count { margin: 0 0 var(--space-3) 0; font-size: 12.5px; font-weight: 650; color: var(--text-muted); }
+.cabinet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: var(--space-2); }
+.cabinet-card {
+    display: flex; flex-direction: column; gap: 3px;
+    background: var(--surface-sunken); border-radius: var(--radius-xs);
+    padding: 10px 12px; min-width: 0;
+}
+.cabinet-abbr { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary); }
+.cabinet-term { font-size: 11px; line-height: 1.35; color: var(--text-muted); overflow-wrap: anywhere; }
+.cabinet-when { font-size: 10px; color: var(--text-muted); opacity: 0.8; }
+.cabinet-tier {
+    align-self: flex-start;
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.045em;
+    border-radius: var(--radius-pill); padding: 2px 7px;
+    background: var(--glass-thin); color: var(--brand-teal);
+}
+.cabinet-tier.tier-3 { color: var(--level-easy); }
+.cabinet-tier.tier-4 { color: var(--accent-ink); }
+.cabinet-tier.tier-5 { color: var(--warning-text); background: var(--warning-bg); }
+.cabinet-card.is-open { box-shadow: inset 0 0 0 1px var(--glass-border); }
+/* Dimmed, not hidden and not disabled: a stitch you have not worked yet is a reason to keep going,
+   so it stays legible and only reads as quieter than the rest. */
+.cabinet-card.is-locked .cabinet-abbr { color: var(--text-muted); opacity: 0.62; }
+.cabinet-card.is-locked .cabinet-term { opacity: 0.62; }
+
+/* ---- Lessons ---- */
+.lessons-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.lesson-item {
+    background: var(--surface-sunken); border-radius: var(--radius-xs);
+    padding: 10px 14px; border-left: 3px solid var(--brand-teal);
+}
+.lesson-text { margin: 0 0 4px 0; font-size: 12.5px; line-height: 1.55; color: var(--text-primary); }
+.lesson-when { font-size: 10.5px; color: var(--text-muted); }
+
+@media (max-width: 700px) {
+    .cabinet-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    .practice-entry { align-items: stretch; flex-direction: column; }
+    .practice-entry input[type="number"] { width: 100%; }
 }
 
 /* ===================================================== */

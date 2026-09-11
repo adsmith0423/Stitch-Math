@@ -21,10 +21,10 @@ function addStitch(name, def, cost, yieldVal) {
 }
 
 // Compiler and Studio were two entries onto the same panels and were merged, so the count has never
-// been one per panel group. Construction is the eleventh, after Schematics was retired and the
-// Studio Locker removed with the avatar.
+// been one per panel group. Construction came in when Schematics was retired; the Studio Locker went
+// with the avatar; Daily Practice is the twelfth.
 var NAV_IDS = ['nav-dashboard', 'nav-patterns', 'nav-library', 'nav-studio', 'nav-sizer',
-    'nav-testers', 'nav-analytics', 'nav-gauge',
+    'nav-testers', 'nav-analytics', 'nav-gauge', 'nav-practice',
     'nav-publish', 'nav-construction', 'nav-settings'];
 
 // Every panel the app had before the shell landed, plus Settings, Help and the panels split out of the
@@ -42,7 +42,7 @@ var CLEAN = [
     'Row 3: ch 1, turn, sc in each st across (18)'
 ];
 
-print('\n1. Eleven destinations, none of them a form control');
+print('\n1. Twelve destinations, none of them a form control');
 NAV_IDS.forEach(function (id) {
     ok(id + ' is in the markup', HTML.indexOf('id="' + id + '"') !== -1);
 });
@@ -50,11 +50,11 @@ NAV_IDS.forEach(function (id) {
     var tag = (HTML.match(new RegExp('<(\\w+)[^>]*\\bid="' + id + '"')) || [, ''])[1];
     ck(id + ' is a button', tag, 'button');
 });
-ck('eleven of them', (HTML.match(/class="nav-item"/g) || []).length, 11);
+ck('twelve of them', (HTML.match(/class="nav-item"/g) || []).length, 12);
 no('Compiler is no longer a destination of its own', /id="nav-compiler"/.test(HTML));
 no('Schematics is retired', /id="nav-schematics"/.test(HTML));
 no('and the Studio Locker went with the avatar', /id="nav-locker"/.test(HTML));
-// The eleven are grouped into four hubs now, so document order follows the grouping rather than
+// The twelve are grouped into four hubs now, so document order follows the grouping rather than
 // the old flat run. Within Library & Assets, Pattern Files still leads into the Stitch Library.
 ok('Pattern Files leads into Stitch Library',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-library"'));
@@ -71,18 +71,18 @@ HUB_IDS.forEach(function (id) {
 ck('four of them', (HTML.match(/class="nav-hub"/g) || []).length, 4);
 ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 4);
 // A hub is not a destination. If one ever gained a NAV_TARGETS entry it would own a route and a
-// view, and the rail would have fifteen places to go rather than eleven.
+// view, and the rail would have sixteen places to go rather than twelve.
 HUB_IDS.forEach(function (id) {
     no(id + ' is not itself a destination', HTML.indexOf('id="' + id + '" class="nav-item"') !== -1);
 });
-// The grouping lives in app.js. Read it back and prove it covers the eleven exactly once - a
-// twelfth view added with a route and no hub would otherwise be reachable by URL and invisible
+// The grouping lives in app.js. Read it back and prove it covers the twelve exactly once - a
+// thirteenth view added with a route and no hub would otherwise be reachable by URL and invisible
 // in the rail, which is the failure this pins.
 var shellSrc = readFile('app.js');
 var hubBody = shellSrc.slice(shellSrc.indexOf('const NAV_HUBS = {'),
                              shellSrc.indexOf('const HUB_IDS'));
 var grouped = (hubBody.match(/'nav-[a-z]+'/g) || []).map(function (s) { return s.slice(1, -1); });
-ck('NAV_HUBS lists eleven destinations', grouped.length, 11);
+ck('NAV_HUBS lists twelve destinations', grouped.length, 12);
 NAV_IDS.forEach(function (id) {
     ck(id + ' has exactly one hub', grouped.filter(function (g) { return g === id; }).length, 1);
 });
@@ -762,35 +762,40 @@ function resetProgress() {
 print('\n9. Points come from recorded work, and outlive New File');
 resetProgress();
 pinRoll('bobble');
-ck('a fresh browser has none', $('points-total').textContent, '0');
+ck('a fresh browser has none', progress().points, 0);
 ck('and is level 1', $('xp-level').textContent, 'Level 1');
 ck('and holds the first rank', $('xp-title').textContent, 'Chain Starter');
+// Rank, not currency. The sidebar leads with the rank name and counts levels to the next one; the
+// figure behind it is deliberately not on screen anywhere.
+ck('the sidebar leads with the rank', $('points-total').textContent, 'Chain Starter');
+ok('and says how far the next one is', /levels? to Row Counter/.test($('points-next').textContent));
+no('no balance in the sidebar', /\d+ pts/.test($('points-next').textContent));
 ck('with nothing earned to report', $('points-note').textContent, 'Write, export or save a pattern to start earning.');
 
 // Source one: the daily quest, completed by the pattern on the page compiling clean. CLEAN works 56
 // stitches, short of the 100 that pays, so the quest is the only thing settling here.
 load(CLEAN);
 ck('a clean compile completes the quest', $('quest-count').textContent, '1 / 1');
-ck('and pays 50', $('points-total').textContent, '50');
+ck('and pays 50', progress().points, 50);
 ck('and banks the stitches it worked', progress().stitches, 56);
 ck('and counts the compile', progress().compiles, 1);
 
 // Source two: saving a project.
 $('project-name').value = 'shell test';
 $('save-btn').fire('click');
-ck('a saved project adds 25', $('points-total').textContent, '75');
+ck('a saved project adds 25', progress().points, 75);
 ck('and the streak has started', $('streak-count').textContent, '1 day streak');
 ok('the note reports what earned it', /1 saved/.test($('points-note').textContent));
 
 print('\n9b. Saving pays for a new file, not for pressing the button');
 $('save-btn').fire('click');
-ck('saving over the same file pays nothing', $('points-total').textContent, '75');
+ck('saving over the same file pays nothing', progress().points, 75);
 ck('and does not count a second pattern', progress().projects, 1);
 ok('and the app says it updated rather than saved',
    /Project "shell test" updated\./.test(ALERTS[ALERTS.length - 1]));
 $('project-name').value = 'shell test two';
 $('save-btn').fire('click');
-ck('a genuinely new file does pay', $('points-total').textContent, '100');
+ck('a genuinely new file does pay', progress().points, 100);
 ck('and counts', progress().projects, 2);
 ok('and says so', /Project "shell test two" saved\./.test(ALERTS[ALERTS.length - 1]));
 
@@ -799,23 +804,23 @@ $('load-select').value = 'shell test two';
 $('delete-project-btn').fire('click');
 $('project-name').value = 'shell test two';
 $('save-btn').fire('click');
-ck('a deleted name that comes back is not paid for twice', $('points-total').textContent, '100');
+ck('a deleted name that comes back is not paid for twice', progress().points, 100);
 ck('nor counted twice', progress().projects, 2);
 
 $('project-name').value = 'shell test';
 
 $('new-file-btn').fire('click');
-ck('New File does not take the points away', $('points-total').textContent, '100');
+ck('New File does not take the points away', progress().points, 100);
 ok('because they are not part of the open file', /2 saved/.test($('points-note').textContent));
 
 print('\n10. The quest pays once a day, not once a compile');
 load(CLEAN);
-ck('re-compiling clean does not pay again', $('points-total').textContent, '100');
+ck('re-compiling clean does not pay again', progress().points, 100);
 ck('but it still reads as done', $('quest-count').textContent, '1 / 1');
 ck('and the stitches are not banked twice', progress().stitches, 56);
 load(['Row 1: ch 13, sc in 2nd ch from hook and in each ch across (12)',
       'Row 2: ch 1, turn, sc2tog x 20 (12)']);
-ck('and a broken pattern takes nothing back', $('points-total').textContent, '100');
+ck('and a broken pattern takes nothing back', progress().points, 100);
 ck('nor banks stitches that do not add up', progress().stitches, 56);
 
 print('\n10b. Stitches are credited once, and only the ones newly written');
@@ -888,29 +893,35 @@ load(CLEAN);
 no('a clean pattern without the stitch does not claim it', progress().roll.claimed);
 ck('and the quest below it is unaffected', $('quest-count').textContent, '1 / 1');
 
-print('\n11c. The re-roll is a gamble that costs points');
+print('\n11c. The re-roll is a daily allowance, not a purchase');
+// It used to cost forty points. Telling a beginner that looking at a different stitch costs them
+// progress teaches the wrong lesson about curiosity, so it is two a day and free.
 resetProgress();
 pinRoll('bobble');
-seedProgress({ points: 10 });
-$('nav-dashboard').fire('click');
-ok('under the price, the button says so', /needs 40/.test($('roll-again').textContent));
-ok('and is disabled', $('roll-again').disabled);
+seedProgress({ points: 0 });
+nav('nav-practice');
+no('with no points at all it is still live', $('roll-again').disabled);
+ok('and says how many are left', /2 left today/.test($('roll-again').textContent));
 $('roll-again').fire('click');
-ck('so pressing it changes nothing', progress().roll.stitch, 'bobble');
-ck('and takes nothing', progress().points, 10);
-
-seedProgress({ points: 200 });
-$('nav-dashboard').fire('click');
-no('with points in hand it is live', $('roll-again').disabled);
-$('roll-again').fire('click');
-ck('re-rolling costs forty', progress().points, 160);
-ck('and it is recorded as spent', progress().roll.rerolls, 1);
+ck('re-rolling costs nothing', progress().points, 0);
+ck('and records nothing as spent', progress().spent, 0);
+ck('but it is counted', progress().roll.rerolls, 1);
 ok('the stitch is drawn from the pool', $('roll-stitch').textContent.length > 0);
-var second = progress().roll.stitch;
+
 $('roll-again').fire('click');
-ck('a second re-roll is refused', progress().roll.stitch, second);
-ck('and costs nothing', progress().points, 160);
-ok('the button says why', /Re-rolled today/.test($('roll-again').textContent));
+ck('a second re-roll is allowed', progress().roll.rerolls, 2);
+var third = progress().roll.stitch;
+$('roll-again').fire('click');
+ck('a third in one day is refused', progress().roll.stitch, third);
+ck('and the counter holds at the cap', progress().roll.rerolls, 2);
+ok('the button says why', /No re-rolls left today/.test($('roll-again').textContent));
+ok('and is disabled', $('roll-again').disabled);
+
+// Tomorrow is a new roll, so the allowance comes back with it.
+seedProgress({ roll: { date: dayString(-1), stitch: 'bobble', rerolls: 2, claimed: false, isNew: true } });
+nav('nav-practice');
+ck('a new day draws again', progress().roll.date, dayString(0));
+ck('and resets the allowance', progress().roll.rerolls, 0);
 
 print('\n11d. A streak is consecutive days, and it is worth something');
 resetProgress();
@@ -928,6 +939,87 @@ load(CLEAN);
 ck('a missed day resets to one', progress().streak, 1);
 ck('but the best is remembered', progress().bestStreak, 9);
 ck('and the record strip reports it', $('rec-best').textContent, '9');
+
+print('\n11d-ii. A rest day is banked every seven, and spent on a single missed day');
+/*
+ * Why forgiveness exists at all: a reset un-earns every milestone with it, which is the mechanic that
+ * makes people quit on day eight and not come back - and it punishes the wrong thing. Somebody who
+ * worked twenty days and missed one has not undone the twenty.
+ *
+ * What it is NOT is a free pass, and most of what follows is about that: the day has to have been
+ * earned, only a gap of exactly one is covered, and two days away still resets however full the bank.
+ */
+resetProgress();
+seedProgress({ lastActive: dayString(-1), streak: 6, bestStreak: 6, restDays: 0, restBankedAt: 0 });
+pinRoll('bobble');
+load(CLEAN);
+ck('reaching seven days banks one', progress().restDays, 1);
+ck('and the bank remembers where it came from', progress().restBankedAt, 7);
+
+// Day 8, 9 and 10 must not each bank another. The bank moves when the streak CROSSES a seventh day.
+resetProgress();
+seedProgress({ lastActive: dayString(-1), streak: 8, bestStreak: 8, restDays: 1, restBankedAt: 7 });
+pinRoll('bobble');
+load(CLEAN);
+ck('standing past seven banks nothing more', progress().restDays, 1);
+
+resetProgress();
+seedProgress({ lastActive: dayString(-1), streak: 13, bestStreak: 13, restDays: 1, restBankedAt: 7 });
+pinRoll('bobble');
+load(CLEAN);
+ck('fourteen days banks the second', progress().restDays, 2);
+
+resetProgress();
+seedProgress({ lastActive: dayString(-1), streak: 20, bestStreak: 20, restDays: 2, restBankedAt: 14 });
+pinRoll('bobble');
+load(CLEAN);
+ck('twenty-one still banks two, because two is the cap', progress().restDays, 2);
+
+print('\n11d-iii. Spending one, and the gaps it does not cover');
+resetProgress();
+seedProgress({ lastActive: dayString(-2), streak: 9, bestStreak: 9, restDays: 1, restBankedAt: 7,
+               lastMilestone: 7 });
+pinRoll('bobble');
+load(CLEAN);
+ck('one missed day with a rest banked continues the streak', progress().streak, 10);
+ck('and the bank paid for it', progress().restDays, 0);
+ck('the milestones are not un-earned', progress().lastMilestone, 7);
+
+resetProgress();
+seedProgress({ lastActive: dayString(-2), streak: 9, bestStreak: 9, restDays: 0, restBankedAt: 7,
+               lastMilestone: 7 });
+pinRoll('bobble');
+load(CLEAN);
+ck('one missed day with nothing banked resets, as it always did', progress().streak, 1);
+ck('and clears the milestones with it', progress().lastMilestone, 0);
+ck('but the best is still remembered', progress().bestStreak, 9);
+
+resetProgress();
+seedProgress({ lastActive: dayString(-3), streak: 20, bestStreak: 20, restDays: 2, restBankedAt: 14,
+               lastMilestone: 14 });
+pinRoll('bobble');
+load(CLEAN);
+ck('three days away resets however full the bank is', progress().streak, 1);
+ck('and the bank goes with the run that earned it', progress().restDays, 0);
+ck('milestones cleared', progress().lastMilestone, 0);
+
+print('\n11d-iv. Seven dots, not a bare number');
+// A number makes one missed day feel like a score of zero. A row of dots makes it a week with a gap
+// in it, which is what it actually is.
+resetProgress();
+seedProgress({ lastActive: dayString(-2), streak: 9, bestStreak: 9, restDays: 1, restBankedAt: 7,
+               days: [{ d: dayString(-4), k: 'worked' }, { d: dayString(-3), k: 'worked' },
+                      { d: dayString(-2), k: 'worked' }] });
+pinRoll('bobble');
+load(CLEAN);
+nav('nav-practice');
+ck('seven days are drawn', $('streak-dots').children.length, 7);
+var dots = $('streak-dots').children.map(function (d) { return d.className.replace('streak-dot is-', ''); });
+ck('today was worked', dots[6], 'worked');
+ck('yesterday was covered by the bank', dots[5], 'rested');
+ck('the day before was worked', dots[4], 'worked');
+ck('and a day with nothing on it reads as missed', dots[0], 'missed');
+ok('the note names the run', /10 day streak/.test($('streak-dots-note').textContent));
 
 print('\n11e. Streak milestones pay once');
 resetProgress();
@@ -988,16 +1080,26 @@ ck('and New File leaves all of it standing', $('rec-stitches').textContent, '56'
 // Left as the app found it, so the sections below start from a known store.
 resetProgress();
 
-print('\n11i. A re-roll is a purchase, so it does not cost rank');
+print('\n11i. The spend machinery is kept, deliberately unused');
+// Section 2 of the build plan says so in as many words: REROLL_COST, `spent` and the
+// lifetime = points + spent arithmetic are what a currency needs, and they stay against the return
+// of one. Asserted rather than left to a comment, so a future tidy-up has to argue with a test.
+var APPSRC = readFile('app.js');
+ok('REROLL_COST still exists', /const REROLL_COST = \d+;/.test(APPSRC));
+ok('and says why it is kept', /KEPT ON PURPOSE/.test(APPSRC));
+ok('lifetime still counts what was spent', /const lifetime = progress\.points \+ progress\.spent;/.test(APPSRC));
 resetProgress();
-seedProgress({ points: 500 });
+// Rank is computed from lifetime earnings, so a spend cannot walk it backwards. Seeded directly
+// because nothing in the app spends any more - which is the point of keeping the arithmetic.
+seedProgress({ points: 500, spent: 0 });
 pinRoll('bobble');
 nav('nav-dashboard');
 ck('500 points is level 6', $('xp-level').textContent, 'Level 6');
-$('roll-again').fire('click');
-ck('the re-roll comes off the balance', progress().points, 460);
-ck('and is recorded as spent', progress().spent, 40);
-ck('but the level holds', $('xp-level').textContent, 'Level 6');
+ck('and a rank to match', $('xp-title').textContent, 'Pattern Explorer');
+seedProgress({ points: 460, spent: 40 });
+nav('nav-dashboard');
+ck('spending forty of it holds the level', $('xp-level').textContent, 'Level 6');
+ck('and the rank with it', $('xp-title').textContent, 'Pattern Explorer');
 
 resetProgress();
 
@@ -1143,7 +1245,7 @@ ok('with the bullet spoken as a full stop rather than the word "bullet"',
    /replace\(\/\\s\*•\\s\*\/g, '\. '\)/.test(describeBody));
 
 print('\n12. Hash routing');
-// Eleven views and one address. The slug is derived from the nav id rather than written
+// Twelve views and one address. The slug is derived from the nav id rather than written
 // beside it, so a view cannot gain a route without a tab or a tab without a route - which is the whole
 // reason to assert the mapping rather than a hand-written list.
 var SLUGS = NAV_IDS.map(function (id) { return id.replace(/^nav-/, ''); });

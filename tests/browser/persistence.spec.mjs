@@ -106,7 +106,12 @@ try {
 
     // ---- 2. Save, reload, recover ------------------------------------------------------------
     console.log('\n2. Autosave survives a reload - the sequence a designer performs');
-    await page.click('#nav-studio'); await page.waitForTimeout(300);
+    // Reached by its address rather than by clicking the sidebar. This suite is about IndexedDB,
+    // and coupling it to nav markup is why it broke when the sidebar became collapsible hubs:
+    // #nav-studio still exists, but it now sits inside a collapsed group and cannot be clicked.
+    // The hash router is the stable way in, and it is a supported entry point in its own right.
+    await page.evaluate(() => { window.location.hash = '#studio'; });
+    await page.waitForTimeout(300);
     await page.fill('#bulk-input', PATTERN);
     await page.click('#bulk-parse-btn');
     // Autosave is debounced; give it room to fire and to write.
@@ -162,7 +167,8 @@ try {
         Object.defineProperty(window, 'indexedDB', { value: { open() { throw new Error('refused'); } } });
     });
     await page2.goto(url); await page2.waitForTimeout(1500);
-    await page2.click('#nav-studio'); await page2.waitForTimeout(300);
+    await page2.evaluate(() => { window.location.hash = '#studio'; });
+    await page2.waitForTimeout(300);
     await page2.fill('#bulk-input', PATTERN);
     await page2.click('#bulk-parse-btn'); await page2.waitForTimeout(2500);
     const blockedLine = await page2.textContent('#save-status');

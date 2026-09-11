@@ -168,7 +168,10 @@
         // read yet" - several callers need to tell those apart rather than defaulting to a guess.
         // Shape is CrochetMathEngine.inferPatternSettings's return value; see validator.js section 8.
         inferred: null,
-        viewPrefs: { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false },
+        // practiceMode is DEFAULT ON. A beginner will not go looking in Settings for a feature they
+        // do not know exists; a professional finds the switch within a minute of wanting it. It
+        // describes what is SHOWN, never who the person is - see SETTING_SPECS.
+        viewPrefs: { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false, practiceMode: true },
         viewPrefsKey: "stitchmath_view_prefs",
         savedProjectsKey: "stitchmath_saves",
         
@@ -309,7 +312,7 @@
             "stitch-usage-panel", "stitch-usage-content",
             "print-area", "pdf-preview", "pub-refresh-preview",
             "pub-export-txt", "pub-export-pdf", "pub-export-markup", "pub-export-history", "pub-export-package",
-            "nav-dashboard", "nav-patterns", "nav-sizer", "nav-studio",
+            "nav-dashboard", "nav-patterns", "nav-sizer", "nav-studio", "nav-practice",
             "nav-testers", "nav-analytics", "nav-library", "nav-gauge",
             "nav-publish", "nav-settings", "nav-construction", "nav-toggle", "nav-scrim",
             // Construction (section 8c). Hosts only - everything inside is built at run time, so none of it
@@ -322,7 +325,19 @@
             "points-total", "points-bar", "points-next", "points-note",
             "xp-title", "xp-level", "xp-bar", "xp-count", "streak-count", "streak-note",
             "roll-reel", "roll-stitch", "roll-term", "roll-tier", "roll-reward",
-            "roll-note", "roll-again",
+            "roll-note", "roll-again", "roll-worked",
+            // Daily Practice (section 12). The answer box is why this is a view rather than a
+            // Dashboard card: the Dashboard carries no form controls, by contract.
+            "practice-panel", "practice-read", "practice-meet", "practice-swatch",
+            "practice-read-state", "practice-swatch-state", "practice-swatch-note",
+            "practice-available", "practice-instruction", "practice-answer", "practice-check",
+            "practice-verdict", "practice-teaches", "practice-swatch-go", "toggle-practice-mode",
+            // The surfaces the practice-mode gate hides. Named rather than reached by class or by
+            // walking to parentElement, both of which break silently when the markup moves.
+            "sidebar-points", "status-pill", "card-daily", "card-record",
+            "streak-dots", "streak-dots-note",
+            "cabinet-panel", "cabinet-count", "cabinet-grid",
+            "lessons-panel", "lessons-list",
             "rec-patterns", "rec-exports", "rec-stitches", "rec-compiles", "rec-best",
             "rec-collected", "rec-collection-bar",
             "tile-patterns", "tile-compiler", "tile-sizer", "tile-studio",
@@ -507,6 +522,7 @@
         UI["toggle-collapse-repeats"]?.addEventListener("change", applyCollapseRepeatPref);
         UI["toggle-outline-view"]?.addEventListener("change", applyOutlineViewPref);
         UI["toggle-beginner-phrasing"]?.addEventListener("change", applyRepeatPhrasingMode);
+        UI["toggle-practice-mode"]?.addEventListener("change", applyPracticeMode);
         UI["gauge-convert-unit"]?.addEventListener("change", applyConvertUnitOverride);
         UI["sizing-category"]?.addEventListener("change", edits(refreshGaugeOutputs));
         UI["sizing-piece"]?.addEventListener("change", edits(applySizingPieceOverride));
@@ -624,15 +640,57 @@
         if (typeof saved.showTrendMarkers === "boolean") state.viewPrefs.showTrendMarkers = saved.showTrendMarkers;
         if (typeof saved.collapseRepeats === "boolean") state.viewPrefs.collapseRepeats = saved.collapseRepeats;
         if (typeof saved.outlineOnly === "boolean") state.viewPrefs.outlineOnly = saved.outlineOnly;
+        // Absent means never chosen, which is on. Written as a typeof test rather than `|| true`
+        // so an explicit false is not read back as a missing value.
+        if (typeof saved.practiceMode === "boolean") state.viewPrefs.practiceMode = saved.practiceMode;
 
         if (UI["toggle-trend-markers"]) UI["toggle-trend-markers"].checked = state.viewPrefs.showTrendMarkers;
         if (UI["toggle-collapse-repeats"]) UI["toggle-collapse-repeats"].checked = state.viewPrefs.collapseRepeats;
         if (UI["toggle-outline-view"]) UI["toggle-outline-view"].checked = state.viewPrefs.outlineOnly;
+        // Set here rather than left to a `checked` attribute in the markup: the headless stub does not
+        // read markup, so a default that lives in index.html alone is untestable.
+        if (UI["toggle-practice-mode"]) UI["toggle-practice-mode"].checked = state.viewPrefs.practiceMode;
+        applyPracticeMode();
     }
 
     function saveViewPrefs() {
         setLocalStorage(state.viewPrefsKey, state.viewPrefs);
     }
+
+    /**
+     * The progress layer, shown or not shown. One boolean, one meaning.
+     *
+     * What it does NOT do is stop the store recording. awardProgress, recordWork, touchStreak and the
+     * collection all run exactly as they do with it on; only rendering is suppressed. Someone who
+     * switches off in March and back on in June finds six months of history waiting rather than a
+     * reset - and it is the simpler implementation besides, one gate at the render boundary rather
+     * than a condition threaded through every award path where a missed branch silently costs
+     * somebody their streak.
+     *
+     * Nothing leaves the device either way, so there is no privacy cost to counting quietly.
+     */
+    function applyPracticeMode() {
+        const on = !!UI['toggle-practice-mode']?.checked;
+        state.viewPrefs.practiceMode = on;
+        saveViewPrefs();
+
+        PRACTICE_SURFACES.forEach(id => setHidden(id, !on));
+        // The nav entry goes with the view it opens, or the rail offers a destination whose panel is
+        // hidden - which reads as a broken tab rather than as a setting doing its job.
+        setHidden('nav-practice', !on);
+        // Standing on Practice when it is switched off would leave an empty workspace and a rail with
+        // nothing marked current. Only ever a step BACK to the Dashboard, never a redirect on the way
+        // in, so this cannot fight the router.
+        if (!on && currentNavId === 'nav-practice') navigateTo('nav-dashboard');
+    }
+
+    /* Every surface the switch hides, in one list. A new one added to the progress layer belongs here
+       on the day it is written - retrofitting a gate around a finished feature is how two versions of
+       the same app start to drift. */
+    const PRACTICE_SURFACES = [
+        'sidebar-points', 'status-pill', 'card-daily', 'card-record',
+        'practice-panel', 'cabinet-panel', 'lessons-panel'
+    ];
 
     /**
      * Mirrors the Pattern Metadata fields into state, and carries the chosen yarn weight across to the
@@ -1721,9 +1779,18 @@
             state.grading = { sections: {}, overrides: {}, modes: {}, testers: [], fields: {}, customChart: null };
             state.convertUnitManuallySet = false;
             state.sizingPieceManuallySet = false;
-            // View preferences are restored too: trend markers are on by default, and leaving them off
-            // forever because they were once switched off is not a default.
-            state.viewPrefs = { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false };
+            // Matrix view preferences are restored too: trend markers are on by default, and leaving
+            // them off forever because they were once switched off is not a default.
+            //
+            // practiceMode is NOT among them, and deliberately carried across. The others describe how
+            // to read the pattern in front of you, so a new pattern is a fair moment to reset them.
+            // Practice mode is a statement about the whole app - a professional who switched the layer
+            // off did not ask for it back on their next new file, and having it reappear there would
+            // be the setting quietly undoing itself.
+            state.viewPrefs = {
+                showTrendMarkers: true, collapseRepeats: false, outlineOnly: false,
+                practiceMode: state.viewPrefs.practiceMode
+            };
             saveViewPrefs();
             if (UI["toggle-trend-markers"]) UI["toggle-trend-markers"].checked = true;
             if (UI["toggle-collapse-repeats"]) UI["toggle-collapse-repeats"].checked = false;
@@ -5720,6 +5787,10 @@
         const lines = String(box.value || '').split('\n');
         lines[finding.lineIndex] = diff.after;
         box.value = lines.join('\n');
+        // Recorded here, where the correction is actually accepted. Not on the finding appearing,
+        // which would reward writing bad rows, and not on dismissal, which would reward ignoring
+        // advice. See recordLesson.
+        recordLesson(finding);
         closeLintTip();
         // Back through the ordinary parse, so a correction accepted here is read exactly as one typed
         // by hand. Nothing writes to state.patternSteps directly: handleBulkSubmit rebuilds it from
@@ -5798,6 +5869,10 @@
                 if (after === null || after === before) return;
                 lines[finding.lineIndex] = after;
                 done[finding.lineIndex] = true;
+                // Accepting them in a batch is still accepting them, so each one that carries a
+                // lesson records it. recordLesson is first-time-only, so a fix applied here and again
+                // by hand tomorrow does not move its date.
+                recordLesson(finding);
                 changed++;
             });
 
@@ -8229,16 +8304,19 @@
         // read as one run, so the two stitch panels sit under the colours rather than on a tab of their
         // own. 'library' is no longer a view; nav-library focuses them here.
         patterns:  ['project-panel', 'metadata-panel', 'color-panel',
-                    'stitch-usage-panel', 'custom-stitch-section'],
+                    'stitch-usage-panel', 'cabinet-panel', 'custom-stitch-section'],
         // Writing a pattern and compiling it are the same desk, so they are one view. Pattern Structure
         // sits under the paste box: how to read what was just written, before the matrix that reads it.
         studio:    ['intro-header', 'input-section', 'structure-section', 'matrix-section'],
         sizer:     ['grader-section', 'finished-size-panel'],
         // Its own tab now, not a disclosure inside the grader.
         testers:   ['tester-panel', 'tester-notes-panel'],
-        analytics: ['pattern-analytics-dashboard', 'output-section', 'complexity-panel'],
+        analytics: ['pattern-analytics-dashboard', 'output-section', 'complexity-panel', 'lessons-panel'],
         gauge:     ['gauge-profile-panel', 'gauge-history-dashboard'],
         settings:  ['help-panel', 'settings-panel', 'about-panel'],
+        // The daily habit, and the one view a person who is not writing a pattern has a reason to
+        // open. Hidden entirely when practice mode is off - see applyPracticeMode.
+        practice:  ['practice-panel'],
         // Engine capability with no other way in. Section 8c.
         construction:   ['construction-panel', 'construction-yoke-panel', 'construction-impact-panel'],
         // Project Management appears on Patterns as well: the same panel shown in two places, not a copy
@@ -8253,7 +8331,7 @@
     // section 3 of test-shell.js checks this against index.html - getting it wrong leaves an empty
     // column beside the content.
     const LEFT_PANELS = [
-        'output-section', 'pattern-analytics-dashboard', 'complexity-panel',
+        'output-section', 'pattern-analytics-dashboard', 'complexity-panel', 'lessons-panel',
         'gauge-profile-panel', 'finished-size-panel', 'gauge-history-dashboard'
     ];
 
@@ -8275,6 +8353,7 @@
         'nav-sizer':      { view: 'sizer',     title: 'Sizer / Grader', sub: 'Grade one size into a range' },
         'nav-testers':    { view: 'testers',   title: 'Testers & Feedback', sub: 'What testers actually made' },
         'nav-analytics':  { view: 'analytics', title: 'Analytics', sub: 'Pattern health and complexity' },
+        'nav-practice':   { view: 'practice',  title: 'Daily Practice', sub: 'Three things to do today, and none of them need a pattern' },
         'nav-gauge':      { view: 'gauge',     title: 'Gauge Profile', sub: 'Swatches, density and yardage' },
         'nav-publish':    { view: 'publish',   title: 'Publish / Export', sub: 'Save your work, or take it out of Stitch Math' },
         'nav-construction':    { view: 'construction',   title: 'Construction', sub: 'Plan a yoke, and see what a measurement change disturbs' },
@@ -8294,7 +8373,7 @@
      * by URL and invisible in the rail.
      */
     const NAV_HUBS = {
-        'hub-dashboard': ['nav-dashboard', 'nav-analytics'],
+        'hub-dashboard': ['nav-dashboard', 'nav-analytics', 'nav-practice'],
         'hub-studio':    ['nav-studio', 'nav-sizer', 'nav-construction'],
         'hub-library':   ['nav-patterns', 'nav-library', 'nav-gauge'],
         'hub-community': ['nav-testers', 'nav-publish', 'nav-settings']
@@ -8420,6 +8499,11 @@
        panels are on screen, and a dock must not become a second. */
     let currentViewName = 'dashboard';
 
+    /* The nav id navigateTo last landed on, as opposed to the view it resolved to - Stitch Library and
+       Pattern Files share a view and are different places. Null until the first navigation, which is
+       what lets applyPracticeMode run during init without trying to route anywhere. */
+    let currentNavId = null;
+
     function showView(view) {
         const panels = VIEW_PANELS[view] ? view : 'dashboard';
         const shown = VIEW_PANELS[panels];
@@ -8455,6 +8539,10 @@
         // Reads the pattern's sections and the swatch's row gauge, both of which move while the tab is
         // closed, so it is rebuilt on arrival rather than once at boot.
         if (panels === 'construction') renderConstruction();
+        // Both read the store rather than the pattern, and the store moves while the tab is closed.
+        if (panels === 'practice') renderPractice();
+        if (panels === 'patterns') renderCabinet();
+        if (panels === 'analytics') renderLessons();
         return panels;
     }
 
@@ -8491,6 +8579,15 @@
         { id: 'toggle-beginner-phrasing', kind: 'checkbox', group: 'Pattern Linter', label: 'Beginner-friendly repeat phrasing',
           note: 'Spell every repeat out in full instead of bracket shorthand - switching back off folds them back to brackets.',
           apply: applyRepeatPhrasingMode },
+
+        /* It describes what is SHOWN, not who the person is. Not "beginner mode" - nobody wants to
+           tick a box that calls them a beginner, and a professional using the practice rows to check
+           their own dialect should not have to identify as one either. */
+        { id: 'toggle-practice-mode', kind: 'checkbox', group: 'Practice and progress',
+          label: 'Show daily practice, streak and rank',
+          note: 'Turn this off for a plain working tool. Nothing is lost - your record keeps counting, '
+              + 'and it is all still here if you turn it back on.',
+          apply: applyPracticeMode },
 
         { id: 'gauge-unit', kind: 'select', group: 'Gauge and measurements', label: 'Gauge unit',
           note: 'The unit your swatch width and height are measured in.', apply: refreshGaugeOutputs },
@@ -8931,6 +9028,15 @@
         if (!target) return;
         const opts = options || {};
 
+        // Practice is a destination only while the layer it belongs to is shown. Refused here rather
+        // than only hidden in the rail, because a hash is a way in that does not go through the rail:
+        // #practice with the switch off would otherwise open a panel display: none is hiding.
+        if (navId === 'nav-practice' && !state.viewPrefs.practiceMode) {
+            navigateTo('nav-dashboard', opts);
+            return;
+        }
+        currentNavId = navId;
+
         // A dock holds panels that also belong to a view. Leave one open across a navigation onto
         // that view and the panels are in the floating pane while the column they came from shows a
         // gap where they should be. Closing here is the whole fix, and it is also what you want
@@ -9047,6 +9153,10 @@
         // shortcut runs the same function the original button runs: synthesising a click would work in a
         // browser and do nothing headlessly, so the shortcuts could never be tested.
         UI['roll-again']?.addEventListener('click', rerollStitch);
+        UI['roll-worked']?.addEventListener('click', markStitchWorked);
+        UI['practice-check']?.addEventListener('click', checkPracticeAnswer);
+        // A shortcut, not a second implementation: logging the swatch is still the Gauge Profile's job.
+        UI['practice-swatch-go']?.addEventListener('click', () => navigateTo('nav-gauge'));
         // Construction's construction picker. Everything else on that tab is built at run time and wires
         // itself as it is built; these three are in the markup.
         Object.keys(CONSTRUCTION_PLANNERS).forEach(key => {
@@ -9115,6 +9225,16 @@
 
     /* Consecutive days are worth more than the sum of their parts, so the streak pays out at the points
        where giving up is most tempting. Once each, and only forwards. */
+    /* One rest day banked per seven consecutive days, never more than two in hand. Two is enough to
+       cover an ordinary weekend away and few enough that the streak still means what it says. */
+    const REST_DAY_EVERY = 7;
+    const REST_DAY_CAP = 2;
+    /* Seven dots shown, a fortnight kept. A gap then reads as a week with a hole in it rather than as
+       a failure - a bare number makes a miss feel like a score of zero, which is what this replaces.
+       The second week is held so a rest day spent on the boundary is still on the record. */
+    const STREAK_WEEK = 7;
+    const STREAK_DOTS = 14;
+
     const STREAK_MILESTONES = [
         { day: 3, points: 25 }, { day: 7, points: 75 },
         { day: 14, points: 150 }, { day: 30, points: 400 }
@@ -9130,6 +9250,7 @@
     function readProgress() {
         const stored = getLocalStorage(state.progressKey);
         const roll = stored.roll || {};
+        const practice = stored.practice || {};
         const dayExports = stored.dayExports || {};
         const object = (value) => (value && typeof value === 'object') ? value : {};
         // Version 3 added the lifetime record and the stitch roll; 4 the locker; 5 how the designer
@@ -9152,10 +9273,41 @@
             compiles: Number(stored.compiles) || 0,
             streak: Number(stored.streak) || 0,
             bestStreak: Number(stored.bestStreak) || 0,
+            // Rest days banked, and the streak length the last one was banked at. Both additive and
+            // both default to zero, so a store written before forgiveness existed reads as a designer
+            // who has banked nothing rather than needing a migration.
+            restDays: Math.max(0, Math.min(REST_DAY_CAP, Number(stored.restDays) || 0)),
+            restBankedAt: Number(stored.restBankedAt) || 0,
+            // The days that were not missed, most recent last, each { d: 'YYYY-MM-DD', k: 'worked' |
+            // 'rested' }. Dated rather than positional because the dots have to show gaps, and a gap
+            // is a day with NO entry - which a bare list of outcomes cannot represent.
+            days: Array.isArray(stored.days)
+                ? stored.days.filter(day => day && day.d).slice(-STREAK_DOTS)
+                : [],
             lastMilestone: Number(stored.lastMilestone) || 0,
             lastActive: stored.lastActive || '',
             questDate: stored.questDate || '',
+            // token -> the date it was first worked. It used to be `true`; any truthy value still
+            // reads as collected, so a store written before the cabinet existed keeps its stitches
+            // and simply has no dates to show for them. The same additive rule as everything else
+            // here - no migration.
             collection: object(stored.collection),
+            // Slot A's ledger and slot B's mark, both stamped with the day they belong to. Nothing
+            // pays twice and everything resets at local midnight, exactly as questDate does.
+            practice: {
+                date: practice.date || '',
+                rowId: practice.rowId || '',
+                answered: !!practice.answered,
+                given: Number(practice.given) || 0,
+                correct: !!practice.correct,
+                met: !!practice.met
+            },
+            // The day a swatch was last logged. The lifetime count cannot answer "today?", which is
+            // the only question slot C asks.
+            lastSwatch: stored.lastSwatch || '',
+            // fixId -> the date the correction was first accepted. Deliberately not priced: this is a
+            // record of understanding, and putting points on it would invite farming.
+            lessons: object(stored.lessons),
             credited: object(stored.credited),
             creditOrder: Array.isArray(stored.creditOrder) ? stored.creditOrder : [],
             paidSaves: Array.isArray(stored.paidSaves) ? stored.paidSaves : [],
@@ -9180,18 +9332,82 @@
         renderProgress();
     }
 
-    /** A streak is consecutive calendar days with recorded activity. A missed day resets it to one
-     *  rather than zero - the day being recorded is itself a day of work. */
+    /**
+     * A streak is consecutive calendar days with recorded activity, with one day of forgiveness in
+     * the bank for every seven kept.
+     *
+     * Why forgiveness at all: resetting to 1 on a single missed day un-earns every milestone with it,
+     * which is the mechanic that makes people quit on day eight and not come back. It also punishes
+     * the wrong thing - somebody who worked twenty days and missed one has not undone the twenty.
+     *
+     * What it is NOT is a free pass. A rest day is spent, not granted: it has to have been earned by
+     * seven days of actual work, only one gap of exactly one day can be covered, and two days away is
+     * still a reset however full the bank is.
+     */
     function touchStreak(progress) {
         const now = today();
         if (progress.lastActive === now) return progress;
-        progress.streak = (progress.lastActive === today(-1)) ? progress.streak + 1 : 1;
+
+        const yesterday = progress.lastActive === today(-1);
+        // Exactly one day missed, and something banked to cover it. Longer gaps fall through to the
+        // reset below whatever the bank holds.
+        const forgiven = !yesterday && progress.lastActive === today(-2) && progress.restDays > 0;
+
+        if (forgiven) {
+            progress.restDays -= 1;
+            progress.streak += 1;
+            markDay(progress, 'rested', today(-1));
+        } else if (yesterday) {
+            progress.streak += 1;
+        } else {
+            progress.streak = 1;
+            // A run that ended takes its bank with it. Carrying it over would let somebody bank two
+            // days across a good fortnight and then spend them covering alternate days forever.
+            progress.restDays = 0;
+            progress.restBankedAt = 0;
+        }
+
+        markDay(progress, 'worked');
         progress.lastActive = now;
         if (progress.streak > progress.bestStreak) progress.bestStreak = progress.streak;
         // A broken streak un-earns its milestones, or the next run of days would climb past them in
         // silence.
         if (progress.streak === 1) progress.lastMilestone = 0;
+
+        // One banked per seven consecutive days, capped. `restBankedAt` is what stops day 8, 9 and 10
+        // each banking another: the bank moves when the streak CROSSES a seventh day, not while it
+        // stands past one.
+        const earned = Math.floor(progress.streak / REST_DAY_EVERY) * REST_DAY_EVERY;
+        if (earned > progress.restBankedAt) {
+            progress.restBankedAt = earned;
+            progress.restDays = Math.min(REST_DAY_CAP, progress.restDays + 1);
+        }
         return progress;
+    }
+
+    /** Records one day as worked or rested. A rest day and the day of work that follows it are two
+     *  separate marks on two separate dates, which is why this takes the date rather than assuming
+     *  today. Kept short: it is a picture of the last fortnight, not a history. */
+    function markDay(progress, kind, date) {
+        if (!Array.isArray(progress.days)) progress.days = [];
+        const day = date || today();
+        const already = progress.days.findIndex(entry => entry.d === day);
+        if (already !== -1) progress.days.splice(already, 1);
+        progress.days.push({ d: day, k: kind });
+        while (progress.days.length > STREAK_DOTS) progress.days.shift();
+    }
+
+    /** The last seven calendar days, oldest first. A day with no entry is a miss - which is the whole
+     *  reason the entries are dated: a list of outcomes alone cannot say which days are missing. */
+    function streakDots(progress) {
+        const marks = {};
+        (progress.days || []).forEach(entry => { marks[entry.d] = entry.k; });
+        const out = [];
+        for (let back = STREAK_WEEK - 1; back >= 0; back--) {
+            const date = today(-back);
+            out.push({ date, kind: marks[date] || 'missed' });
+        }
+        return out;
     }
 
     /** Marks the day as worked and pays any streak milestone that just came due. */
@@ -9229,7 +9445,7 @@
                 progress.paidSaves.push(detail);
                 progress.projects += 1;
             }
-            if (kind === 'swatch') progress.swatches += 1;
+            if (kind === 'swatch') { progress.swatches += 1; progress.lastSwatch = today(); }
             if (kind === 'quest') { progress.questDate = today(); progress.compiles += 1; }
             if (kind === 'export') {
                 // The lifetime figure is the honest record and always moves. The payout is what is
@@ -9301,7 +9517,7 @@
             const gained = Math.max(0, total - (Number(progress.credited[fingerprint]) || 0));
             if (!gained && !fresh.length) return false;
 
-            fresh.forEach(name => { progress.collection[name] = true; });
+            fresh.forEach(name => { progress.collection[name] = today(); });
             if (gained) {
                 progress.credited[fingerprint] = total;
                 rememberFingerprint(progress, fingerprint);
@@ -9328,7 +9544,21 @@
      * never notice would be a quest that cannot be completed.
      */
     const ROLL_BASE = 40;
+    /*
+     * KEPT ON PURPOSE, and deliberately no longer charged. Rerolls became a daily allowance (see
+     * REROLLS_PER_DAY) because telling a beginner that looking at a different stitch costs them
+     * progress teaches the wrong lesson about curiosity.
+     *
+     * This constant, `progress.spent` and the `lifetime = points + spent` arithmetic in
+     * renderProgress are the machinery a currency needs. They stay against the return of a spend -
+     * the avatar and its accessories are the use case that would want one - exactly as readProgress
+     * keeps the version 4 and 5 fields it no longer reads. Not dead code to be tidied away.
+     */
     const REROLL_COST = 40;
+    /* Two a day. Enough to get past a stitch you have no yarn for, few enough that the draw still
+       means something - the whole shape of the roll is that which stitch you are asked for is not up
+       to you. Read off the counter the store already keeps. */
+    const REROLLS_PER_DAY = 2;
     const DISCOVERY_BONUS = 50;
     // Neither a stitch nor a technique anyone sets out to use: rolling "work a chain today" is not a
     // quest, it is a description of crochet.
@@ -9431,25 +9661,21 @@
         return readProgress();
     }
 
-    /** The gamble. Forty points buys one more draw, and the next stitch can be worth less than the one it
-     *  replaced - a Legendary traded for a slip stitch is the price of asking. One a day, never after the
-     *  bonus has been claimed, and never on credit. */
+    /** Two draws a day beyond the first, and none once the bonus has been claimed - a stitch already
+     *  worked is not one to trade away. The counter resets with the roll, so tomorrow starts at zero. */
     function canReroll(progress) {
-        return !progress.roll.claimed && progress.roll.rerolls === 0
-            && progress.points >= REROLL_COST;
+        return !progress.roll.claimed && progress.roll.rerolls < REROLLS_PER_DAY;
     }
 
     function rerollStitch() {
         if (!canReroll(ensureRoll())) return;
         writeProgress(progress => {
-            progress.points -= REROLL_COST;
-            progress.spent += REROLL_COST;   // a purchase, so it must not cost rank either
             progress.roll.rerolls += 1;
             progress.roll.stitch = drawStitch(today() + '#' + progress.roll.rerolls);
             progress.roll.isNew = !progress.collection[progress.roll.stitch];
         });
         startReel();
-        renderDashboard();
+        renderPractice();
     }
 
     /** Whether the pattern on the page currently counts as finished work. */
@@ -9471,7 +9697,7 @@
         writeProgress(store => {
             store.points += reward;
             store.roll.claimed = true;
-            if (!store.collection[store.roll.stitch]) store.collection[store.roll.stitch] = true;
+            if (!store.collection[store.roll.stitch]) store.collection[store.roll.stitch] = today();
             recordWork(store);
         });
     }
@@ -9483,6 +9709,459 @@
         if (isCleanPass(pass) && readProgress().questDate !== today()) awardProgress('quest');
         return readProgress().questDate === today();
     }
+
+    // ---- Daily practice ------------------------------------------------------
+    /*
+     * Three slots, each independently completable, each resetting at local midnight - and completing
+     * ANY one of them is a day's work, so the streak advances.
+     *
+     * That last part is the whole reason this section exists. Every other way to earn presupposes
+     * somebody who is ALREADY writing a pattern: a project saved, a swatch measured, a file exported,
+     * stitches worked, a clean compile. A beginner has none of those, so the entire progress layer was
+     * invisible to exactly the person it was meant to serve.
+     *
+     * The rule it does not weaken: there is still no participation trophy for opening the app. A slot
+     * has to be DONE. What changed is that there is now something a learner can do.
+     */
+
+    /*
+     * The rows.
+     *
+     * Curated rather than generated, in the same spirit as PATTERN_TEMPLATES. A generated row can be
+     * arithmetically valid and pedagogically meaningless, and the value here is that a person chose
+     * what is worth learning on day nine.
+     *
+     * NO ROW STORES ITS ANSWER, and none ever may. The count comes back from evaluateStep every time
+     * the question is asked - see practiceAnswer. An answer stored beside the row would eventually
+     * disagree with the validator, and then the app would be teaching something its own checker
+     * contradicts. Grading through the engine makes that impossible by construction, and the practice
+     * improves for free every time the engine does. test-practice.js asserts the absence of the field.
+     *
+     * EVERY ROW IS WORKED IN THE ROUND, with no turning chain, and that is not decoration. The engine
+     * counts a turning chain into the row's yield - correct for a dc row, surprising for an sc one -
+     * and a practice question is the wrong place to meet a convention argument. A round row has one
+     * defensible answer and the engine gives it.
+     *
+     * `available` must equal what the instruction actually consumes: a row that uses fewer stitches
+     * than it is handed does not validate at all, and the suite checks every entry.
+     */
+    const PRACTICE_ROWS = [
+        { id: 'ring-six', tier: 1, available: 0,
+          instruction: '6 sc in magic ring',
+          teaches: 'A magic ring starts from nothing, so the round makes exactly as many stitches as it works.' },
+        { id: 'plain-round', tier: 1, available: 18,
+          instruction: 'sc in each st around',
+          teaches: 'One stitch worked into each stitch keeps the count exactly where it was.' },
+        { id: 'inc-every', tier: 1, available: 6,
+          instruction: 'inc in each st around',
+          teaches: 'An increase works twice into one stitch, so increasing into every stitch doubles the round.' },
+        { id: 'two-into-each', tier: 1, available: 6,
+          instruction: '2 sc in each st around',
+          teaches: 'Two stitches into each stitch is the same thing an increase names, written out in full.' },
+        { id: 'inc-every-other', tier: 1, available: 12,
+          instruction: '[1 sc, inc] * 6',
+          teaches: 'Six repeats with one increase each add six stitches - the plain stitches beside them change nothing.' },
+        { id: 'inc-every-third', tier: 1, available: 18,
+          instruction: '[2 sc, inc] * 6',
+          teaches: 'The repeat grew but the number of increases did not, so the round still gains six.' },
+        { id: 'inc-every-fourth', tier: 2, available: 24,
+          instruction: '[3 sc, inc] * 6',
+          teaches: 'A flat circle adds the same six every round; only the plain run between them lengthens.' },
+        { id: 'inc-every-fifth', tier: 2, available: 30,
+          instruction: '[4 sc, inc] * 6',
+          teaches: 'Count the repeats, not the stitches: six repeats, six increases, six stitches gained.' },
+        { id: 'dec-every-sixth', tier: 2, available: 36,
+          instruction: '[4 sc, dec] * 6',
+          teaches: 'A decrease works two stitches together into one, so each repeat gives one stitch back.' },
+        { id: 'dec-every-fourth', tier: 2, available: 20,
+          instruction: '[2 sc, dec] * 5',
+          teaches: 'Five repeats, five decreases: the round loses five however long the repeat is.' },
+        { id: 'dec-eighth', tier: 2, available: 48,
+          instruction: '[6 sc, dec] * 6',
+          teaches: 'Closing a sphere is the increase rounds run backwards, one repeat at a time.' },
+        { id: 'dec-nine', tier: 3, available: 45,
+          instruction: '[3 sc, dec] * 9',
+          teaches: 'Nine repeats is nine decreases. The repeat count is what sets the change, not the stitch count.' },
+        { id: 'sc2tog-long', tier: 3, available: 32,
+          instruction: '[sc in next 2 sts, sc2tog] * 8',
+          teaches: 'sc2tog is dec written the long way, and it eats two stitches to make one.' },
+        { id: 'sc2tog-four', tier: 3, available: 20,
+          instruction: '[sc in next 3 sts, sc2tog] * 4',
+          teaches: 'Each repeat here consumes five stitches and produces four.' },
+        { id: 'dc-inc', tier: 3, available: 12,
+          instruction: '[dc in next st, 2 dc in next st] * 6',
+          teaches: 'Taller stitches increase the same way single crochet does - height changes nothing about the count.' },
+        { id: 'hdc-inc', tier: 3, available: 16,
+          instruction: '[hdc in next st, 2 hdc in next st] * 8',
+          teaches: 'Eight repeats, one extra stitch in each: half double crochet counts like everything else.' },
+        { id: 'inc-double', tier: 3, available: 18,
+          instruction: '[sc in next st, inc] * 9',
+          teaches: 'Nine increases in a round of eighteen is half the stitches doubled, so it gains nine.' },
+        { id: 'inc-five', tier: 4, available: 30,
+          instruction: '[5 sc, inc] * 5',
+          teaches: 'Five repeats of six stitches uses all thirty and returns thirty-five - the repeat count rules.' },
+        { id: 'dc2tog-all', tier: 4, available: 16,
+          instruction: '[dc2tog] * 8',
+          teaches: 'Nothing but decreases: every repeat takes two stitches and leaves one, so the round halves.' },
+        { id: 'tr-inc', tier: 4, available: 8,
+          instruction: '[tr in next st, 2 tr in next st] * 4',
+          teaches: 'Treble crochet increases exactly like the rest; four repeats gain four.' },
+        { id: 'mesh-round', tier: 4, available: 12,
+          instruction: '[sc, ch 1, sk next st] * 6',
+          teaches: 'A skipped stitch is consumed without being worked, and the chain beside it fills the gap.' },
+        { id: 'dec-eight-run', tier: 4, available: 40,
+          instruction: '[8 sc, dec] * 4',
+          teaches: 'A long plain run hides how little is happening: four repeats, four stitches lost.' }
+    ];
+
+    /* A correct answer is worth about what a swatch is. Deliberately modest: the reason to do this is
+       to find out whether you can read the row, and pricing it higher would make it a chore to farm. */
+    const PRACTICE_POINTS = 20;
+
+    const PRACTICE_TIERS = 4;
+
+    /** Which tiers today's draw may reach. The ladder is the collection, because how many stitches
+     *  somebody has actually worked is the only evidence in the store of how far along they are - a
+     *  points total measures how much they have done, not how much they know. */
+    function practiceCeiling(progress) {
+        const pool = rollPool();
+        if (!pool.length) return 1;
+        const collected = pool.filter(entry => progress.collection[entry.token]).length;
+        const share = collected / pool.length;
+        return Math.max(1, Math.min(PRACTICE_TIERS, Math.floor(share * PRACTICE_TIERS) + 1));
+    }
+
+    /** The day's row, decided by the date alone within the tiers open to this designer - so the same
+     *  day gives the same row on every device, and a reload is not a second draw. Same reason
+     *  drawStitch seeds off the date. */
+    function practiceDraw(progress) {
+        const ceiling = practiceCeiling(progress);
+        const open = PRACTICE_ROWS.filter(row => row.tier <= ceiling);
+        const pool = open.length ? open : PRACTICE_ROWS;
+        return pool[hashString(today() + '#practice') % pool.length];
+    }
+
+    function practiceRowById(id) {
+        return PRACTICE_ROWS.find(row => row.id === id) || null;
+    }
+
+    /** Draws today's row the first time the day is seen, then holds it - so answering, navigating away
+     *  and coming back is the same question. Drawing is not work, so this write does not touch the
+     *  streak: opening the app on a new day must not start one. */
+    function ensurePractice() {
+        const progress = readProgress();
+        if (progress.practice.date === today() && progress.practice.rowId) return progress;
+        writeProgress(store => {
+            store.practice = {
+                date: today(), rowId: practiceDraw(store).id,
+                answered: false, given: 0, correct: false, met: false
+            };
+        });
+        return readProgress();
+    }
+
+    /**
+     * THE ANSWER, AND THE ONE RULE THIS FILE MUST NOT BREAK.
+     *
+     * It comes back from the engine, every single time, and is never read off the row. expectedYield
+     * is passed as 0 so evaluateStep reports its own arithmetic rather than judging it against a
+     * figure we supplied - the question is what the row makes, and the engine is the only thing here
+     * entitled to say.
+     */
+    function practiceAnswer(row) {
+        const evaluation = window.CrochetMathEngine.evaluateStep(
+            0,                  // initialChain
+            row.available,      // availableStitches
+            row.instruction,    // instructionString
+            1,                  // rowMultiplier
+            0,                  // expectedYield - 0 so the engine reports rather than judges
+            0,                  // availableCorners
+            0                   // unstatedSkip
+        );
+        return evaluation.calculatedYield;
+    }
+
+    /** One attempt at today's row. No second try: the point is the thinking, not the guessing, and a
+     *  box that keeps taking numbers until one of them is right teaches nothing at all. */
+    function checkPracticeAnswer() {
+        const progress = ensurePractice();
+        if (progress.practice.answered) return;
+        const row = practiceRowById(progress.practice.rowId);
+        const box = UI['practice-answer'];
+        if (!row || !box) return;
+
+        const given = Number(box.value);
+        if (String(box.value).trim() === '' || !Number.isFinite(given)) {
+            setText('practice-verdict', 'Type a number first.');
+            return;
+        }
+
+        const right = given === practiceAnswer(row);
+        writeProgress(store => {
+            store.practice.answered = true;
+            store.practice.given = given;
+            store.practice.correct = right;
+            if (right) store.points += PRACTICE_POINTS;
+            // Right or wrong. Reading the row and committing to a number is the work; being wrong
+            // about it is most of how anybody learns to read one.
+            recordWork(store);
+        });
+        renderPractice();
+    }
+
+    /** Slot B. Credits the rolled stitch to the collection without a pattern - the roll's own payout
+     *  still needs one compiled clean, so this records the DOING rather than the writing, and pays
+     *  nothing on its own. */
+    function markStitchWorked() {
+        const progress = ensurePractice();
+        if (progress.practice.met) return;
+        const token = ensureRoll().roll.stitch;
+        if (!token) return;
+        writeProgress(store => {
+            store.practice.met = true;
+            if (!store.collection[token]) store.collection[token] = today();
+            recordWork(store);
+        });
+        renderPractice();
+        renderCabinet();
+    }
+
+    // ---- Rendering the practice panel ----------------------------------------
+    function renderPractice() {
+        // Both, and both before anything is read. The roll used to be ensured only by the Dashboard,
+        // which meant opening Practice first thing on a new day drew today's practice row beside
+        // yesterday's stitch. Each is a no-op once the day has been seen.
+        ensurePractice();
+        ensureRoll();
+        const progress = readProgress();
+        renderStreakDots(progress);
+        renderPracticeRow(progress);
+        renderRollSlot(progress);
+        renderSwatchSlot(progress);
+    }
+
+    /** Seven days as they happened. `rested` is a day covered by the bank, which is a different fact
+     *  from having worked it and is drawn as a different dot. */
+    function renderStreakDots(progress) {
+        const host = shellEl('streak-dots');
+        if (!host) return;
+        const dots = streakDots(progress);
+        host.replaceChildren();
+        dots.forEach(day => {
+            const dot = elem('span', `streak-dot is-${day.kind}`);
+            dot.setAttribute('title', `${day.date}: ${day.kind}`);
+            host.appendChild(dot);
+        });
+
+        const banked = progress.restDays;
+        const run = progress.streak === 0 ? 'No streak yet'
+            : progress.streak === 1 ? '1 day streak'
+            : `${progress.streak} day streak`;
+        setText('streak-dots-note', banked
+            ? `${run} · ${banked} rest ${banked === 1 ? 'day' : 'days'} banked`
+            : run);
+    }
+
+    function renderPracticeRow(progress) {
+        const row = practiceRowById(progress.practice.rowId);
+        if (!row) return;
+        const done = progress.practice.answered;
+
+        setText('practice-read-state', done ? 'Done today' : 'Not done today');
+        setText('practice-available', row.available
+            ? `You have ${row.available} stitches.`
+            : 'You are starting from a magic ring, with nothing to work into yet.');
+        setText('practice-instruction', row.instruction);
+
+        const box = UI['practice-answer'];
+        if (box) {
+            if (done) box.value = String(progress.practice.given);
+            box.disabled = done;
+        }
+        const check = UI['practice-check'];
+        if (check) check.disabled = done;
+
+        if (!done) {
+            setText('practice-verdict', '');
+            setText('practice-teaches', '');
+            return;
+        }
+        // The engine's working is shown whether the answer was right or wrong. A wrong answer is the
+        // moment somebody is most willing to read the explanation, and spending it on a red cross
+        // throws that away.
+        const answer = practiceAnswer(row);
+        setText('practice-verdict', progress.practice.correct
+            ? `Yes - ${answer} stitches. +${PRACTICE_POINTS} Stitch Points.`
+            : `Not quite. It makes ${answer} stitches, not ${progress.practice.given}.`);
+        setText('practice-teaches', row.teaches);
+    }
+
+    function renderRollSlot(progress) {
+        const roll = describeRoll(progress);
+        setText('roll-stitch', roll.token);
+        setText('roll-term', roll.term);
+        setText('roll-tier', roll.isNew ? `${roll.tier} · New` : roll.tier);
+        setTierTone('roll-tier', roll.weight);
+        setText('roll-reward', roll.claimed
+            ? `+${roll.reward} Stitch Points earned today`
+            : `+${roll.reward} Stitch Points`);
+        setText('roll-note', roll.claimed
+            ? 'Worked today. A new stitch is drawn tomorrow.'
+            : roll.isNew
+                ? `You have never worked this one - it pays ${DISCOVERY_BONUS} extra.`
+                : 'Work it into a pattern that compiles clean.');
+
+        const reroll = shellEl('roll-again');
+        if (reroll) {
+            const left = REROLLS_PER_DAY - progress.roll.rerolls;
+            reroll.disabled = !canReroll(progress);
+            reroll.textContent = roll.claimed ? 'Claimed'
+                : left <= 0 ? 'No re-rolls left today'
+                : `Re-roll · ${left} left today`;
+        }
+
+        const worked = shellEl('roll-worked');
+        if (worked) {
+            const met = progress.practice.met;
+            worked.disabled = met;
+            worked.textContent = met ? 'Added to your cabinet' : "I've worked this";
+        }
+    }
+
+    function renderSwatchSlot(progress) {
+        const done = progress.lastSwatch === today();
+        setText('practice-swatch-state', done ? 'Done today' : 'Not done today');
+        setText('practice-swatch-note', done
+            ? 'Logged today. The gauge every count in your pattern is measured against is current.'
+            : 'Measure a square and write down what it came to. It is the one step every pattern depends on and almost nobody takes.');
+    }
+
+    // ---- The stitch cabinet --------------------------------------------------
+    /*
+     * What progress.collection has been recording all along, as something you can look at. It rendered
+     * as a single progress bar before, and a collection you cannot browse is not a collection - the
+     * pull comes from seeing the holes.
+     *
+     * Locked cards show the abbreviation and nothing else: enough to know something is missing, not
+     * enough to be a stitch dictionary nobody earned.
+     */
+    function renderCabinet() {
+        const host = shellEl('cabinet-grid');
+        if (!host) return;
+        const progress = readProgress();
+        const pool = rollPool();
+        const collected = pool.filter(entry => progress.collection[entry.token]).length;
+
+        setText('cabinet-count', `${collected} of ${pool.length} stitches worked`);
+
+        host.replaceChildren();
+        pool.forEach(entry => {
+            const when = progress.collection[entry.token];
+            const has = !!when;
+            const card = elem('div', `cabinet-card ${has ? 'is-open' : 'is-locked'}`,
+                null, `cabinet-${entry.token}`);
+
+            card.appendChild(elem('strong', 'cabinet-abbr', entry.token));
+            if (has) {
+                card.appendChild(elem('span', 'cabinet-term', stitchTermFor(entry.token)));
+                const tier = elem('span', `cabinet-tier tier-${entry.weight}`,
+                    ROLL_TIERS[entry.weight].name);
+                card.appendChild(tier);
+                // A date only where there is one to show: a stitch collected before the cabinet
+                // existed was stored as `true`, and inventing a day for it would be inventing a fact.
+                if (when !== true && typeof when === 'string') {
+                    card.appendChild(elem('span', 'cabinet-when', `First worked ${when}`));
+                }
+            } else {
+                card.appendChild(elem('span', 'cabinet-term', 'Not worked yet'));
+            }
+            host.appendChild(card);
+        });
+    }
+
+    // ---- Lessons -------------------------------------------------------------
+    /*
+     * The linter already emits a `lesson` on many findings - one general sentence on why a convention
+     * matters. It appeared once and vanished.
+     *
+     * A lesson is recorded when the correction is APPLIED through the app's own control, and at no
+     * other moment. Recording it when the finding appears would reward writing bad patterns;
+     * recording it when the finding is dismissed would reward ignoring advice. Applying the fix is
+     * the only event that means the lesson landed.
+     *
+     * No points. This is a record of understanding, and pricing it would turn it into something to
+     * farm - which is exactly what it is not for.
+     */
+    function recordLesson(finding) {
+        if (!finding || !finding.lesson || !finding.id) return;
+        writeProgress(store => {
+            // First time only. The date is when it was first understood, and a second acceptance of
+            // the same correction does not move it.
+            if (store.lessons[finding.id]) return false;
+            store.lessons[finding.id] = today();
+        });
+        renderLessons();
+    }
+
+    /** Every lesson accepted, oldest first, with the sentence the linter used at the time. The text is
+     *  looked up from the engine's current fixes where it can be, so a reworded lesson is not frozen
+     *  in the store; the store holds the id and the date, which is all it should. */
+    function renderLessons() {
+        const host = shellEl('lessons-list');
+        if (!host) return;
+        const progress = readProgress();
+        const ids = Object.keys(progress.lessons)
+            .sort((a, b) => String(progress.lessons[a]).localeCompare(String(progress.lessons[b])));
+
+        if (!ids.length) {
+            host.innerHTML = emptyState(
+                'Nothing yet. Accept a suggestion in the Pattern Linter and what it taught is recorded here.');
+            return;
+        }
+
+        host.replaceChildren();
+        ids.forEach(id => {
+            const item = elem('div', 'lesson-item', null, `lesson-${id}`);
+            item.appendChild(elem('p', 'lesson-text', lessonTextFor(id)));
+            item.appendChild(elem('span', 'lesson-when', `First accepted ${progress.lessons[id]}`));
+            host.appendChild(item);
+        });
+    }
+
+    /*
+     * The wording. Taken from the finding on screen whenever this fix is among them, so what is shown
+     * is the linter's own current sentence rather than a copy.
+     *
+     * Nothing but the id and the date is stored, which is the whole reason for this lookup: a sentence
+     * written into the store on the day it was earned would be the one thing in the app able to
+     * contradict the linter it came from. The fallbacks below are summaries for the days when the
+     * pattern on screen happens not to raise the finding again - shorter than the engine's, and never
+     * pretending to be it.
+     */
+    function lessonTextFor(id) {
+        const live = (state.linter.findings || []).find(finding => finding.id === id && finding.lesson);
+        if (live) return live.lesson;
+        // Matched by family, because several of these are generated with the offending term in the id -
+        // `shorthand-2-sc`, `dialect-treble` - and there is one lesson behind each family.
+        const family = Object.keys(LESSON_TEXT)
+            .find(prefix => id === prefix || id.indexOf(prefix + '-') === 0);
+        return family ? LESSON_TEXT[family] : id;
+    }
+
+    const LESSON_TEXT = {
+        'unstated-skip-ordinal': 'A first row that skips a chain should say so: the reader cannot tell a '
+            + 'deliberate skip from a miscount.',
+        'repeat-shorthand': 'Bracket shorthand and the long form say the same thing. A pattern should '
+            + 'pick one and hold to it.',
+        'granny-growth': 'A granny square gains four clusters a round because each of its four corners '
+            + 'adds two.',
+        'increase-style-mixed': 'Stacked increases pile into columns and staggered ones lie flat. Which '
+            + 'you want is a choice; mixing them by accident is not.',
+        'shorthand': 'Standard abbreviations are what let a reader work a pattern from its key alone.',
+        'dialect': 'US and UK crochet reuse each other\'s abbreviations for different stitches. Naming '
+            + 'which system a pattern uses, and staying inside it, is what stops a reader working the '
+            + 'wrong stitch throughout.'
+    };
 
     // ---- Rank ----------------------------------------------------------------
     /* The level was a number with nothing attached; the title beside it was a word with nothing behind
@@ -9502,6 +10181,16 @@
         return (rank || RANKS[RANKS.length - 1]).name;
     }
 
+    /** The rank above the one being worn, and how many levels away it is - or null at the top of the
+     *  ladder, where there is nothing to count towards and saying so is more honest than inventing a
+     *  target. RANKS runs high to low, so the next one up is the last entry the level has not reached. */
+    function nextRankFor(level) {
+        const ahead = RANKS.filter(entry => level < entry.from);
+        if (!ahead.length) return null;
+        const next = ahead[ahead.length - 1];
+        return { name: next.name, levels: next.from - level };
+    }
+
     function renderProgress() {
         const progress = readProgress();
         // Rank is a statement about work done, so it is computed from everything ever earned rather than
@@ -9510,18 +10199,29 @@
         const lifetime = progress.points + progress.spent;
         const level = Math.floor(lifetime / POINTS_PER_LEVEL) + 1;
         const into = lifetime % POINTS_PER_LEVEL;
-        const nextAt = level * POINTS_PER_LEVEL;
 
-        setText('points-total', progress.points.toLocaleString());
+        /*
+         * Rank, not currency.
+         *
+         * Points still drive levels and levels still drive rank; what they stopped being is a WALLET.
+         * A balance on screen turns every reward into a price and every look at a different stitch
+         * into a cost, which is the wrong lesson to teach a beginner about curiosity. The arithmetic
+         * below is unchanged - only the display drops the figure.
+         */
+        const rank = rankFor(level);
+        const ahead = nextRankFor(level);
+        setText('points-total', rank);
         setBarWidth('points-bar', (into / POINTS_PER_LEVEL) * 100);
-        setText('points-next', `Next level at ${nextAt.toLocaleString()} pts`);
-        // The record, not the balance: what the number was earned for is more interesting than the
-        // number, and it is the only place the lifetime figures reach the rail.
-        setText('points-note', progress.points
+        setText('points-next', ahead
+            ? `${ahead.levels} ${ahead.levels === 1 ? 'level' : 'levels'} to ${ahead.name}`
+            : 'Top rank reached');
+        // The record, not the balance: what the work was is more interesting than a score for it, and
+        // it is the only place the lifetime figures reach the rail.
+        setText('points-note', lifetime
             ? `${progress.projects} saved · ${progress.exports} exported · ${progress.stitches.toLocaleString()} stitches worked.`
             : 'Write, export or save a pattern to start earning.');
 
-        setText('xp-title', rankFor(level));
+        setText('xp-title', rank);
         setText('xp-level', `Level ${level}`);
         setBarWidth('xp-bar', (into / POINTS_PER_LEVEL) * 100);
         setText('xp-count', `${into} / ${POINTS_PER_LEVEL} XP`);
@@ -9764,34 +10464,16 @@
         ensureRoll();
         checkStitchRoll(pass);
         const done = checkDailyQuest(pass);
-        const progress = readProgress();
-        const roll = describeRoll(progress);
-
-        setText('roll-stitch', roll.token);
-        setText('roll-term', roll.term);
-        setText('roll-tier', roll.isNew ? `${roll.tier} · New` : roll.tier);
-        setTierTone('roll-tier', roll.weight);
-        setText('roll-reward', roll.claimed
-            ? `+${roll.reward} Stitch Points earned today`
-            : `+${roll.reward} Stitch Points`);
-        setText('roll-note', roll.claimed
-            ? `Worked today. A new stitch is drawn tomorrow.`
-            : roll.isNew
-                ? `You have never worked this one - it pays ${DISCOVERY_BONUS} extra.`
-                : `Work it into a pattern that compiles clean.`);
-
-        const reroll = shellEl('roll-again');
-        if (reroll) {
-            reroll.disabled = !canReroll(progress);
-            reroll.textContent = roll.claimed ? 'Claimed'
-                : roll.rerolled ? 'Re-rolled today'
-                : progress.points < REROLL_COST ? `Re-roll needs ${REROLL_COST} pts`
-                : `Re-roll · ${REROLL_COST} pts`;
-        }
 
         setText('quest-text', 'Compile a pattern without any errors');
+        setText('quest-reward', `+${POINTS.quest} Stitch Points`);
         setText('quest-count', done ? '1 / 1' : '0 / 1');
         setBarWidth('quest-bar', done ? 100 : 0);
+
+        // The roll lives on the Practice view now, and a compile that claims it happens wherever the
+        // designer is standing. Panels are hidden rather than torn down, so redrawing one nobody is
+        // looking at is the same cheap write it has always been.
+        renderPractice();
     }
 
     /** The tier chip wears its rarity as a class, so the colour lives in the stylesheet. */

@@ -109,7 +109,7 @@ source files did not have to change to run under Node.
 `./run-tests.sh` is kept as the macOS fallback and takes a filter argument, which the Node
 runner does not. Both exit non-zero on any failure, so either can gate a commit.
 
-The baseline is **4112 assertions, 0 failed** across 107 node:test cases, and the two runners report identical per-suite
+The baseline is **4373 assertions, 0 failed** across 111 node:test cases, and the two runners report identical per-suite
 counts. If a previously passing count drops, that is a regression; if one rises, check that
 an assertion was not simply loosened.
 
@@ -134,6 +134,14 @@ Everything lives in `tests/`:
   application half, in `app.js` section 5b. Read `PERSISTENCE.md` before changing any of them: the
   two hard rules it opens with (a newer file is never guessed at; recovery points are not version
   history) are asserted here, including one message word for word.
+* `tests/test-practice.js`, `test-practice-mode.js`, `test-collection.js`, `test-lessons.js` — the
+  progress layer: the daily practice rows, the switch that hides the whole layer, the stitch cabinet
+  and the lesson record. `test-practice.js` is the real specification for `PRACTICE_ROWS` the way
+  `test-templates.js` is for the templates, and the rule it exists to enforce is that **a practice
+  row is graded by `CrochetMathEngine` and never by a number stored beside it** — §4 of that suite
+  asserts the absence of the field, because a rule kept by memory lasts until the next row is added.
+  `test-practice-mode.js` seeds its preference **before `boot()`**, which is why it is a suite of its
+  own: that makes it the reload test as well as the gate test.
 * `tests/test-corpus-*.js` — real-world pattern corpora. These report "N of M" rather than
   assertions; two are expected to be short of perfect (see the baseline below).
 * `tests/test-vintage-corpus.js` + `tests/fixtures-vintage.json` — 479 rows lifted verbatim
@@ -152,7 +160,7 @@ against the real markup via `readFile('index.html')`. That is why `run-tests.sh`
 paths instead of changing directory.
 
 **Baseline that must hold.** Engine 177/177, parser 8/8, feedback 5/5, analytics 16/16;
-**4112 assertions, 0 failed** as `./run-tests.sh` reports it on its closing line, which is the
+**4373 assertions, 0 failed** as `./run-tests.sh` reports it on its closing line, which is the
 grand total across every suite including the engine ones named above;
 `test-corpus-pattern` and `test-corpus-p2` at 0 failing
 rows; `test-corpus-pattern` and `test-corpus-p2` also at **0 miscounted**; `test-corpus-suite` at 12 of 12

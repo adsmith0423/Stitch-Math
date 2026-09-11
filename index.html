@@ -127,6 +127,7 @@
                 <div class="nav-sub" id="sub-dashboard"><div>
                     <button type="button" id="nav-dashboard" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-home"></use></svg><span class="nav-label">Overview</span></button>
                     <button type="button" id="nav-analytics" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-chart"></use></svg><span class="nav-label">Analytics</span></button>
+                    <button type="button" id="nav-practice"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg><span class="nav-label">Daily Practice</span></button>
                 </div></div>
             </div>
 
@@ -161,15 +162,21 @@
             </div>
         </nav>
 
-        <!-- Points, level and streak are computed from what actually happened in this browser -
-             projects saved, clean compiles, swatches logged. Progress store, app.js section 12. -->
-        <div class="sidebar-points">
+        <!-- Rank, and how far the next one is. Computed from what actually happened in this browser -
+             projects saved, clean compiles, swatches logged, practice done. Progress store, app.js
+             section 12.
+
+             It leads with the RANK rather than a points total on purpose. Points still drive levels
+             and levels still drive rank; what they stopped being is a wallet, and a balance on screen
+             turns every reward into a price. The ids are unchanged because a rename would be churn
+             across the shell suite for no gain - #points-total holds the rank name now. -->
+        <div class="sidebar-points" id="sidebar-points">
             <div class="points-head">
-                <span class="points-title">Stitch Points</span>
-                <strong id="points-total">0</strong>
+                <span class="points-title">Your rank</span>
+                <strong id="points-total">Chain Starter</strong>
             </div>
             <div class="points-track"><span id="points-bar" class="points-bar"></span></div>
-            <p id="points-next" class="points-next">Next level at 100 pts</p>
+            <p id="points-next" class="points-next">2 levels to Row Counter</p>
             <p id="points-note" class="points-note">Write, export or save a pattern to start earning.</p>
         </div>
     </aside>
@@ -346,34 +353,27 @@
                     <div id="dash-recent" class="dash-recent-list"></div>
                 </section>
 
-                <!-- The stitch roll and the daily quest, in that order and paid separately. The roll is
-                     the gamble - a stitch drawn at random, worth more the rarer it is - and the quest
-                     beneath it is the floor, so a stitch nobody wants to work costs a bonus rather than
-                     the day. Both are settled in app.js section 12. -->
-                <section class="dash-card card-quest">
+                <!-- The daily quest: the floor under the stitch roll, which now lives on the Practice
+                     view because it is one of three ways to do a day's work rather than the only one.
+                     The two are still paid separately, and both are settled in app.js section 12.
+                     The id is what the practice-mode gate hides this by - see applyPracticeMode. -->
+                <section class="dash-card card-quest" id="card-daily">
                     <div class="dash-card-head">
-                        <h3>Daily Stitch Roll</h3>
-                        <span id="roll-tier" class="roll-tier tier-1">Common</span>
+                        <h3>Daily Quest</h3>
+                        <svg class="ic quest-chest" aria-hidden="true" focusable="false"><use href="#ic-gift"></use></svg>
                     </div>
-                    <div id="roll-reel" class="roll-reel">
-                        <strong id="roll-stitch" class="roll-stitch">sc</strong>
-                    </div>
-                    <p id="roll-term" class="roll-term">single crochet</p>
-                    <p class="quest-reward"><svg class="ic quest-spark" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg> <span id="roll-reward">+40 Stitch Points</span></p>
-                    <p id="roll-note" class="roll-note">Work it into a pattern that compiles clean.</p>
-                    <button type="button" id="roll-again" class="roll-again">Re-roll · 40 pts</button>
                     <p id="quest-text" class="quest-text">Compile a pattern without any errors</p>
+                    <p class="quest-reward"><svg class="ic quest-spark" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg> <span id="quest-reward">+50 Stitch Points</span></p>
                     <div class="quest-foot">
                         <div class="meter-track"><span id="quest-bar" class="meter-bar"></span></div>
                         <span id="quest-count" class="quest-count">0 / 1</span>
-                        <svg class="ic quest-chest" aria-hidden="true" focusable="false"><use href="#ic-gift"></use></svg>
                     </div>
                 </section>
 
                 <!-- Everything this browser has ever written, which is what the points are a score of.
                      Lifetime figures only: the tiles at the top report the file that is open, this
                      reports the designer. -->
-                <section class="dash-card card-record">
+                <section class="dash-card card-record" id="card-record">
                     <div class="dash-card-head">
                         <h3>Studio Record</h3>
                         <span class="record-caption">Everything written in this browser</span>
@@ -501,6 +501,18 @@
             <div id="complexity-panel" class="panel">
                 <h2>Technical Complexity</h2>
                 <div id="complexity-content"><p class="placeholder-text">Add a row to analyze complexity.</p></div>
+            </div>
+
+            <!-- === 3c. LESSONS LEARNED ===
+                 The linter already explains WHY a fix is a fix; that sentence appeared once and
+                 vanished. A lesson is recorded when the fix is APPLIED - not when the finding
+                 appears, which would reward writing bad rows, and not when it is dismissed, which
+                 would reward ignoring advice. No points: this is a record of understanding, and
+                 pricing it would invite farming. Built in app.js section 12. -->
+            <div id="lessons-panel" class="panel">
+                <h2>Lessons Learned</h2>
+                <p class="helper-text">One line for every kind of correction you have accepted, and when you first accepted it.</p>
+                <div id="lessons-list" class="lessons-list"></div>
             </div>
 
             <!-- === 4. YARN & GAUGE PROFILE === -->
@@ -836,6 +848,18 @@
                 <div id="stitch-usage-content"></div>
             </section>
 
+            <!-- === 7-iv-b. THE STITCH CABINET ===
+                 What progress.collection has been recording all along, shown as something you can
+                 browse. It sits beside the Stitch Library because that is the stitch reference and
+                 this is the same subject; a collection you cannot look at is not a collection, and
+                 the pull comes from seeing the holes. Built in app.js section 12. -->
+            <section class="panel" id="cabinet-panel">
+                <h2>Stitch Cabinet</h2>
+                <p class="helper-text">Every stitch the daily roll can ask for. One is unlocked the first time you work it into a pattern that compiles clean.</p>
+                <p id="cabinet-count" class="cabinet-count">0 of 0 stitches worked</p>
+                <div id="cabinet-grid" class="cabinet-grid"></div>
+            </section>
+
             <!-- === 7-iv. CUSTOM STITCH DICTIONARY === -->
             <section class="panel" id="custom-stitch-section">
                 <h2>Custom Stitch Dictionary</h2>
@@ -960,6 +984,20 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                             <p class="help-warning">Everything is stored in this browser only. Clearing your browser data removes your saved projects, so export anything you want to keep.</p>
                         </div>
                     </details>
+
+                    <details class="help-topic">
+                        <summary>8. Daily Practice, and turning it off</summary>
+                        <div class="help-body">
+                            <p><strong>Daily Practice</strong> has three things to do, and any one of them counts as a day&rsquo;s work &mdash; you do not have to be writing a pattern to keep a streak going.</p>
+                            <ul class="help-points">
+                                <li><strong>Read a row</strong> &mdash; one row of crochet and the count going into it. Say what comes out. The answer is worked out by the same engine that checks your own patterns, so it cannot disagree with the rest of the app.</li>
+                                <li><strong>Meet a stitch</strong> &mdash; one stitch a day, drawn at random. Work it into a pattern that compiles clean and it pays; press <strong>I&rsquo;ve worked this</strong> to add it to your <strong>Stitch Cabinet</strong> if you worked it off-pattern.</li>
+                                <li><strong>Log a swatch</strong> &mdash; a shortcut to <strong>Gauge Profile</strong>, which is where swatches are recorded.</li>
+                            </ul>
+                            <p>Miss a day and a banked rest day covers it, if you have one &mdash; you earn one for every seven days in a row, up to two.</p>
+                            <p>If you would rather have a plain working tool, turn off <strong>Show daily practice, streak and rank</strong> at the foot of that page or in <strong>Settings</strong>. Nothing is lost: your record keeps counting, and it is all there if you turn it back on.</p>
+                        </div>
+                    </details>
                 </div>
             </section>
 
@@ -1010,6 +1048,86 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                         pattern that validates is not thereby guaranteed to fit. It is provided as is,
                         with no warranty.</dd>
                 </dl>
+            </section>
+
+            <!-- === 7b-iii. DAILY PRACTICE ===
+                 Three slots, each independently completable, each resetting at local midnight.
+                 Completing ANY one of them is a day's work and advances the streak - which is the
+                 whole point: every other way to earn presupposes someone already writing a pattern,
+                 and a beginner has none of those. Built in app.js section 12.
+
+                 It is a view of its own rather than a Dashboard card because two of the slots need
+                 form controls, and the Dashboard holds none by contract - it is a read-only summary
+                 and section 12 of test-shell.js keeps it that way.
+
+                 The switch at the foot is the SOURCE control for the practice-mode setting; Settings
+                 mirrors it. It sits with the thing it hides, and is mirrored because once hidden this
+                 copy goes with it and the mirror is the way back. -->
+            <section class="panel" id="practice-panel">
+                <h2>Daily Practice</h2>
+                <p class="helper-text">Three things to do today. Any one of them counts as a day's work &mdash; you do not have to be writing a pattern to keep a streak.</p>
+
+                <!-- Seven days, worked / rested / missed. A bare number makes one missed day feel
+                     like a score of zero; a row of dots makes it a week with a gap in it, which is
+                     what it is. Built by renderStreakDots. -->
+                <div class="streak-strip">
+                    <div id="streak-dots" class="streak-dots"></div>
+                    <p id="streak-dots-note" class="streak-dots-note">No streak yet</p>
+                </div>
+
+                <!-- Slot A. The row is curated; the ANSWER is not stored anywhere. It is computed by
+                     CrochetMathEngine.evaluateStep every time, so a practice question can never
+                     disagree with the validator that grades the designer's own rows. -->
+                <div class="practice-slot" id="practice-read">
+                    <div class="practice-slot-head">
+                        <h3>Read a row</h3>
+                        <span id="practice-read-state" class="practice-state">Not done today</span>
+                    </div>
+                    <p id="practice-available" class="practice-available">You have 12 stitches.</p>
+                    <p id="practice-instruction" class="practice-instruction">Row 2: ch 1, turn, [sc, inc] x 6</p>
+                    <div class="practice-entry">
+                        <label for="practice-answer">How many stitches will this row make?</label>
+                        <input type="number" id="practice-answer" min="0" step="1" inputmode="numeric">
+                        <button type="button" id="practice-check" class="row-button">Check</button>
+                    </div>
+                    <p id="practice-verdict" class="practice-verdict"></p>
+                    <p id="practice-teaches" class="practice-teaches"></p>
+                </div>
+
+                <!-- Slot B. The Daily Stitch Roll, moved here from the Dashboard. Same draw, same
+                     payout; what is new is that working the stitch off-pattern can be recorded. -->
+                <div class="practice-slot" id="practice-meet">
+                    <div class="practice-slot-head">
+                        <h3>Meet a stitch</h3>
+                        <span id="roll-tier" class="roll-tier tier-1">Common</span>
+                    </div>
+                    <div id="roll-reel" class="roll-reel">
+                        <strong id="roll-stitch" class="roll-stitch">sc</strong>
+                    </div>
+                    <p id="roll-term" class="roll-term">single crochet</p>
+                    <p class="quest-reward"><svg class="ic quest-spark" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg> <span id="roll-reward">+40 Stitch Points</span></p>
+                    <p id="roll-note" class="roll-note">Work it into a pattern that compiles clean.</p>
+                    <div class="practice-buttons">
+                        <button type="button" id="roll-worked" class="row-button">I&rsquo;ve worked this</button>
+                        <button type="button" id="roll-again" class="roll-again">Re-roll</button>
+                    </div>
+                </div>
+
+                <!-- Slot C. Not a new feature: logging a swatch already pays, and already lives on the
+                     Gauge Profile. This is the prompt and the way there. -->
+                <div class="practice-slot" id="practice-swatch">
+                    <div class="practice-slot-head">
+                        <h3>Log a swatch</h3>
+                        <span id="practice-swatch-state" class="practice-state">Not done today</span>
+                    </div>
+                    <p id="practice-swatch-note" class="practice-swatch-note">Measure a square and write down what it came to. It is the one step every pattern depends on and almost nobody takes.</p>
+                    <button type="button" id="practice-swatch-go" class="row-button">Open Gauge Profile</button>
+                </div>
+
+                <label class="practice-switch" for="toggle-practice-mode">
+                    <input type="checkbox" id="toggle-practice-mode">
+                    <span>Show daily practice, streak and rank</span>
+                </label>
             </section>
 
             <!-- === 7b-iii-b. CONSTRUCTION ===

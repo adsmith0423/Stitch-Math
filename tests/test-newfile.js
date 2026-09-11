@@ -75,7 +75,9 @@ $('new-file-btn').fire('click');
 
 print('\n3. Every field is back to its default');
 // Checkboxes are matrix view preferences, deliberately persisted - see loadViewPrefs.
-var VIEW_PREFS = { 'toggle-trend-markers': 1, 'toggle-collapse-repeats': 1 };
+// practice-answer belongs to the DAY rather than to the file: it is one attempt at one row, already
+// closed once it has been used, and New File is not a way to have another go at it.
+var VIEW_PREFS = { 'toggle-trend-markers': 1, 'toggle-collapse-repeats': 1, 'practice-answer': 1 };
 var dirty = [];
 FIELDS.forEach(function (fld) {
     if (VIEW_PREFS[fld.id]) return;
