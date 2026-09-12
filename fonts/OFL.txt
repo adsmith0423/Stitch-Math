@@ -1,0 +1,9 @@
+Fredoka (Copyright 2021 The Fredoka Project Authors, https://github.com/hafontia-zz/Fredoka)
+Nunito  (Copyright 2014 The Nunito Project Authors, https://github.com/googlefonts/nunito)
+
+Both families are licensed under the SIL Open Font License, Version 1.1.
+The full licence text: https://openfontlicense.org/open-font-license-official-text/
+
+The files beside this note are the latin-subset variable woff2 builds served by Google Fonts,
+copied here so the app keeps its own faces offline rather than depending on a third-party
+request. No modification has been made to either font.

@@ -33,7 +33,10 @@ const KEEP_COMMENTS = process.argv.includes('--keep-comments');
    on purpose - it is a development harness, and loadDevOnlyScripts() adds it on a dev origin only. */
 const SCRIPTS = ['validator.js', 'analytics.js', 'persistence.js', 'pdf.js', 'app.js'];
 const STATIC = ['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
-                'icons/icon-maskable-512.png'];
+                'icons/icon-maskable-512.png',
+                // The two type families, self-hosted so an installed copy reads in its own faces offline.
+                'fonts/Fredoka-latin.woff2', 'fonts/Nunito-latin.woff2', 'fonts/Nunito-latin-italic.woff2',
+                'fonts/OFL.txt'];
 
 // ---------------------------------------------------------------------------------------------
 // Scanning
@@ -285,6 +288,7 @@ function read(file) { return fs.readFileSync(path.join(ROOT, file), 'utf8'); }
 function build() {
     fs.rmSync(DIST, { recursive: true, force: true });
     fs.mkdirSync(path.join(DIST, 'icons'), { recursive: true });
+    fs.mkdirSync(path.join(DIST, 'fonts'), { recursive: true });
 
     // --- the bundle ---------------------------------------------------------------------------
     let js = '';
@@ -360,7 +364,7 @@ function build() {
     console.log(`  ${jsName.padEnd(24)} ${kb(js).padStart(10)}   (from ${(rawJs / 1024).toFixed(1)} KB of source)`);
     console.log(`  ${cssName.padEnd(24)} ${kb(css).padStart(10)}`);
     console.log(`  ${'index.html'.padEnd(24)} ${kb(html).padStart(10)}   (from ${(Buffer.byteLength(read('index.html')) / 1024).toFixed(1)} KB of source)`);
-    console.log(`  sw.js, manifest, ${STATIC.length - 1} icons`);
+    console.log(`  sw.js, manifest, 3 icons, 3 fonts`);
     console.log(`  comments: ${KEEP_COMMENTS ? 'kept' : 'stripped, and every literal verified unchanged'}`);
 }
 

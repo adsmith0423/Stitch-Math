@@ -109,7 +109,7 @@ ck('down to the oldest kept', listed.last.value[4].savedAt, 1002);
 ck('each carries its reason', listed.last.value[0].reason, 'auto-save');
 // Summaries, not envelopes: the panel needs a time and a label, and five envelopes is a lot of pattern
 // text to hold for two lines of UI.
-ck('the list is summaries only', Object.keys(listed.last.value[0]).sort().join(','), 'id,reason,savedAt');
+ck('the list is summaries only', Object.keys(listed.last.value[0]).sort().join(','), 'digest,id,reason,savedAt');
 
 print('\n9. Seven written in one tick still leave a determinate five');
 var tick = P.createStore(P.memoryAdapter());

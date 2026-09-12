@@ -156,7 +156,7 @@ var spoken = (section.match(/'[^'\n]{12,}'/g) || []).join(' ');
 no('nothing it can say calls the ring a history', /\bhistor(y|ies)\b/i.test(spoken));
 // The panel itself is headed for what it holds. The Recover button is allowed to say "version" -
 // that is what a designer is looking for - but the list it opens must not claim to be one.
-ok('the panel is headed as recovery points', spoken.indexOf('Recent recovery points (last 5)') >= 0);
+ok('the panel is headed as recovery points', spoken.indexOf('Recent recovery points') >= 0);
 no('and not as versions', /recovery points[^']*version/i.test(spoken));
 ck('every reason a snapshot can carry is in the closed set', P.SNAPSHOT_REASONS.length, 5);
 // A reason spelled wrong stores fine and surfaces much later as a blank row in the recover panel.

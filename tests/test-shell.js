@@ -54,38 +54,75 @@ ck('twelve of them', (HTML.match(/class="nav-item"/g) || []).length, 12);
 no('Compiler is no longer a destination of its own', /id="nav-compiler"/.test(HTML));
 no('Schematics is retired', /id="nav-schematics"/.test(HTML));
 no('and the Studio Locker went with the avatar', /id="nav-locker"/.test(HTML));
-// The twelve are grouped into four hubs now, so document order follows the grouping rather than
-// the old flat run. Within Library & Assets, Pattern Files still leads into the Stitch Library.
+// The rail is the workflow now, so document order follows the work: Setup (Pattern Files, Stitch
+// Library, Gauge) before Write (Studio), and Settings last of all. Within Setup, Pattern Files
+// still leads into the Stitch Library.
 ok('Pattern Files leads into Stitch Library',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-library"'));
-ok('and Studio comes before both, being its own hub',
-   HTML.indexOf('id="nav-studio"') < HTML.indexOf('id="nav-patterns"'));
+ok('and Setup comes before Studio, because you set a pattern up before you write it',
+   HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-studio"'));
+ok('then the grader', HTML.indexOf('id="nav-studio"') < HTML.indexOf('id="nav-sizer"'));
+ok('then the testers', HTML.indexOf('id="nav-sizer"') < HTML.indexOf('id="nav-testers"'));
+ok('then the export', HTML.indexOf('id="nav-testers"') < HTML.indexOf('id="nav-publish"'));
+ok('and Settings is the last entry in the rail',
+   HTML.indexOf('id="nav-publish"') < HTML.indexOf('id="nav-settings"'));
 
-print('\n1b. Four hubs, and every destination lives in exactly one');
-var HUB_IDS = ['hub-dashboard', 'hub-studio', 'hub-library', 'hub-community'];
+print('\n1b. Six hubs, and every destination but Settings lives in exactly one');
+var HUB_IDS = ['hub-dashboard', 'hub-setup', 'hub-write', 'hub-grade', 'hub-test', 'hub-export'];
 HUB_IDS.forEach(function (id) {
     ok(id + ' is in the markup', HTML.indexOf('id="' + id + '"') !== -1);
     var tag = (HTML.match(new RegExp('<(\\w+)[^>]*\\bid="' + id + '"')) || [, ''])[1];
     ck(id + ' is a button', tag, 'button');
 });
-ck('four of them', (HTML.match(/class="nav-hub"/g) || []).length, 4);
-ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 4);
+ck('six of them', (HTML.match(/class="nav-hub"/g) || []).length, 6);
+ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 6);
 // A hub is not a destination. If one ever gained a NAV_TARGETS entry it would own a route and a
-// view, and the rail would have sixteen places to go rather than twelve.
+// view, and the rail would have eighteen places to go rather than twelve.
 HUB_IDS.forEach(function (id) {
     no(id + ' is not itself a destination', HTML.indexOf('id="' + id + '" class="nav-item"') !== -1);
 });
-// The grouping lives in app.js. Read it back and prove it covers the twelve exactly once - a
-// thirteenth view added with a route and no hub would otherwise be reachable by URL and invisible
-// in the rail, which is the failure this pins.
+// The grouping lives in app.js. Read it back and prove it covers eleven of the twelve exactly once
+// - a thirteenth view added with a route and no hub would otherwise be reachable by URL and
+// invisible in the rail, which is the failure this pins. Settings is the one that is meant to be
+// in no hub: it is not a step in writing a pattern.
 var shellSrc = readFile('app.js');
 var hubBody = shellSrc.slice(shellSrc.indexOf('const NAV_HUBS = {'),
                              shellSrc.indexOf('const HUB_IDS'));
 var grouped = (hubBody.match(/'nav-[a-z]+'/g) || []).map(function (s) { return s.slice(1, -1); });
-ck('NAV_HUBS lists twelve destinations', grouped.length, 12);
+ck('NAV_HUBS lists eleven destinations', grouped.length, 11);
 NAV_IDS.forEach(function (id) {
-    ck(id + ' has exactly one hub', grouped.filter(function (g) { return g === id; }).length, 1);
+    ck(id + (id === 'nav-settings' ? ' is in no hub' : ' has exactly one hub'),
+       grouped.filter(function (g) { return g === id; }).length, id === 'nav-settings' ? 0 : 1);
 });
+// In the markup too: the last sub-list has closed before Settings appears.
+ok('and Settings is not inside any sub-list in the markup',
+   HTML.slice(HTML.lastIndexOf('class="nav-sub"'), HTML.indexOf('id="nav-settings"')).indexOf('</div></div>') !== -1);
+
+print('\n1b-ii. The sidebar steps and the stage rail are one list, numbered the same way');
+// STAGES is the table both are drawn from. Read its labels and hubs back out of app.js and prove
+// the markup's numbered hubs carry the same word under the same number, in the same order - the
+// failure this pins is step 4 reading "Test" in one place and something else in the other.
+var stageBody = shellSrc.slice(shellSrc.indexOf('const STAGES = ['), shellSrc.indexOf('const STAGE_NAV'));
+var stageRows = stageBody.match(/hub: '([a-z-]+)',\s*nav: '([a-z-]+)',\s*label: '([^']+)'/g) || [];
+ck('five stages, each naming its hub, destination and label', stageRows.length, 5);
+var stageHubs = [];
+stageRows.forEach(function (row, i) {
+    var m = row.match(/hub: '([a-z-]+)',\s*nav: '([a-z-]+)',\s*label: '([^']+)'/);
+    var hub = m[1], dest = m[2], label = m[3];
+    stageHubs.push(hub);
+    var btn = HTML.slice(HTML.indexOf('id="' + hub + '"'));
+    btn = btn.slice(0, btn.indexOf('</button>'));
+    ok('step ' + (i + 1) + ' is hub ' + hub + ' in the markup', HTML.indexOf('id="' + hub + '"') !== -1);
+    ok('and shows the number ' + (i + 1), btn.indexOf('class="nav-step" aria-hidden="true">' + (i + 1) + '<') !== -1);
+    ok('and the word "' + label + '"', btn.indexOf('<span class="nav-label">' + label + '</span>') !== -1);
+    // The hub's first entry is where the stage lands, so a hub press and a stage press agree.
+    var hubEntries = hubBody.slice(hubBody.indexOf("'" + hub + "'"));
+    hubEntries = hubEntries.slice(0, hubEntries.indexOf(']'));
+    ck('and its hub leads with ' + dest, (hubEntries.match(/'nav-[a-z]+'/g) || [''])[0], "'" + dest + "'");
+    if (i > 0) ok('and it comes after step ' + i, HTML.indexOf('id="' + stageHubs[i - 1] + '"') < HTML.indexOf('id="' + hub + '"'));
+});
+ok('the Dashboard sits above step 1', HTML.indexOf('id="hub-dashboard"') < HTML.indexOf('id="' + stageHubs[0] + '"'));
+ck('and the Dashboard is not numbered', (HTML.match(/class="nav-step"/g) || []).length, 5);
 
 print('\n1c. Navigating opens the hub that owns where you went, and closes the rest');
 function openHubs() {
@@ -94,22 +131,26 @@ function openHubs() {
 NAV_IDS.forEach(function (id) {
     nav(id);
     var open = openHubs();
+    if (id === 'nav-settings') {
+        ck(id + ' leaves no hub open', open.length, 0);
+        return;
+    }
     ck(id + ' leaves exactly one hub open', open.length, 1);
     ck('and it is announced as expanded', $(open[0]).getAttribute('aria-expanded'), 'true');
 });
 // Where you are decides which hub is open, so the two cannot drift apart. Spot-check the mapping
 // rather than trusting that "exactly one" happened to be the right one.
 nav('nav-gauge');
-ck('the Gauge Profile opens Library & Assets', openHubs()[0], 'hub-library');
+ck('the Gauge Profile opens Setup', openHubs()[0], 'hub-setup');
 nav('nav-construction');
-ck('Construction opens Studio', openHubs()[0], 'hub-studio');
+ck('Construction opens Write', openHubs()[0], 'hub-write');
 nav('nav-analytics');
 ck('Analytics opens Dashboard', openHubs()[0], 'hub-dashboard');
 // A hub press is a navigation, not just a disclosure: it lands on the group's first entry.
-$('hub-community').fire('click');
-ok('pressing a hub goes to its first entry', $('nav-testers').classList.contains('is-active'));
-ck('and opens that hub', openHubs()[0], 'hub-community');
-ck('while the others close', $('hub-studio').getAttribute('aria-expanded'), 'false');
+$('hub-export').fire('click');
+ok('pressing a hub goes to its first entry', $('nav-publish').classList.contains('is-active'));
+ck('and opens that hub', openHubs()[0], 'hub-export');
+ck('while the others close', $('hub-write').getAttribute('aria-expanded'), 'false');
 
 print('\n1d. The workflow rail crosses the five views a pattern is written across');
 var STAGE_NAV = ['nav-patterns', 'nav-studio', 'nav-sizer', 'nav-testers', 'nav-publish'];
@@ -142,26 +183,57 @@ no('and the others are not', stage('nav-sizer').getAttribute('aria-current') ===
 stage('nav-sizer').fire('click');
 ok('a stage press switches view', shown('grader-section'));
 ok('and marks the sidebar entry active', $('nav-sizer').classList.contains('is-active'));
-ok('and opens the hub that owns it', $('hub-studio').classList.contains('is-open'));
+ok('and opens the hub that owns it', $('hub-grade').classList.contains('is-open'));
 ck('and moves the current step', stage('nav-sizer').getAttribute('aria-current'), 'step');
 
-print('\n1d-ii. A stage ticks itself off what the pattern actually has, and reports nothing else');
-// The ticks are read from live state every redraw, never recorded, so they must follow the pattern
-// rather than the visits. Walking all five above must NOT have ticked anything.
+print('\n1d-ii. A stage marks itself off what the pattern actually has, and reports nothing else');
+// The marks are read from live state every redraw, never recorded, so they must follow the pattern
+// rather than the visits. Walking all five above must NOT have marked anything.
 $('clear-all-btn').fire('click');
 nav('nav-studio');
-no('an empty pattern has not been drafted', stage('nav-studio').className.indexOf('is-done') >= 0);
+no('an empty pattern has not been written', stage('nav-studio').className.indexOf('is-done') >= 0);
 no('nor graded', stage('nav-sizer').className.indexOf('is-done') >= 0);
 no('nor tested', stage('nav-testers').className.indexOf('is-done') >= 0);
 no('nor is it ready to hand over', stage('nav-publish').className.indexOf('is-done') >= 0);
 
 load(CLEAN);
-ok('a compiled pattern ticks Draft', stage('nav-studio').className.indexOf('is-done') >= 0);
+ok('a compiled pattern marks Write done', stage('nav-studio').className.indexOf('is-done') >= 0);
 ok('and a clean one is ready to export', stage('nav-publish').className.indexOf('is-done') >= 0);
 no('but grading is still untouched', stage('nav-sizer').className.indexOf('is-done') >= 0);
-// Un-ticks itself when the thing it reported is gone - which is what "read, never recorded" buys.
+// The sidebar's numbered hubs light off the same predicates, at the same moment.
+ok('and the sidebar lights step 2', $('hub-write').classList.contains('is-done'));
+ok('and step 5', $('hub-export').classList.contains('is-done'));
+no('but not step 3', $('hub-grade').classList.contains('is-done'));
+// A done stage keeps its number. It used to swap the number for a tick, which left step 4 reading
+// "4" in the sidebar and as a checkmark in the rail - the same step, two labels.
+function stageNum(navId) {
+    var el = stage(navId);
+    var nums = [];
+    (function walk(node) {
+        (node.children || []).forEach(function (child) {
+            if (child.className === 'stage-num') nums.push(child.textContent);
+            walk(child);
+        });
+    })(el);
+    return nums.join('');
+}
+ck('a done stage still shows its number', stageNum('nav-studio'), '2');
+ck('and so does one that is not done', stageNum('nav-sizer'), '3');
+no('and nothing draws a tick any more', /stage-tick/.test(shellSrc) || /stage-tick/.test(CSS));
+ck('the stage words are the sidebar words', ['nav-patterns', 'nav-studio', 'nav-sizer', 'nav-testers', 'nav-publish']
+    .map(function (id) { return stage(id).text().replace(/\d|\||\(done\)/g, '').trim(); }).join('|'),
+   'Setup|Write|Grade|Test|Export');
+// Un-marks itself when the thing it reported is gone - which is what "read, never recorded" buys.
 $('clear-all-btn').fire('click');
-no('clearing the pattern un-ticks Draft', stage('nav-studio').className.indexOf('is-done') >= 0);
+no('clearing the pattern un-marks Write', stage('nav-studio').className.indexOf('is-done') >= 0);
+no('in the sidebar as well', $('hub-write').classList.contains('is-done'));
+// And the sidebar keeps up on a view with no rail at all: a compile run while the Dashboard is
+// showing has to light step 2 even though there is nothing in the topbar to redraw.
+nav('nav-dashboard');
+no('the rail is off the Dashboard', railShown());
+load(CLEAN);
+ok('but a compile there still lights step 2 in the sidebar', $('hub-write').classList.contains('is-done'));
+$('clear-all-btn').fire('click');
 
 print('\n1e. The two floating docks');
 function dockOpen(id) { return $(id).classList.contains('is-open'); }
@@ -529,6 +601,99 @@ no('loading the project moved the preview off the empty-pattern message',
 $('load-select').value = 'preview reload test';
 $('delete-project-btn').fire('click');
 $('new-file-btn').fire('click');
+
+print('\n4e. Day and night, chosen under Settings');
+// The one setting that lives on the Settings panel itself rather than being mirrored from another
+// panel, so it is checked against the markup directly: a select, inside the panel, ahead of the
+// generated list, offering exactly the three words the stylesheet and the head script understand.
+var SETTINGS_BLOCK = HTML.slice(HTML.indexOf('id="settings-panel"'), HTML.indexOf('id="about-panel"'));
+ok('the control is in the Settings panel', SETTINGS_BLOCK.indexOf('id="theme-mode"') !== -1);
+ck('and it is a select', (SETTINGS_BLOCK.match(/<(\w+)[^>]*\bid="theme-mode"/) || [, ''])[1], 'select');
+ok('ahead of the generated list', SETTINGS_BLOCK.indexOf('id="theme-mode"') < SETTINGS_BLOCK.indexOf('id="settings-list"'));
+var THEME_SELECT = SETTINGS_BLOCK.slice(SETTINGS_BLOCK.indexOf('id="theme-mode"'));
+THEME_SELECT = THEME_SELECT.slice(0, THEME_SELECT.indexOf('</select>'));
+ck('offering system, day and night',
+   (THEME_SELECT.match(/value="([a-z]+)"/g) || []).join(' '), 'value="system" value="day" value="night"');
+ok('with a label pointing at it', /<label[^>]*\bfor="theme-mode"/.test(SETTINGS_BLOCK));
+
+// The resolved theme is written to <html>, never the preference itself: the stylesheet has one
+// night block, and 'system' is resolved before it gets there. The stub has no matchMedia, so
+// 'system' resolves to day here.
+ck('a fresh boot follows the system', $('theme-mode').value, 'system');
+ck('which, with nothing to ask, is day', document.documentElement.dataset.theme, 'light');
+$('theme-mode').value = 'night'; $('theme-mode').fire('change');
+ck('choosing night darkens the document', document.documentElement.dataset.theme, 'dark');
+ck('and is remembered with the other view preferences',
+   JSON.parse(localStorage.getItem('stitchmath_view_prefs')).theme, 'night');
+$('theme-mode').value = 'day'; $('theme-mode').fire('change');
+ck('choosing day lightens it again', document.documentElement.dataset.theme, 'light');
+// A theme is about the room, not the file: New File resets the matrix view options and keeps this.
+$('theme-mode').value = 'night'; $('theme-mode').fire('change');
+$('new-file-btn').fire('click');
+ck('New File keeps the theme', JSON.parse(localStorage.getItem('stitchmath_view_prefs')).theme, 'night');
+ck('and the document stays dark', document.documentElement.dataset.theme, 'dark');
+$('theme-mode').value = 'system'; $('theme-mode').fire('change');
+
+// What the browser does before app.js has loaded. The head script and applyTheme read the same
+// key and write the same attribute; if either drifted the page would flash on load.
+var HEAD = HTML.slice(0, HTML.indexOf('</head>'));
+ok('the document declares both schemes', /<meta name="color-scheme" content="light dark">/.test(HEAD));
+ok('and carries a head script that applies the stored theme before the stylesheet',
+   /<script>[\s\S]*stitchmath_view_prefs[\s\S]*dataset\.theme[\s\S]*<\/script>[\s\S]*<link rel="stylesheet"/.test(HEAD));
+ok('the stylesheet has a night block keyed on the resolved theme', /:root\[data-theme="dark"\] \{/.test(CSS));
+var NIGHT = CSS.slice(CSS.indexOf(':root[data-theme="dark"] {'));
+NIGHT = NIGHT.slice(0, NIGHT.indexOf('\n}'));
+ok('which hands native controls to the dark scheme', /color-scheme: dark;/.test(NIGHT));
+// Print is paper whatever the room looks like.
+var PRINT = CSS.slice(CSS.indexOf('@media print {'));
+PRINT = PRINT.slice(0, PRINT.indexOf('\n}'));
+no('and print knows nothing about it', /data-theme/.test(PRINT));
+
+print('\n4e-iii. The seafoam theme: two self-hosted faces, six pastel pairs, the craft icons');
+// Both families are declared in the stylesheet and served from fonts/, and the worker and the build
+// both know about them - a face the worker does not precache is a face an installed copy loses.
+['Fredoka', 'Nunito'].forEach(function (face) {
+    ok(face + ' has an @font-face', new RegExp("@font-face \\{\\s*font-family: '" + face + "'").test(CSS));
+});
+['Fredoka-latin', 'Nunito-latin', 'Nunito-latin-italic'].forEach(function (file) {
+    ok('the stylesheet loads fonts/' + file, CSS.indexOf("url('fonts/" + file + ".woff2')") !== -1);
+    ok('and the worker precaches it', readFile('sw.js').indexOf("'./fonts/" + file + ".woff2'") !== -1);
+    ok('and the build ships it', readFile('build.js').indexOf("'fonts/" + file + ".woff2'") !== -1);
+});
+ok('the body reads in the body face', /body \{\s*font-family: var\(--font-body\)/.test(CSS));
+ok('and headings in the display face', /h1, h2, h3, h4,[\s\S]{0,400}font-family: var\(--font-display\)/.test(CSS));
+// Every pastel comes as a pair, in both modes.
+var ROOT = CSS.slice(CSS.indexOf(':root {'), CSS.indexOf('\n}', CSS.indexOf(':root {')));
+['mint', 'lavender', 'pink', 'butter', 'sky', 'peach', 'aqua'].forEach(function (hue) {
+    ok(hue + ' has a fill and an ink by day', new RegExp('--' + hue + ':').test(ROOT) && new RegExp('--' + hue + '-ink:').test(ROOT));
+    ok('and by night', new RegExp('--' + hue + ':').test(NIGHT) && new RegExp('--' + hue + '-ink:').test(NIGHT));
+});
+ok('the five steps each own a pastel', [1, 2, 3, 4, 5].every(function (n) { return new RegExp('--step-' + n + ':').test(ROOT); }));
+ok('and the markup tags each hub with its step', [1, 2, 3, 4, 5].every(function (n) { return HTML.indexOf('data-step="' + n + '"') !== -1; }));
+// The craft icons: five new symbols, and every heading icon points at a symbol that exists.
+['ic-hook', 'ic-needles', 'ic-scissors', 'ic-tape', 'ic-marker', 'ic-book-open', 'ic-folder'].forEach(function (id) {
+    ok(id + ' is in the sprite', HTML.indexOf('<symbol id="' + id + '"') !== -1);
+});
+var symbols = (HTML.match(/<symbol id="(ic-[a-z-]+)"/g) || []).map(function (t) { return t.slice(12, -1); });
+var headingIcons = (HTML.match(/class="ic h-ic tint-[a-z]+"[^>]*><use href="#(ic-[a-z-]+)"/g) || [])
+    .map(function (t) { return t.slice(t.indexOf('#') + 1, -1); });
+ok('the panel headings carry icons', headingIcons.length >= 20);
+ok('and every one names a symbol in the sprite', headingIcons.every(function (id) { return symbols.indexOf(id) !== -1; }));
+ok('the logo is a ball of yarn and a pencil', /class="mark-ball"/.test(HTML) && /class="mark-pencil"/.test(HTML));
+ok('the app icon colours follow the theme', /"theme_color": "#B9EBDC"/.test(readFile('manifest.webmanifest')));
+
+print('\n4e-ii. Coral means wrong, and only wrong');
+// Coral used to be the action colour as well as the error colour: every Add button, New Project,
+// the publish CTA. Now an action is teal and coral is reserved for a row that failed.
+var SECONDARY = (CSS.match(/\.btn-secondary, #load-btn, \.btn-info, \.form-controls button \{[^}]*\}/) || [''])[0];
+ok('the secondary buttons are the quiet paper pill', /--pill: var\(--paper\)/.test(SECONDARY));
+no('and not coral', /--accent|--peach/.test(SECONDARY));
+no('New Project is not coral', /--accent/.test((CSS.match(/\.btn-new-project \{[^}]*\}/) || [''])[0]));
+no('nor the publish call to action', /--accent/.test((CSS.match(/\.publish-cta \{[^}]*\}/) || [''])[0]));
+no('nor a finished step in the rail', /coral|--accent/.test((CSS.match(/\.stage\.is-done \.stage-dot \{[^}]*\}/) || [''])[0]));
+no('nor a finished step in the sidebar', /coral|--accent/.test((CSS.match(/\.nav-hub\.is-done \.nav-step \{[^}]*\}/) || [''])[0]));
+ok('a failed row still is', /--accent/.test((CSS.match(/\.status-invalid \{[^}]*\}/) || [''])[0]));
+ok('and so is the danger button', /--pill: var\(--peach\)/.test((CSS.match(/\.btn-danger \{[^}]*\}/) || [''])[0]));
 
 print('\n4d-v. The Stitch Library lists what the pattern actually works');
 ck('the tab is named for it', HTML.indexOf('<span class="nav-label">Stitch Library</span>') !== -1, true);

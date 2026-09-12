@@ -149,7 +149,7 @@ no('and so is the turning-chain box', /id="skipped-chains"/.test(readFile('index
 // Sliced to color-panel rather than structure-section, which now lives on a different tab entirely and
 // would sweep in everything written between the two.
 var META = readFile('index.html');
-META = META.slice(META.indexOf('<h2>Pattern Metadata</h2>'), META.indexOf('id="color-panel"'));
+META = META.slice(META.indexOf('Pattern Metadata</h2>'), META.indexOf('id="color-panel"'));
 no('meta-row-numbering no longer in Pattern Metadata', META.indexOf('id="meta-row-numbering"') !== -1);
 ok('metadata keeps designer, hook and yarn weight',
    /meta-designer/.test(META) && /meta-hook/.test(META) && /meta-yarn-weight/.test(META));
@@ -184,7 +184,7 @@ ok('picker hidden again', $('size-picker-group').classList.contains('hidden'));
 
 print('\n14. The two input panels are one');
 var H = readFile('index.html');
-ck('a single Pattern Input panel', (H.match(/<h2>Pattern Input<\/h2>/g) || []).length, 1);
+ck('a single Pattern Input panel', (H.match(/Pattern Input<\/h2>/g) || []).length, 1);
 no('no separate Bulk Import panel', /<h2>Bulk Row\/Round Import<\/h2>/.test(H));
 no('no separate Single Row panel', /<h2>Single Row\/Round Input<\/h2>/.test(H));
 ok('both controls survive in it', /id="bulk-input"/.test(H) && /id="row-form"/.test(H));
@@ -232,7 +232,7 @@ ok('label reads Row Instructions', /<label for="tokens-input">Row Instructions:/
 ok('label reads Expected Stitch Count', /<label for="expected-yield-input">Expected Stitch Count:/.test(IH));
 no('the old wording is gone', /Initial Foundation Chain|Pattern Instructions:|Expected Final Stitch Count/.test(IH));
 // The four whole-pattern buttons moved inside the panel, after the collapsible.
-var panel = IH.slice(IH.indexOf('<h2>Pattern Input</h2>'));
+var panel = IH.slice(IH.indexOf('Pattern Input</h2>'));
 panel = panel.slice(0, panel.indexOf('</section>'));
 ['delete-last-btn', 'clear-all-btn', 'export-txt-btn', 'export-pdf-btn']
     .forEach(function (id) { ok(id + ' is inside Pattern Input', panel.indexOf('id="' + id + '"') !== -1); });

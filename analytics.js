@@ -407,24 +407,29 @@ window.CrochetAnalyticsEngine = (() => {
         // Complex. The two existing boundaries are kept so patterns do not jump bands - Intermediate
         // stays, Advanced becomes Complex - and the old bottom band splits at 60. Brand tokens rather
         // than raw hex, so the badge tracks the palette.
+        // Each band is a pastel PAIR - the fill the badge is painted, and the ink its word is set in -
+        // so the badge reads in both modes rather than being a solid ink behind ink-coloured text.
         let level = "Basic";
-        let badgeColor = "var(--primary)";
+        let badgeColor = "var(--mint)";
+        let badgeInk = "var(--mint-ink)";
 
         if (score > 60) {
             level = "Easy";
-            badgeColor = "var(--level-easy)";
+            badgeColor = "var(--level-easy-bg)";
+            badgeInk = "var(--level-easy)";
         }
         if (score > 120) {
             level = "Intermediate";
-            // Not --cat-shaping: that ochre is only 3.33:1 against white text.
-            badgeColor = "var(--warning-text)";
+            badgeColor = "var(--warning-bg)";
+            badgeInk = "var(--warning-text)";
         }
         if (score > 275) {
             level = "Complex";
-            badgeColor = "var(--danger-text)";
+            badgeColor = "var(--danger-bg)";
+            badgeInk = "var(--danger-text)";
         }
 
-        return { score, level, badgeColor };
+        return { score, level, badgeColor, badgeInk };
     }
 
     // Stitches that mean the same thing written different ways. Two spellings of one stitch in a

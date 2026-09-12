@@ -2329,7 +2329,7 @@ window.CrochetMathEngine = (function() {
                 title: short > 0
                     ? `This row seems to be missing ${short} stitch${short === 1 ? '' : 'es'} to reach ${expectedYield}`
                     : `This row makes ${-short} stitch${-short === -1 ? '' : 'es'} more than the ${expectedYield} it states`,
-                detail: `The stitches written add up to ${calculatedYield}. If the count in brackets is the `
+                detail: `The stitches written add up to ${calculatedYield}. If the count in parentheses is the `
                     + `typo, this corrects it; if the stitches are, fix those instead and the note clears itself.`,
                 edit: { target: 'statedCount', from: expectedYield, to: calculatedYield }
             });

@@ -17,10 +17,17 @@ clearTimeout = function () {};
 var P = window.StitchPersistence;
 
 function panelText() { return $('recover-panel').text(); }
+// The offer row carries its own Restore button; the ring is one dropdown with one button beside it.
 function restoreButtons() {
     return $('recover-panel').children.filter(function (row) {
         return row.children.some(function (c) { return c.tagName === 'BUTTON'; });
     });
+}
+function recoveryOptions() {
+    var pick = $('recover-panel').children.filter(function (row) { return row.className === 'recover-pick'; })[0];
+    if (!pick) return [];
+    var select = pick.children.filter(function (c) { return c.tagName === 'SELECT'; })[0];
+    return select ? select.children : [];
 }
 function said() { return ALERTS.length ? String(ALERTS[ALERTS.length - 1]) : ''; }
 // Every boot() leaves another click handler on the same stub element, so by the middle of this suite
@@ -102,7 +109,7 @@ no('there is something to see, so it is showing', $('recover-panel').classList.c
 print('\n9. The panel is headed for what it holds');
 // Not "history" and not "versions". Five slots in a store a browser may clear at any moment, that do
 // not travel between machines and do not survive a cleared profile.
-ok('the heading names recovery points', panelText().indexOf('Recent recovery points (last 5)') >= 0);
+ok('the heading names recovery points', panelText().indexOf('Recent recovery points') >= 0);
 no('it is not called a history', /histor/i.test(panelText()));
 ok('and it says outright that they are temporary',
    panelText().indexOf('Recovery points are temporary. Use Export Project to keep a copy you own.') >= 0);
@@ -116,7 +123,7 @@ $('project-name').value = 'Nothing Here';
 showPanel();
 ok('the empty panel points at the copy the designer owns',
    panelText().indexOf('Recovery points are temporary. Use Export Project to keep a copy you own.') >= 0);
-ok('and offers nothing to restore', restoreButtons().length === 0);
+ok('and offers nothing to restore', restoreButtons().length === 0 && recoveryOptions().length === 0);
 
 print('\n11. Snapshots are named for what they were');
 var listing = P.memoryAdapter();
@@ -127,7 +134,8 @@ $('bulk-input').value = 'Ch 6\nRow 1: sc in each ch across. (6)';
 $('bulk-input').fire('input');
 showPanel();
 ok('an autosave is listed as one', panelText().indexOf('autosaved') >= 0);
-ok('and offers a restore', restoreButtons().length >= 1);
+ok('and offers a restore', recoveryOptions().length >= 1 && restoreButtons().length === 1);
+ok('with the time on the entry', /\d/.test(recoveryOptions()[0].textContent));
 $('save-btn').fire('click');
 showPanel();
 ok('an explicit save is listed as a save', /\bsaved\b/.test(panelText()));
@@ -138,10 +146,31 @@ var replaced = 'Ch 40\nRow 1: sc in each ch across. (40)';
 $('bulk-input').value = replaced;
 $('bulk-input').fire('input');
 showPanel();
-$('recover-restore-0').fire('click');
+$('recover-restore-btn').fire('click');
 ck('the earlier work is back', $('bulk-input').value.indexOf('Ch 6'), 0);
 showPanel();
 ok('and what it replaced was kept', panelText().indexOf('before a restore') >= 0);
+
+print('\n13. Snapshots of the same page fold into one row');
+// Five autosaves of one unchanged page are five recovery points that restore the same thing. The
+// panel offers that once, as its newest, so a Restore button always means a different page.
+var folded = P.memoryAdapter();
+window.STITCH_ADAPTER = folded;
+boot();
+$('project-name').value = 'Folded';
+$('bulk-input').value = 'Ch 8\nRow 1: sc in each ch across. (8)';
+$('bulk-input').fire('input');
+$('save-btn').fire('click');
+$('save-btn').fire('click');
+$('save-btn').fire('click');
+showPanel();
+ck('three saves of one page are one entry', recoveryOptions().length, 1);
+ck('and there is one Restore button, not one per entry', restoreButtons().length, 1);
+// A different page is a different digest, which is what makes it a second row. Asserted on the
+// fingerprint rather than by saving again: every boot() above re-registers the Save handler on the
+// same stub element, so one click here writes several snapshots and floods the five-slot ring.
+ok('the store fingerprints each snapshot', typeof P.digestOf === 'function' && P.digestOf({ a: 1 }) !== P.digestOf({ a: 2 }));
+
 
 print('\n13. A recovery record this build cannot read costs the record, not the page');
 // The same trade getLocalStorage makes at the top of section 5: one damaged key is worth what is in

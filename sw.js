@@ -27,7 +27,7 @@
  * is where this kind of file usually goes wrong. In dist/ the build writes both: VERSION from the
  * bundle hash, PRECACHE from the filenames it actually emitted.
  */
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const CACHE_NAME = `stitch-math-${VERSION}`;
 
 /* The shell, in load order. Everything the app needs to open with no network at all. */
@@ -47,7 +47,10 @@ const PRECACHE = [
     './manifest.webmanifest',
     './icons/icon-192.png',
     './icons/icon-512.png',
-    './icons/icon-maskable-512.png'
+    './icons/icon-maskable-512.png',
+    './fonts/Fredoka-latin.woff2',
+    './fonts/Nunito-latin.woff2',
+    './fonts/Nunito-latin-italic.woff2'
 ];
 
 self.addEventListener('install', (event) => {

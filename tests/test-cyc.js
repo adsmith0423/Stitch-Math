@@ -16,7 +16,8 @@ ck('400 -> Complex',               level(400), 'Complex');
 print('\n2. Four bands need four distinct colours');
 var colours = [40,90,200,400].map(function(s){ return A.CalculateDifficulty({sc:s}).badgeColor; });
 ck('four distinct colours', new Set(colours).size, 4);
-ck('Easy uses the new token', colours[1], 'var(--level-easy)');
+ck('Easy uses the sky fill', colours[1], 'var(--level-easy-bg)');
+ck('and the sky ink on it', A.CalculateDifficulty({sc:90}).badgeInk, 'var(--level-easy)');
 
 print('\n3. Markup and token');
 var html = readFile('index.html'), css = readFile('style.css');
@@ -25,7 +26,7 @@ ok('dropdown offers Easy',    /<option>Easy<\/option>/.test(html));
 ok('dropdown offers Complex', /<option>Complex<\/option>/.test(html));
 ok('old Beginner/Advanced options gone', !/<option>(Beginner|Advanced)<\/option>/.test(html));
 ok('stat badge default is Basic', /id="stat-difficulty"[^>]*>Basic</.test(html));
-ok('--level-easy defined', /--level-easy:\s*#707152/.test(css));
+ok('--level-easy defined', /--level-easy:\s*var\(--sky-ink\)/.test(css));
 
 print('\n4. Yarn weight 0 no longer falls back to Worsted');
 var TOTALS = { sc: 500 };

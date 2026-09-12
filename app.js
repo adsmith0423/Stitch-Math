@@ -56,12 +56,11 @@
         // project load, which is why setting them never seemed to "stick".
         { id: "meta-row-numbering", key: "rowNumbering", label: "Row Numbering", onLoad: "restart" },
         { id: "meta-chain-space-convention", key: "chainSpaceConvention", label: "Chain-Sp Counts As", onLoad: "count" },
-        // Which terminology the pattern is written in, so a US term in a UK pattern can be flagged.
-        // Blank IS off, spelled the way `difficulty` above spells "not set": it keeps every project
-        // saved before this existed opening unchanged - the check is something you turn on, not
-        // something that arrives switched on and starts underlining a finished pattern - and it keeps
-        // "Terminology: off" out of every printout, since metadataForPrint drops empty fields.
-        { id: "meta-terminology", key: "terminology", label: "Terminology", onLoad: "" }
+        // Which terminology the pattern is written in, so a UK term in a US pattern can be flagged.
+        // US or UK, never off: a project saved before the field existed (or while it still had an
+        // "off" choice) carries a blank, and a blank opens as US - the dialect most patterns in the
+        // store are written in - rather than as a check quietly switched off.
+        { id: "meta-terminology", key: "terminology", label: "Terminology", onLoad: "us" }
     ];
     const META_FIELD_IDS = META_FIELDS.map(field => field.id);
 
@@ -76,7 +75,7 @@
     /** Which terminology this project declares. Read off the control rather than off state.metadata so
      *  it is current mid-edit, the way applyMetadataChange's other readers are; 'off' whenever the
      *  field is absent, which is every project saved before it existed. */
-    const terminologyMode = () => UI['meta-terminology']?.value || 'off';
+    const terminologyMode = () => UI['meta-terminology']?.value || 'us';
 
     /** How many foundation chains a row skips when it never says. Read off the row's own opening
      *  stitch by the engine; 0 where nothing on the row settles it. */
@@ -171,7 +170,9 @@
         // practiceMode is DEFAULT ON. A beginner will not go looking in Settings for a feature they
         // do not know exists; a professional finds the switch within a minute of wanting it. It
         // describes what is SHOWN, never who the person is - see SETTING_SPECS.
-        viewPrefs: { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false, practiceMode: true },
+        // theme is 'system' | 'day' | 'night'. 'system' is the default because a first visit should
+        // look like the rest of the person's screen, and it keeps following the OS until they choose.
+        viewPrefs: { showTrendMarkers: true, collapseRepeats: false, outlineOnly: false, practiceMode: true, theme: 'system' },
         viewPrefsKey: "stitchmath_view_prefs",
         savedProjectsKey: "stitchmath_saves",
         
@@ -223,7 +224,7 @@
 
     /* The build, in one place. Shown in the dashboard strip and stamped into every exported project, so
        a bug report arrives with the version that produced it instead of a guess. Bump it on release. */
-    const APP_VERSION = '1.0.0';
+    const APP_VERSION = '1.1.0';
 
     /**
      * The last line of defence. Without one, a throw anywhere in a render left the page half-drawn with
@@ -265,7 +266,7 @@
             "color-form", "color-code", "color-name", "color-table", "color-body", "color-feedback",
             "delete-last-btn", "clear-all-btn", "export-txt-btn", "export-pdf-btn", "export-markup-btn",
             "save-status", "export-project-btn", "import-project-btn", "import-stitches-btn", "import-file",
-            "recover-btn", "recover-panel",
+            "recover-btn", "recover-panel", "recover-select", "recover-restore-btn",
             ...META_FIELD_IDS,
             "print-pattern-title", "print-metadata", "print-stitches-used", "print-stitches-used-section",
             "print-custom-dictionary", "print-custom-dictionary-section", "print-table-body",
@@ -332,6 +333,8 @@
             "practice-read-state", "practice-swatch-state", "practice-swatch-note",
             "practice-available", "practice-instruction", "practice-answer", "practice-check",
             "practice-verdict", "practice-teaches", "practice-swatch-go", "toggle-practice-mode",
+            // Day or night. The one setting that lives on the Settings panel itself.
+            "theme-mode",
             // The surfaces the practice-mode gate hides. Named rather than reached by class or by
             // walking to parentElement, both of which break silently when the markup moves.
             "sidebar-points", "status-pill", "card-daily", "card-record",
@@ -523,6 +526,13 @@
         UI["toggle-outline-view"]?.addEventListener("change", applyOutlineViewPref);
         UI["toggle-beginner-phrasing"]?.addEventListener("change", applyRepeatPhrasingMode);
         UI["toggle-practice-mode"]?.addEventListener("change", applyPracticeMode);
+        UI["theme-mode"]?.addEventListener("change", applyTheme);
+        // 'Match system' means keep matching it: the OS flipping to dark at sunset re-applies here.
+        // Only ever consulted while the preference is 'system' - applyTheme reads it back each time.
+        const scheme = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)');
+        if (scheme && typeof scheme.addEventListener === 'function') {
+            scheme.addEventListener('change', () => { if (state.viewPrefs.theme === 'system') applyTheme(); });
+        }
         UI["gauge-convert-unit"]?.addEventListener("change", applyConvertUnitOverride);
         UI["sizing-category"]?.addEventListener("change", edits(refreshGaugeOutputs));
         UI["sizing-piece"]?.addEventListener("change", edits(applySizingPieceOverride));
@@ -643,6 +653,9 @@
         // Absent means never chosen, which is on. Written as a typeof test rather than `|| true`
         // so an explicit false is not read back as a missing value.
         if (typeof saved.practiceMode === "boolean") state.viewPrefs.practiceMode = saved.practiceMode;
+        // Anything but the three known words is 'system' - a hand-edited store cannot pick a theme
+        // the stylesheet does not have.
+        if (THEME_MODES.indexOf(saved.theme) >= 0) state.viewPrefs.theme = saved.theme;
 
         if (UI["toggle-trend-markers"]) UI["toggle-trend-markers"].checked = state.viewPrefs.showTrendMarkers;
         if (UI["toggle-collapse-repeats"]) UI["toggle-collapse-repeats"].checked = state.viewPrefs.collapseRepeats;
@@ -651,6 +664,36 @@
         // read markup, so a default that lives in index.html alone is untestable.
         if (UI["toggle-practice-mode"]) UI["toggle-practice-mode"].checked = state.viewPrefs.practiceMode;
         applyPracticeMode();
+        if (UI["theme-mode"]) UI["theme-mode"].value = state.viewPrefs.theme;
+        applyTheme();
+    }
+
+    const THEME_MODES = ['system', 'day', 'night'];
+
+    /**
+     * Day or night, on the document. The head script in index.html made the same decision before
+     * the stylesheet loaded, from the same stored word; this is the one that runs when the word
+     * CHANGES - from the Settings control, or from the OS while the preference is 'system'.
+     *
+     * The stylesheet is keyed on a resolved 'dark' | 'light', never on the preference itself, so
+     * 'system' is resolved here and the CSS carries one night block rather than one for each way
+     * of arriving at night. Everything is guarded because the headless stub has neither a
+     * documentElement nor matchMedia, and neither is a reason for a preference not to save.
+     */
+    function applyTheme() {
+        const picked = UI['theme-mode']?.value;
+        const mode = THEME_MODES.indexOf(picked) >= 0 ? picked : 'system';
+        state.viewPrefs.theme = mode;
+        saveViewPrefs();
+
+        const scheme = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)');
+        const dark = mode === 'night' || (mode === 'system' && !!(scheme && scheme.matches));
+        const root = document.documentElement;
+        if (root && root.dataset) root.dataset.theme = dark ? 'dark' : 'light';
+        // The browser chrome around an installed app follows the sidebar, which is the darkest thing
+        // on the page in either mode.
+        const chrome = typeof document.querySelector === 'function' && document.querySelector('meta[name="theme-color"]');
+        if (chrome) chrome.setAttribute('content', dark ? '#171A2C' : '#B9EBDC');
     }
 
     function saveViewPrefs() {
@@ -1789,7 +1832,9 @@
             // be the setting quietly undoing itself.
             state.viewPrefs = {
                 showTrendMarkers: true, collapseRepeats: false, outlineOnly: false,
-                practiceMode: state.viewPrefs.practiceMode
+                practiceMode: state.viewPrefs.practiceMode,
+                // A theme is a statement about the room, not the file.
+                theme: state.viewPrefs.theme
             };
             saveViewPrefs();
             if (UI["toggle-trend-markers"]) UI["toggle-trend-markers"].checked = true;
@@ -1832,7 +1877,8 @@
                 "swatch-weight-unit": "g", "calc-skein-weight-unit": "g",
                 "calc-skein-length-unit": "yd",
                 "sizing-category": "", "sizing-piece": "round",
-                "grade-ease-mode": "in", "grade-chart": "", "grade-rounding": "nearest", "grade-parity": "any"
+                "grade-ease-mode": "in", "grade-chart": "", "grade-rounding": "nearest", "grade-parity": "any",
+                "meta-terminology": "us"
             };
             Object.entries(SELECT_DEFAULTS).forEach(([id, value]) => {
                 if (!UI[id]) return;
@@ -2267,7 +2313,17 @@
     }
 
     /**
-     * Five rows at most, newest first, and named for what they are.
+     * One dropdown of recovery points, newest first, and one Restore button - not a button per row.
+     *
+     * The ring holds five, and most of the time several of them are autosaves of one unchanged page.
+     * Five Restore buttons for one state is five decisions nobody needs to make, so a run of
+     * snapshots with the same digest is listed once, as its newest, and the whole list is a single
+     * <select> with the time and the reason on each entry. A snapshot written before the digest
+     * existed has none, and is kept - an entry that might differ beats one that might be lost.
+     *
+     * The offer - unsaved work found on boot - keeps its own row and button above the dropdown: it
+     * is a different question ("do you want this back?") from "which of these?", and it is the one
+     * the panel opens itself to ask.
      *
      * "Recovery points", never "history" and never "versions". The ring lives in storage a browser may
      * clear at any moment, does not travel between machines and does not survive a cleared profile.
@@ -2281,7 +2337,7 @@
         const panel = UI['recover-panel'];
         if (!panel) return;
         panel.replaceChildren();
-        panel.appendChild(elem('h3', 'recover-title', 'Recent recovery points (last 5)'));
+        panel.appendChild(elem('h3', 'recover-title', 'Recent recovery points'));
 
         const offer = state.recovery.offer;
         if (offer) {
@@ -2295,15 +2351,33 @@
             panel.appendChild(row);
         }
 
-        const rows = state.recovery.snapshots || [];
-        rows.forEach((snapshot, index) => {
-            const row = elem('div', 'recover-row');
-            row.appendChild(elem('span', 'recover-when',
-                `${relativeWhen(snapshot.savedAt)} \u00b7 ${SNAPSHOT_LABELS[snapshot.reason] || snapshot.reason}`));
-            row.appendChild(button('btn-secondary', 'Restore', `recover-restore-${index}`,
-                () => restoreSnapshot(snapshot.id)));
-            panel.appendChild(row);
-        });
+        const rows = (state.recovery.snapshots || []).filter((snapshot, i, all) =>
+            !snapshot.digest || i === 0 || snapshot.digest !== all[i - 1].digest);
+        if (rows.length) {
+            const pick = elem('div', 'recover-pick');
+            const label = elem('label', 'recover-pick-label', 'Recovery point');
+            label.htmlFor = 'recover-select';
+            const select = elem('select', null, null, 'recover-select');
+            UI['recover-select'] = select;
+            // Ids are looked up from the option's value rather than carried on it: an IndexedDB key
+            // is a number, and a <select> only ever hands back a string.
+            const byValue = {};
+            rows.forEach(snapshot => {
+                const value = String(snapshot.id);
+                byValue[value] = snapshot.id;
+                const option = elem('option', null,
+                    `${clockWhen(snapshot.savedAt)} (${relativeWhen(snapshot.savedAt)}) \u00b7 ${SNAPSHOT_LABELS[snapshot.reason] || snapshot.reason}`);
+                option.value = value;
+                select.appendChild(option);
+            });
+            select.value = String(rows[0].id);
+            const restore = button('btn-secondary', 'Restore', 'recover-restore-btn', () => {
+                const id = byValue[select.value];
+                if (id !== undefined) restoreSnapshot(id);
+            });
+            pick.append(label, select, restore);
+            panel.appendChild(pick);
+        }
 
         if (!rows.length && !offer) {
             panel.appendChild(elem('p', 'recover-empty',
@@ -2501,7 +2575,7 @@
         const incoming = (env.body && env.body.customStitches) || {};
         if (!Object.keys(incoming).length) {
             notify(`"${env.projectName || 'That project'}" carries no custom stitches. `
-                + 'Projects saved before stitch dictionaries travelled with them will not have any.', 'warn');
+                + 'Projects saved before stitch dictionaries traveled with them will not have any.', 'warn');
             return;
         }
 
@@ -2517,7 +2591,7 @@
             // answers lead somewhere, and the difference is only which list is written.
             askConfirm(`${list} ${report.conflicts.length === 1 ? 'is' : 'are'} already in your `
                      + `dictionary with different numbers. Replace ${report.conflicts.length === 1 ? 'it' : 'them'} `
-                     + `with the imported version? Cancelling keeps what you have and imports the rest.`,
+                     + `with the imported version? Canceling keeps what you have and imports the rest.`,
                 () => finishStitchImport(report, take.concat(report.conflicts)),
                 { confirmLabel: 'Replace', onCancel: () => finishStitchImport(report, take) });
             return;
@@ -5984,6 +6058,7 @@
         if (UI["stat-difficulty"]) {
             UI["stat-difficulty"].textContent = report.difficulty.level;
             UI["stat-difficulty"].style.backgroundColor = report.difficulty.badgeColor;
+            UI["stat-difficulty"].style.color = report.difficulty.badgeInk;
         }
 
         applyAutoDifficulty(report);
@@ -8364,19 +8439,28 @@
 
     /*
      * Which hub owns each destination. Twelve entries in a flat rail said nothing about which of
-     * them belonged together, so they are grouped into four - but grouped is all they are. Every id
-     * below is still its own view with its own route; nothing was merged and nothing was hidden.
+     * them belonged together, or which you needed next - so the rail is now the workflow: the
+     * Dashboard, then the five steps a pattern is written through in the order they happen, then
+     * Settings. Grouped and ordered is all they are. Every id below is still its own view with its
+     * own route; nothing was merged and nothing was hidden.
+     *
+     * Settings is in no hub. It is not a step in writing a pattern, and a rail that filed it under
+     * one would be claiming it was. HUB_OF has no entry for it, and expandHub(undefined) closes
+     * every hub, which is exactly what landing on Settings should look like.
      *
      * This table is the ONLY place the grouping is written down. HUB_OF is derived from it rather
-     * than kept beside it, and the assertion under it fails the boot if a destination exists with
-     * no hub to live in - which is exactly how a thirteenth view would otherwise end up reachable
-     * by URL and invisible in the rail.
+     * than kept beside it, and test-shell.js section 1b reads the table back and fails if a
+     * destination other than Settings has no hub - which is exactly how a thirteenth view would
+     * otherwise end up reachable by URL and invisible in the rail. The five numbered hubs are the
+     * five STAGES below, in the same order: hub-setup is step 1 because STAGES[0] says so.
      */
     const NAV_HUBS = {
         'hub-dashboard': ['nav-dashboard', 'nav-analytics', 'nav-practice'],
-        'hub-studio':    ['nav-studio', 'nav-sizer', 'nav-construction'],
-        'hub-library':   ['nav-patterns', 'nav-library', 'nav-gauge'],
-        'hub-community': ['nav-testers', 'nav-publish', 'nav-settings']
+        'hub-setup':     ['nav-patterns', 'nav-library', 'nav-gauge'],
+        'hub-write':     ['nav-studio', 'nav-construction'],
+        'hub-grade':     ['nav-sizer'],
+        'hub-test':      ['nav-testers'],
+        'hub-export':    ['nav-publish']
     };
     const HUB_IDS = Object.keys(NAV_HUBS);
     const HUB_OF = HUB_IDS.reduce((map, hub) => {
@@ -8387,39 +8471,44 @@
     /*
      * The pattern-writing workflow.
      *
-     * The rail above is organised by what the app IS; this is organised by what you are DOING, and
-     * the two are different shapes. Writing one pattern crosses five views - fill in the metadata,
-     * draft and compile it, grade it to a size range, hear back from testers, export it - and until
-     * now nothing said so. A first-time designer had twelve equal-looking entries and no clue that
-     * four of them were a sequence.
+     * Writing one pattern crosses five views - fill in the metadata, draft and compile it, grade it
+     * to a size range, hear back from testers, export it. The sidebar walks those five in order as
+     * its numbered hubs; the strip in the topbar repeats them as a compact progress rail on the
+     * views they describe. Both are drawn from THIS table, so a step has one number and one word
+     * everywhere it appears: `hub` names the sidebar hub the step is, `nav` the destination the
+     * step lands on, and the position in the array is its number.
      *
      * Two rules, both load-bearing:
      *
      *   - `done` is READ, never recorded. Each predicate below asks the live state a question it
      *     already knows the answer to; there is no separate progress flag to be written, migrated,
-     *     or to drift out of step with the pattern. Delete a pattern's rows and Draft un-ticks
-     *     itself, because the tick was never a fact of its own.
+     *     or to drift out of step with the pattern. Delete a pattern's rows and Write un-marks
+     *     itself, because the mark was never a fact of its own.
      *
      *   - Nothing is GATED. Every stage is clickable whenever the rail is on screen, the same way
-     *     every sidebar entry always was. A tick reports; it does not unlock. Real work does not
-     *     go in this order - people grade before testing, export a draft to read it on paper, and
-     *     come back to the metadata last - and a rail that enforced the sequence would be wrong
-     *     more often than it was right.
+     *     every sidebar entry always was. A done mark reports; it does not unlock. Real work does
+     *     not go in this order - people grade before testing, export a draft to read it on paper,
+     *     and come back to the metadata last - and a rail that enforced the sequence would be
+     *     wrong more often than it was right.
+     *
+     * A done stage KEEPS ITS NUMBER. It used to swap it for a tick, so step 4 read as "4" in the
+     * sidebar and as a checkmark in the rail - the same step with two labels. Colour carries
+     * "done" now, in both places, and the number is the number wherever you look.
      */
     const STAGES = [
         {
-            nav: 'nav-patterns', label: 'Setup',
+            hub: 'hub-setup', nav: 'nav-patterns', label: 'Setup',
             // The file has been identified as somebody's, by name or by any of the metadata.
             done: () => !!(UI['project-name']?.value || '').trim()
                 || !!(state.metadata.designer || state.metadata.hook || state.metadata.yarnWeight)
         },
-        { nav: 'nav-studio',  label: 'Draft & Compile', done: () => state.patternSteps.length > 0 },
-        { nav: 'nav-sizer',   label: 'Grade',  done: () => Object.keys(state.grading.sections).length > 0 },
-        { nav: 'nav-testers', label: 'Test',   done: () => state.grading.testers.length > 0 },
+        { hub: 'hub-write',  nav: 'nav-studio',  label: 'Write',  done: () => state.patternSteps.length > 0 },
+        { hub: 'hub-grade',  nav: 'nav-sizer',   label: 'Grade',  done: () => Object.keys(state.grading.sections).length > 0 },
+        { hub: 'hub-test',   nav: 'nav-testers', label: 'Test',   done: () => state.grading.testers.length > 0 },
         // Ready to export is not the same as exported: a pattern that compiles with no failed or
         // blocked rows is one you can hand over. isCleanPass is the same test the stitch roll and
         // the daily quest pay out on, so the rail cannot disagree with them about what "clean" is.
-        { nav: 'nav-publish', label: 'Export', done: () => isCleanPass(state.analytics.lastPass) }
+        { hub: 'hub-export', nav: 'nav-publish', label: 'Export', done: () => isCleanPass(state.analytics.lastPass) }
     ];
     const STAGE_NAV = STAGES.map(stage => stage.nav);
 
@@ -8553,6 +8642,11 @@
      * wired up in setupEventListeners. Nothing here reimplements an effect, so a mirror and its source
      * cannot drift apart. `apply` is that shared function; `group` only sorts the page into headings.
      */
+    /* Two controls are deliberately NOT here. Difficulty is a fact about the pattern, inferred
+       from its stitches and shown with the rest of the metadata on Pattern Files - not a way the app
+       behaves. The converted-swatch unit is an override of the gauge unit that follows it unless
+       somebody says otherwise, and a settings page that lists both is asking the same question twice;
+       the override stays on the Gauge Profile for the rare swatch that needs it. */
     const SETTING_SPECS = [
         { id: 'meta-size', kind: 'select', group: 'Reading the pattern', label: 'Which size to check',
           note: 'Which of the graded sizes the counts are validated against.',
@@ -8562,21 +8656,19 @@
         { id: 'meta-chain-space-convention', kind: 'select', group: 'Reading the pattern', label: 'Chain-sp counts as',
           note: "Whether a corner or chain space's own chains count toward the round's stitch total, or only the stitches worked into it do.",
           apply: () => { window.CrochetMathEngine.setChainSpaceConvention(UI['meta-chain-space-convention'].value); renderUI(); } },
-        { id: 'meta-difficulty', kind: 'select', group: 'Reading the pattern', label: 'Difficulty',
-          note: 'Left blank, Stitch Math works it out from the stitches you used.', apply: () => applyMetadataChange('meta-difficulty') },
         { id: 'meta-terminology', kind: 'select', group: 'Reading the pattern', label: 'Terminology',
           note: 'Flags US terms in a UK pattern and UK terms in a US one. Never rewrites a stitch, and never changes a count.',
           apply: () => applyMetadataChange('meta-terminology') },
 
-        { id: 'toggle-trend-markers', kind: 'checkbox', group: 'Validation matrix', label: 'Show trend markers',
+        { id: 'toggle-trend-markers', kind: 'checkbox', group: 'Validation and linting', label: 'Show trend markers',
           note: 'Mark whether each row grew, shrank or held its stitch count.', apply: applyTrendMarkerPref },
-        { id: 'toggle-collapse-repeats', kind: 'checkbox', group: 'Validation matrix', label: 'Collapse repeated rows',
+        { id: 'toggle-collapse-repeats', kind: 'checkbox', group: 'Validation and linting', label: 'Collapse repeated rows',
           note: 'Fold runs of identical rows into a single line with a count.', apply: applyCollapseRepeatPref },
-        { id: 'toggle-outline-view', kind: 'checkbox', group: 'Validation matrix', label: 'Geometric outline only',
+        { id: 'toggle-outline-view', kind: 'checkbox', group: 'Validation and linting', label: 'Geometric outline only',
           note: 'Strip the prose and show only the stitch count each row produces, and what it did to the row above.',
           apply: applyOutlineViewPref },
 
-        { id: 'toggle-beginner-phrasing', kind: 'checkbox', group: 'Pattern Linter', label: 'Beginner-friendly repeat phrasing',
+        { id: 'toggle-beginner-phrasing', kind: 'checkbox', group: 'Validation and linting', label: 'Beginner-friendly repeat phrasing',
           note: 'Spell every repeat out in full instead of bracket shorthand - switching back off folds them back to brackets.',
           apply: applyRepeatPhrasingMode },
 
@@ -8593,8 +8685,6 @@
           note: 'The unit your swatch width and height are measured in.', apply: refreshGaugeOutputs },
         { id: 'gauge-convert-size', kind: 'select', group: 'Gauge and measurements', label: 'Convert swatch to',
           note: 'Restate your gauge over a standard square, whatever size you measured.', apply: refreshGaugeOutputs },
-        { id: 'gauge-convert-unit', kind: 'select', group: 'Gauge and measurements', label: 'Converted swatch unit',
-          note: 'Choosing one here stops it following the gauge unit above.', apply: applyConvertUnitOverride },
         { id: 'sizing-category', kind: 'select', group: 'Gauge and measurements', label: 'Sized for',
           note: 'Which body measurement chart the finished size is compared against.', apply: refreshGaugeOutputs },
         { id: 'sizing-piece', kind: 'select', group: 'Gauge and measurements', label: 'Widest row measures',
@@ -8964,8 +9054,19 @@
        having to say where it is. */
     let stageRailNav = null;
 
+    /* Lights the sidebar's numbered hubs off the same predicates the rail reads. Separate from the
+       rail because the sidebar is on screen on every view and the rail is not: a compile run from
+       the Dashboard's compiler dock has to light step 2 in the sidebar even though there is no
+       rail on the Dashboard to redraw. */
+    function renderStepBadges() {
+        STAGES.forEach(stage => {
+            shellEl(stage.hub)?.classList.toggle('is-done', !!stage.done());
+        });
+    }
+
     function renderStageRail(currentNav) {
         stageRailNav = currentNav;
+        renderStepBadges();
         const rail = shellEl('stage-rail');
         if (!rail) return;
 
@@ -8999,16 +9100,18 @@
             const el = button(cls, null, `stage-${stage.nav}`, () => navigateTo(stage.nav));
             UI[el.id] = el;
 
-            // The number is replaced by a tick once the stage has something in it, so the strip
-            // reads as a checklist rather than as five numbered buttons.
+            // The number stays whether or not the stage has anything in it - it is the same number
+            // the sidebar shows for this step, and a label that changes shape is two labels. Done
+            // is the is-done class, which colours the disc.
             const dot = elem('span', 'stage-dot');
-            if (done) dot.innerHTML = '<svg class="ic stage-tick" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg>';
-            else dot.appendChild(elem('span', 'stage-num', String(i + 1)));
+            dot.appendChild(elem('span', 'stage-num', String(i + 1)));
 
+            // The step's pastel, shared with the sidebar through [data-step] in the stylesheet.
+            el.dataset.step = String(i + 1);
             el.appendChild(dot);
             el.appendChild(elem('span', 'stage-label', stage.label));
-            // aria-current marks where you are. "done" is said in words as well, because a tick
-            // drawn in SVG announces as nothing at all.
+            // aria-current marks where you are. "done" is said in words as well, because a colour
+            // announces as nothing at all.
             if (here) el.setAttribute('aria-current', 'step');
             if (done) el.appendChild(elem('span', 'visually-hidden', ' (done)'));
 
@@ -9016,10 +9119,13 @@
         });
     }
 
-    /* Redraw where we already are. Called after a compile, when Draft and Export may have just
-       earned their ticks and the rail would otherwise keep showing the state before the parse. */
+    /* Redraw where we already are. Called after a compile, when Write and Export may have just
+       been earned and the rail would otherwise keep showing the state before the parse. The
+       sidebar badges are refreshed either way - see renderStepBadges - because the rail may
+       never have been drawn on this view while the sidebar always has. */
     function refreshStageRail() {
         if (stageRailNav) renderStageRail(stageRailNav);
+        else renderStepBadges();
     }
 
     /** The one entry point for navigation, from the sidebar or from a dashboard link. */
@@ -10265,6 +10371,18 @@
     /** Plain text out of an engine string that may carry markup. */
     function plainText(value) {
         return String(value ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    /** The wall-clock moment, for a list where "3m ago" and "5m ago" would read as the same thing. */
+    function clockWhen(savedAt) {
+        if (!savedAt) return 'no date';
+        try {
+            return new Date(savedAt).toLocaleString(undefined, {
+                month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+            });
+        } catch (err) {
+            return new Date(savedAt).toISOString().slice(0, 16).replace('T', ' ');
+        }
     }
 
     function relativeWhen(savedAt) {

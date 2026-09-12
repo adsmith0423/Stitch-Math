@@ -366,6 +366,19 @@ window.StitchPersistence = (() => {
      * alone would make which five survive depend on sort stability, and the two runners the project
      * requires to agree would be free to disagree.
      */
+    /**
+     * A short fingerprint of an envelope's body, so two snapshots can be told apart without reading
+     * both back. Five autosaves of an unchanged page are five recovery points that restore the same
+     * thing, and the panel folds runs of equal digests into one row - see renderRecoverPanel. djb2
+     * over the JSON; it only has to separate "same" from "different", not resist anyone.
+     */
+    function digestOf(body) {
+        const text = JSON.stringify(body === undefined ? null : body);
+        let h = 5381;
+        for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+        return h.toString(36) + ':' + text.length.toString(36);
+    }
+
     function prunePlan(existing, limit) {
         const cap = typeof limit === 'number' && limit >= 0 ? limit : SNAPSHOT_LIMIT;
         const rows = (Array.isArray(existing) ? existing : []).filter(isPlainObject);
@@ -727,6 +740,7 @@ window.StitchPersistence = (() => {
                         projectId: env.projectId,
                         savedAt: typeof env.savedAt === 'number' ? env.savedAt : Date.now(),
                         reason,
+                        digest: digestOf(env.body),
                         envelope: env
                     };
                     try {
@@ -744,7 +758,7 @@ window.StitchPersistence = (() => {
                     (result) => {
                         if (!result.ok) { done(result); return; }
                         done(succeed(result.value.map(row => ({
-                            id: row.id, savedAt: row.savedAt, reason: row.reason
+                            id: row.id, savedAt: row.savedAt, reason: row.reason, digest: row.digest
                         }))));
                     }));
             },
@@ -784,6 +798,7 @@ window.StitchPersistence = (() => {
         SNAPSHOT_MIN_INTERVAL_MS,
         SNAPSHOT_REASONS,
         projectIdFor,
+        digestOf,
         buildEnvelope,
         validate,
         migrate,

@@ -110,6 +110,9 @@ var DOM_READY = [];
 // boot() replays it on demand instead of on registration.
 var DOC_LISTENERS = {};
 var document = {
+    // <html> itself, for the one thing the app writes there: data-theme. An El like any other,
+    // so dataset works and a test can read the resolved theme back.
+    documentElement: new El('html'),
     getElementById: function (id) {
         if (!REGISTRY[id]) REGISTRY[id] = new El('div', id);
         return REGISTRY[id];

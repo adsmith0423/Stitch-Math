@@ -235,7 +235,7 @@ ok('and the round after it too', /row-passed/.test(sleeve[1].cls));
 print('\n11. The titling rules are on the page');
 var IH = readFile('index.html');
 ok('a titling guide sits in the Pattern Input panel',
-   IH.indexOf('heading-rules') > 0 && IH.indexOf('heading-rules') > IH.indexOf('<h2>Pattern Input</h2>'));
+   IH.indexOf('heading-rules') > 0 && IH.indexOf('heading-rules') > IH.indexOf('Pattern Input</h2>'));
 ok('it gives the capitals form', /All capitals/.test(IH));
 ok('the colon form', /Ending in a colon/.test(IH));
 ok('the dashes form', /Between dashes/.test(IH));
