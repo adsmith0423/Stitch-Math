@@ -97,10 +97,22 @@ npm run test:browser        # the storage suite, against a real browser (needs P
 ./run-tests.sh sizing       # only suites whose filename contains "sizing"
 ```
 
-`npm run test:browser` is separate on purpose. `npm test` runs anywhere with no dependencies, and
+`npm run test:browser` is separate on purpose. `npm test` runs anywhere with no install step, and
 that property is worth keeping; the storage suite needs a real IndexedDB and therefore a real
 browser. It is still a release blocker when it is red — it covers the one code path that can lose a
 designer's work, and with cloud sync descoped there is no second copy anywhere.
+
+**The browser suite needs Playwright, installed once per machine:**
+
+```
+npm install --save-dev playwright     # the library, into node_modules (git-ignored)
+npx playwright install chromium       # the browser it drives, into a shared system cache
+```
+
+This is the project's only dependency and it is dev-only: it is never loaded by the app, never
+touched by `npm run build`, and `npm test` and CI do not need it. Run the two commands from the
+project folder — a global install will not satisfy the `import` the suite makes. If you forget, the
+suite says so and prints these lines rather than a stack trace.
 
 `npm test` is the one to use. It needs no dependencies — `tests/node/harness.js` recreates
 JavaScriptCore's shared-global model with `vm.runInContext`, which is why the suites and the

@@ -2,11 +2,14 @@
   "name": "stitch-math",
   "version": "1.0.0",
   "private": true,
-  "description": "Crochet pattern validation, grading and yardage. No dependencies: the browser loads the source files directly and the build adds nothing.",
+  "description": "Crochet pattern validation, grading and yardage. Nothing is shipped to the browser but the source files themselves, and `npm test` runs with no install step. The one devDependency, Playwright, drives a real browser for the storage suite alone.",
   "scripts": {
     "test": "node --test tests/node/suites.test.js tests/node/build.test.js tests/node/pdf.test.js",
     "test:jsc": "./run-tests.sh",
     "test:browser": "node tests/browser/persistence.spec.mjs",
     "build": "node build.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }

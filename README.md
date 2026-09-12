@@ -43,13 +43,17 @@ the test baseline. `PERSISTENCE.md` covers the project file format and the recov
 ## Commands
 
 ```bash
-npm test              # 86 node:test cases, 3,719 assertions. No install needed.
-npm run test:browser  # the storage suite, against a real browser (needs Playwright)
+npm test              # 111 node:test cases, 4,373 assertions. No install needed.
 npm run build         # writes dist/
+npm run test:browser  # the storage suite, against a real browser
 ./run-tests.sh        # the same suites under macOS JavaScriptCore
+
+# Once per machine, and only for test:browser:
+npm install --save-dev playwright
+npx playwright install chromium
 ```
 
-**There are no dependencies, and that is deliberate.** `npm test` and CI run with no install step
+**The app has no dependencies, and that is deliberate.** `npm test` and CI run with no install step
 because the suites load the same source files the browser does. The build adds none either: there is
 no module graph to resolve, so bundling is concatenation, and content hashing is `node:crypto`. The
 one thing a toolchain would do better is minification, which is skipped — stripping comments from the

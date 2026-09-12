@@ -15,11 +15,26 @@
  * These are separate from `npm test` on purpose - that runs everywhere with no dependencies, and this
  * needs a browser. A red run here is still a release blocker.
  */
-import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import http from 'node:http';
 import fs from 'node:fs';
+
+/* Imported dynamically, and the only reason is the error message.
+ *
+ * A static `import { chromium } from 'playwright'` on a machine that has not installed it fails with
+ * ERR_MODULE_NOT_FOUND and a stack trace, which reads like the suite is broken rather than like a
+ * missing one-time setup step. That cost a real afternoon. This prints the command instead. */
+let chromium;
+try {
+    ({ chromium } = await import('playwright'));
+} catch {
+    console.error('\nThis suite drives a real browser, which needs Playwright installed once:\n');
+    console.error('    npm install --save-dev playwright');
+    console.error('    npx playwright install chromium\n');
+    console.error('Then run `npm run test:browser` again. `npm test` needs none of this.\n');
+    process.exit(1);
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
