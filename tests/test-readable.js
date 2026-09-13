@@ -172,7 +172,83 @@ ok('and is never written back to the store',
        .indexOf(JSON.parse(localStorage.getItem('stitchmath_view_prefs')).theme) !== -1);
 $('theme-mode').value = 'system'; $('theme-mode').fire('change');
 
-print('\n9. Print is paper, whatever the room looks like');
+print('\n9. The sidebar is a surface, in every appearance');
+/*
+ * The rail has to read as a different surface from the page it navigates. It did not: a gradient
+ * behind a backdrop blur picked up whatever wash was behind it, and Readable had no rail colour at
+ * all - the base rule used the `background` SHORTHAND for its gradient, which resets
+ * background-color to transparent, so overriding background-image alone left the rail painted with
+ * the ground.
+ *
+ * Checked as lightness rather than contrast: two surfaces that touch do not need 4.5:1, they need
+ * to look like two surfaces. L* is the perceptual scale, and the step is asserted in it - by Y
+ * alone night's old rail looked fine (0.008 against 0.011) while being invisible on screen.
+ */
+function lstar(hex) {
+    var y = luminance(hex);
+    return y > 0.008856 ? 116 * Math.pow(y, 1 / 3) - 16 : 903.3 * y;
+}
+var SIDEBAR_RULE = CSS.slice(CSS.indexOf('\n#app-sidebar {'));
+SIDEBAR_RULE = SIDEBAR_RULE.slice(0, SIDEBAR_RULE.indexOf('\n}'));
+ok('the rail paints a background-COLOR, so it can never inherit the ground',
+   /background-color: var\(--sidebar-bg\)/.test(SIDEBAR_RULE));
+no('and not the shorthand, which resets the colour to transparent',
+   /\n\s*background:/.test(SIDEBAR_RULE));
+no('there is no blur on it', /backdrop-filter/.test(SIDEBAR_RULE));
+no('--sidebar-bg-deep is retired, not left dangling', /--sidebar-bg-deep/.test(CSS));
+
+// The rail paints the PAGE's washes, not a set of its own, and attaches them the same way, so the
+// two resolve the same gradients against the same viewport and a bloom crosses the edge unbroken.
+// A rail with its own gradient is what "does not match the main section" meant.
+ok('the rail paints the same wash stack the workspace does',
+   /background-image:[\s\S]{0,120}var\(--page-washes\)/.test(SIDEBAR_RULE));
+ok('and attaches it fixed, as the workspace does', /background-attachment: fixed/.test(SIDEBAR_RULE));
+// Anchored to the line start: "#app-shell {" also matches inside the Readable override
+// ':root[data-theme="readable"] #app-shell {', which sets background-image: none and would have
+// this assertion reading the wrong rule.
+var SHELL_RULE = CSS.slice(CSS.indexOf('\n#app-shell {'));
+SHELL_RULE = SHELL_RULE.slice(0, SHELL_RULE.indexOf('\n}'));
+ok('the workspace reads the same token, so there is one stack and not two',
+   /background-image: var\(--page-washes\)/.test(SHELL_RULE));
+no('and neither writes the gradients out by hand', /radial-gradient/.test(SIDEBAR_RULE + SHELL_RULE));
+// Sharing the washes is what flattens the step: the teal bloom sits on the rail at 0.65 alpha and
+// swallowed the base difference, measuring 0.4 L* at the foot of the day rail. The scrim is the
+// topmost layer for that reason - it deepens by the same amount wherever a bloom happens to fall.
+ok('a deepening scrim sits OVER the washes',
+   /background-image:\s*\n\s*linear-gradient\(var\(--rail-deepen\), var\(--rail-deepen\)\),\s*\n\s*var\(--page-washes\)/.test(SIDEBAR_RULE));
+
+/** Each appearance's own rail and its own ground, read out of its own token block. */
+function scopeOf(selector) {
+    var at = CSS.indexOf(selector);
+    return at === -1 ? '' : CSS.slice(at, CSS.indexOf('\n}', at));
+}
+function tokenIn(scope, name) {
+    var m = scope.match(new RegExp('\\' + name + ':\\s*(#[0-9A-Fa-f]{6})'));
+    return m ? m[1] : null;
+}
+[['day', ':root {'], ['night', ':root[data-theme="dark"] {'],
+ ['readable', ':root[data-theme="readable"] {']].forEach(function (pair) {
+    var scope = scopeOf(pair[1]);
+    var rail = tokenIn(scope, '--sidebar-bg');
+    var ground = tokenIn(scope, '--sea-0');
+    ok(pair[0] + ' declares both a rail and a ground', !!rail && !!ground);
+    if (!rail || !ground) return;
+    var step = lstar(ground) - lstar(rail);
+    ok(pair[0] + ' rail is darker than its ground, by ' + step.toFixed(1) + ' L*', step > 0);
+    // Enough to see, not so much that the rail becomes a second colour rather than a shade.
+    ok(pair[0] + ' step is visible (>= 3.5 L*), it is ' + step.toFixed(1), step >= 3.5);
+    ok(pair[0] + ' step is still a shade (<= 9 L*), it is ' + step.toFixed(1), step <= 9);
+    ok(pair[0] + ' declares its own scrim strength', tokenIn(scope, '--rail-deepen') !== null
+       || /--rail-deepen:\s*(transparent|rgba)/.test(scope));
+});
+// The rail carries text, so its own ink still has to read on it.
+ok('readable rail ink is AAA on the rail, at '
+   + contrast(tokenIn(scopeOf(':root[data-theme="readable"] {'), '--sidebar-ink'),
+              tokenIn(scopeOf(':root[data-theme="readable"] {'), '--sidebar-bg')).toFixed(2) + ':1',
+   contrast(tokenIn(scopeOf(':root[data-theme="readable"] {'), '--sidebar-ink'),
+            tokenIn(scopeOf(':root[data-theme="readable"] {'), '--sidebar-bg')) >= 7);
+
+print('\n10. Print is paper, whatever the room looks like');
 var PRINT = CSS.slice(CSS.indexOf('@media print {'));
 PRINT = PRINT.slice(0, PRINT.indexOf('\n}'));
 no('print knows nothing about the theme', /data-theme/.test(PRINT));

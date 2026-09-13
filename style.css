@@ -168,8 +168,8 @@
     /* App shell. The sidebar is seafoam fading into lavender - the same page, not an inverted one. */
     --sidebar-w: 258px;
     --sidebar-rail: 76px;
-    --sidebar-bg: #D9F1E8;
-    --sidebar-bg-deep: #E6DCF6;
+    /* 92.9 L*, against a --sea-0 ground at 98.0. Both seafoam; the rail is the deeper one. */
+    --sidebar-bg: #DCEFE7;
     --sidebar-ink: var(--ink);
     --sidebar-ink-dim: var(--ink-soft);
     /* The rail's lit surfaces: the open hub and active entry, a hover, the rank card. White
@@ -289,6 +289,26 @@
     --wash-sun: rgba(251, 239, 193, 0.55);
     --wash-depth: rgba(220, 211, 245, 0.50);
 
+    /* The four blooms as ONE background-image stack, because two elements paint them: the workspace
+       and the sidebar. Both attach it fixed, so both resolve the same gradients against the same
+       viewport and a bloom that crosses the rail's edge carries straight through it instead of
+       restarting at it - which is what makes the rail read as the same page a shade deeper rather
+       than as a different surface parked beside it. A theme that wants no washes sets the four
+       colours to transparent and this stack goes quietly flat; nothing overrides the stack itself. */
+    /* What the rail is deepened BY. The washes are shared with the workspace so the two match, and
+       that is exactly what flattens the step: the teal bloom over the bottom-left sits on the rail
+       at 0.65 alpha and swallows most of the difference the base colours make - day measured 0.4 L*
+       there, which is nothing. So the rail lays one flat scrim OVER the washes as well. Being the
+       topmost layer, it deepens by the same amount wherever a bloom happens to fall. */
+    --rail-deepen: rgba(var(--shade), 0.075);
+
+    --page-washes:
+        linear-gradient(180deg, transparent 0%, var(--wash-depth) 100%),
+        radial-gradient(1500px 900px at 12% -14%, var(--wash-teal) 0%, transparent 70%),
+        radial-gradient(1400px 820px at 96% 2%, var(--wash-coral) 0%, transparent 66%),
+        radial-gradient(1300px 900px at 70% 62%, var(--wash-sun) 0%, transparent 68%),
+        radial-gradient(1100px 760px at 18% 92%, var(--wash-teal) 0%, transparent 66%);
+
 }
 
 /* ---- Night ----
@@ -332,8 +352,9 @@
     --hi: 199, 184, 242;
     --shade: 0, 0, 0;
 
-    --sidebar-bg: #151830;
-    --sidebar-bg-deep: #1E1B34;
+    /* 5.1 L*, against a ground at 9.8. The old #151830 was only 2.5 below and read as one surface. */
+    --sidebar-bg: #0D1020;
+    --rail-deepen: rgba(var(--shade), 0.05);
     --rail-lozenge: rgba(199, 184, 242, 0.14);
     --rail-hover: rgba(199, 184, 242, 0.08);
     --rail-card: rgba(199, 184, 242, 0.08);
@@ -529,8 +550,11 @@
     --hi: 255, 255, 255;
     --shade: 17, 17, 17;
 
-    --sidebar-bg: #F5F0E2;
-    --sidebar-bg-deep: #F5F0E2;
+    /* 92.1 L*, against a ground at 97.3. Nothing on top of it: Readable has no washes for a scrim
+       to compensate for, so the base difference IS the step, and adding one took it to 12.7 L* -
+       a second colour rather than a shade. */
+    --sidebar-bg: #EFE8D6;
+    --rail-deepen: transparent;
     --sidebar-ink: #111111;
     --sidebar-ink-dim: #3B3B3B;
     --rail-lozenge: #FFFFFF;
@@ -606,8 +630,7 @@ html:where([data-theme="readable"]) textarea {
     background-image: none;
     -webkit-backdrop-filter: none; backdrop-filter: none;
 }
-:root[data-theme="readable"] #app-shell,
-:root[data-theme="readable"] #app-sidebar { background-image: none; }
+:root[data-theme="readable"] #app-shell { background-image: none; }
 /* The hairline under every heading. Coral at 15% is a tint by day and all but invisible against
    this ground, so here it is the same line everything else is edged with. */
 :root[data-theme="readable"] .panel h2,
@@ -767,12 +790,7 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 #app-shell {
     display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
     min-height: 100vh; background-color: var(--shell-bg);
-    background-image:
-        linear-gradient(180deg, transparent 0%, var(--wash-depth) 100%),
-        radial-gradient(1500px 900px at 12% -14%, var(--wash-teal) 0%, transparent 70%),
-        radial-gradient(1400px 820px at 96% 2%, var(--wash-coral) 0%, transparent 66%),
-        radial-gradient(1300px 900px at 70% 62%, var(--wash-sun) 0%, transparent 68%),
-        radial-gradient(1100px 760px at 18% 92%, var(--wash-teal) 0%, transparent 66%);
+    background-image: var(--page-washes);
     background-attachment: fixed;
 }
 
@@ -781,17 +799,33 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
    part watermark, part smudge - and they read worst exactly where the page is busiest. The washes are
    the ground now, and they are enough. */
 
-/* A pastel rail, not an inverted one: seafoam at the head fading to lavender at the foot, so the
-   sidebar is the same page as the workspace rather than a frame around it. The blur lets the
-   washes behind the rail show through its edge. */
+/* The rail: the SAME washes as the workspace, over a base about five L* deeper.
+   It carried a gradient of its OWN once - seafoam at the head fading to lavender at the foot -
+   behind a backdrop blur, and that is what made it not match. Its gradient ran on its own axis, so
+   it met the page at a different colour top and bottom, and the blur pulled in whatever wash
+   happened to sit behind it, so the rail changed colour as the page scrolled. Painting the page's
+   own --page-washes instead, attached fixed exactly as the workspace attaches them, means the two
+   resolve the same gradients against the same viewport: a bloom crossing the rail's edge carries
+   straight through it. The rail IS the page. --sidebar-bg is what makes it a shade darker, and it
+   is the only thing that differs.
+   background-COLOR, never the background shorthand. The shorthand resets background-color to
+   transparent, so a theme that overrode background-image without also setting a colour got a rail
+   painted with the ground - which is exactly what happened to Readable, where the rail was not
+   merely too pale but genuinely absent.
+   Five L* is the step: it is what day had by accident, it reads as "a shade darker" rather than as
+   a second colour, and night sat at 2.5 and looked like nothing until it was matched.
+   No backdrop blur, and none coming back - the glass is the part that made the rail unreadable.
+   Only the surface is described here; every button inside keeps its own fill, press and lift. */
 #app-sidebar {
     position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
     display: flex; flex-direction: column; gap: 16px; padding: 18px 13px;
-    background:
-        linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-deep) 100%);
-    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    background-color: var(--sidebar-bg);
+    background-image:
+        linear-gradient(var(--rail-deepen), var(--rail-deepen)),
+        var(--page-washes);
+    background-attachment: fixed;
     border-right: 1.5px solid var(--glass-dark-border);
-    box-shadow: var(--glass-dark-sheen), 1px 0 24px -16px rgba(var(--shade), 0.25);
+    box-shadow: 1px 0 24px -16px rgba(var(--shade), 0.25);
     color: var(--sidebar-ink); z-index: 60;
 }
 
@@ -932,10 +966,11 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
    Every figure comes from the progress store in app.js section 12, which only records things that
    actually happened in this browser. */
 .sidebar-points {
-    /* Sits 70px below the last menu item, and never shrinks: 54 + the rail's 16px gap. Deliberately
+    /* Sits 40px below the last menu item, and never shrinks: 24 + the rail's 16px gap. Deliberately
        NOT margin-top: auto - an auto margin would float this to the foot of the rail and the drop
-       would be a different distance on every screen. */
-    flex: none; margin-top: 54px;
+       would be a different distance on every screen. Was 54, which left the card marooned halfway
+       down the empty half of the rail rather than reading as the end of the list. */
+    flex: none; margin-top: 24px;
     background: var(--rail-card); border: 1.5px solid var(--rail-card-border);
     border-radius: var(--radius); padding: 12px;
     box-shadow: var(--glass-dark-sheen), 0 2px 0 rgba(var(--shade), 0.05);
@@ -2694,10 +2729,9 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
    strip - four options on one line with the call to action beside them, a third of the height the
    stacked version spent. */
 .card-publish { grid-column: span 12; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; }
-.card-publish h3, .card-publish .publish-caption { grid-column: 1 / -1; }
+.card-publish h3 { grid-column: 1 / -1; }
 .card-publish .publish-grid { margin-bottom: 0; }
 .card-publish .publish-cta { padding: 13px 30px; }
-.publish-caption { margin: 0 0 8px 0; font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0; color: var(--text-muted); }
 .publish-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .publish-option {
     display: flex; align-items: center; gap: 7px; text-align: left;
@@ -2913,7 +2947,6 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .gum-thin, .stage.is-here, .dash-schematic-frame, .recent-swatch {
         background: var(--surface-subtle); border-color: var(--border);
     }
-    #app-sidebar { background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-deep) 100%); }
     /* Inside a dock the panes gave up their own backdrop on the assumption the dock had one. It
        does not here, so they take a plain surface instead of the near-invisible --glass-thin. */
     .dock.is-open .panel { background: var(--surface-subtle); }
