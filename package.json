@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test tests/node/suites.test.js tests/node/build.test.js tests/node/pdf.test.js",
     "test:jsc": "./run-tests.sh",
-    "test:browser": "node tests/browser/persistence.spec.mjs",
+    "test:browser": "node tests/browser/persistence.spec.mjs && node tests/browser/contrast.spec.mjs",
+    "test:contrast": "node tests/browser/contrast.spec.mjs",
     "build": "node build.js"
   },
   "devDependencies": {

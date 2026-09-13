@@ -6,7 +6,10 @@ El.prototype.querySelector = function () { return null; };
 El.prototype.querySelectorAll = function () { return []; };
 El.prototype.focus = function () {};
 El.prototype.click = function () {};
-El.prototype.scrollIntoView = function () {};
+// Recorded rather than ignored: which panel a navigation LANDS on is a decision worth asserting,
+// and with a no-op there was no way to read it back. SCROLLED_TO holds the last one.
+var SCROLLED_TO = null;
+El.prototype.scrollIntoView = function () { SCROLLED_TO = this.id || null; };
 El.prototype.remove = function () {};
 El.prototype.closest = function () { return null; };
 El.prototype.insertBefore = function (c) { this.children.push(c); return c; };

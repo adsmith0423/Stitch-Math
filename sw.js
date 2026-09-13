@@ -27,7 +27,7 @@
  * is where this kind of file usually goes wrong. In dist/ the build writes both: VERSION from the
  * bundle hash, PRECACHE from the filenames it actually emitted.
  */
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const CACHE_NAME = `stitch-math-${VERSION}`;
 
 /* The shell, in load order. Everything the app needs to open with no network at all. */

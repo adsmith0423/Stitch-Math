@@ -538,6 +538,42 @@ ok('a graded pattern adds the size row', !!$('settings-list').children.some(func
 $('set-toggle-collapse-repeats').checked = false;
 $('set-toggle-collapse-repeats').fire('change');
 
+print('\n4d-ii-b. Save Project, in the topbar beside New Project');
+// The one file action worth having on every view: you want it without first navigating away from
+// what you were writing. It runs handleSaveProject, the same function #save-btn runs - not a
+// synthesised click on that button, which would work in a browser and do nothing here.
+ok('the button is in the topbar', /id="btn-save-project"/.test(HTML));
+ok('to the right of New Project',
+   HTML.indexOf('id="btn-new-project"') < HTML.indexOf('id="btn-save-project"'));
+// Siblings in .topbar-meters, not one of them orphaned into a group of its own: nothing closes
+// between them but the New Project button's own tag.
+ok('both are in the same topbar group',
+   HTML.slice(HTML.indexOf('id="btn-new-project"'), HTML.indexOf('id="btn-save-project"'))
+       .split('</div>').length === 1);
+// Mint, not coral: coral is the call to START something and there is one of those in the topbar
+// already. Anchored to the line start so the shared sizing rule above it is not what is read.
+ok('it is the working colour, not the coral one',
+   /--pill: var\(--mint\)/.test((CSS.match(/\n\.btn-save-project \{[^}]*\}/) || [''])[0]));
+nav('nav-studio');
+load(CLEAN);
+$('project-name').value = 'saved from the topbar';
+$('btn-save-project').fire('click');
+ok('pressing it writes the file',
+   !!JSON.parse(localStorage.getItem('stitchmath_saves') || '{}')['saved from the topbar']);
+// It says its own no rather than saving something unnamed.
+$('new-file-btn').fire('click');
+load(CLEAN);
+$('project-name').value = '';
+$('load-select').value = '';
+ALERTS.length = 0;
+$('btn-save-project').fire('click');
+ok('and asks for a name when there is not one',
+   /project name/i.test(String(ALERTS[ALERTS.length - 1] || '')));
+// Put the store back: section 8 below asserts the dashboard's "no saved projects yet" empty state,
+// and a file left behind here is a file it would list.
+localStorage.removeItem('stitchmath_saves');
+$('new-file-btn').fire('click');
+
 print('\n4d-iii. Publish gathers saving and exporting, and previews the printout');
 nav('nav-publish');
 ok('the project panel is here too', shown('project-panel'));
@@ -602,18 +638,20 @@ $('load-select').value = 'preview reload test';
 $('delete-project-btn').fire('click');
 $('new-file-btn').fire('click');
 
-print('\n4e. Day and night, chosen under Settings');
+print('\n4e. Appearance, chosen under Settings');
 // The one setting that lives on the Settings panel itself rather than being mirrored from another
 // panel, so it is checked against the markup directly: a select, inside the panel, ahead of the
-// generated list, offering exactly the three words the stylesheet and the head script understand.
+// generated list, offering exactly the four words the stylesheet and the head script understand.
+// Readable has a suite of its own - test-readable.js - which is where its promises are checked.
 var SETTINGS_BLOCK = HTML.slice(HTML.indexOf('id="settings-panel"'), HTML.indexOf('id="about-panel"'));
 ok('the control is in the Settings panel', SETTINGS_BLOCK.indexOf('id="theme-mode"') !== -1);
 ck('and it is a select', (SETTINGS_BLOCK.match(/<(\w+)[^>]*\bid="theme-mode"/) || [, ''])[1], 'select');
 ok('ahead of the generated list', SETTINGS_BLOCK.indexOf('id="theme-mode"') < SETTINGS_BLOCK.indexOf('id="settings-list"'));
 var THEME_SELECT = SETTINGS_BLOCK.slice(SETTINGS_BLOCK.indexOf('id="theme-mode"'));
 THEME_SELECT = THEME_SELECT.slice(0, THEME_SELECT.indexOf('</select>'));
-ck('offering system, day and night',
-   (THEME_SELECT.match(/value="([a-z]+)"/g) || []).join(' '), 'value="system" value="day" value="night"');
+ck('offering system, day, night and readable',
+   (THEME_SELECT.match(/value="([a-z]+)"/g) || []).join(' '),
+   'value="system" value="day" value="night" value="readable"');
 ok('with a label pointing at it', /<label[^>]*\bfor="theme-mode"/.test(SETTINGS_BLOCK));
 
 // The resolved theme is written to <html>, never the preference itself: the stylesheet has one
@@ -641,6 +679,7 @@ ok('the document declares both schemes', /<meta name="color-scheme" content="lig
 ok('and carries a head script that applies the stored theme before the stylesheet',
    /<script>[\s\S]*stitchmath_view_prefs[\s\S]*dataset\.theme[\s\S]*<\/script>[\s\S]*<link rel="stylesheet"/.test(HEAD));
 ok('the stylesheet has a night block keyed on the resolved theme', /:root\[data-theme="dark"\] \{/.test(CSS));
+ok('and a readable one beside it', /:root\[data-theme="readable"\] \{/.test(CSS));
 var NIGHT = CSS.slice(CSS.indexOf(':root[data-theme="dark"] {'));
 NIGHT = NIGHT.slice(0, NIGHT.indexOf('\n}'));
 ok('which hands native controls to the dark scheme', /color-scheme: dark;/.test(NIGHT));
@@ -794,10 +833,32 @@ print('\n4d-vi. Navigating scrolls once, not twice');
 // is what made the page lurch. Only one survives.
 var appSrc = readFile('app.js');
 var navBody = appSrc.slice(appSrc.indexOf('function navigateTo'), appSrc.indexOf('function closeNavDrawer'));
+// The panel to land on is now either the destination's own or one the caller named - the dashboard's
+// two compiler shortcuts go to Studio but want its matrix. Either way it is still one branch.
 ok('the reset only runs when there is nothing to focus',
-   /if \(target\.focus\) \{[\s\S]*?focusPanel\(target\.focus[\s\S]*?\} else if[\s\S]*?scrollTo\(0, 0\)/.test(navBody));
-no('and never both in a row', /scrollTo\(0, 0\);\s*if \(target\.focus\)/.test(navBody));
+   /if \(landOn\) \{[\s\S]*?focusPanel\(landOn[\s\S]*?\} else if[\s\S]*?scrollTo\(0, 0\)/.test(navBody));
+no('and never both in a row', /scrollTo\(0, 0\);\s*if \(landOn\)/.test(navBody));
+ok('a caller can name the panel to land on', /const landOn = opts\.focus \|\| target\.focus/.test(navBody));
 ok('focusing a panel does not animate', /behavior: 'auto'/.test(appSrc));
+
+// The Compiler tile and the Overview card's "Open compiler" both go to Studio, because compiling is
+// something Studio does rather than a place of its own. Sent there bare they landed at the top of the
+// tab, which is where the Studio tile beside them lands too - three controls, one visible result, and
+// "Open compiler" reading as a link that did nothing. They land ON the matrix now.
+nav('nav-dashboard');
+SCROLLED_TO = null;
+$('link-compiler').fire('click');
+ck('Open compiler goes to Studio', $('view-title').textContent, 'Studio');
+ck('and lands on the validation matrix', SCROLLED_TO, 'matrix-section');
+nav('nav-dashboard');
+SCROLLED_TO = null;
+$('tile-compiler').fire('click');
+ck('so does the Compiler tile', SCROLLED_TO, 'matrix-section');
+// The Studio tile is the one that means "the top of the tab", and it still does.
+nav('nav-dashboard');
+SCROLLED_TO = null;
+$('tile-studio').fire('click');
+ck('the Studio tile still lands at the top', SCROLLED_TO, null);
 no('nothing smooth-scrolls on navigation', /scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\)/.test(appSrc));
 
 print('\n4e. The help panel explains the app that exists');
@@ -1429,7 +1490,10 @@ print('\n13. Stitch dictionary travels with the project');
 ok('the envelope carries a dictionary field', /customStitches: getLocalStorage/.test(readFile('app.js')));
 ok('and persistence validates it only when present',
    /body\.customStitches !== undefined/.test(readFile('persistence.js')));
-ok('there is a button to take one without the pattern', /id="import-stitches-btn"/.test(HTML));
+// The stitches-only door was a second button in Project Management and is gone; the engine behind it
+// stays, so a caller can still take a dictionary without the pattern that came with it.
+ok('the engine to take one without the pattern is still there', /function importStitchesFrom/.test(readFile('app.js')));
+no('but the second button is not', /id="import-stitches-btn"/.test(HTML));
 
 // The conflict rule is the point of the merge: a name that already exists with DIFFERENT numbers is
 // asked about, one that matches is left alone, and a new one is simply added.

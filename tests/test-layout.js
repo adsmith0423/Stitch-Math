@@ -1,10 +1,24 @@
 boot();
 var html = readFile('index.html'), css = readFile('style.css');
 
-print('\n1. Usage instructions under the subtitle');
+print('\n1. Usage instructions under the heading');
 ck('usage-note present', /class="usage-note"/.test(html), true);
 ck('sits inside <header>', html.indexOf('usage-note') < html.indexOf('</header>'), true);
-ck('after the subtitle', html.indexOf('Mathematical Crochet Pattern Validator') < html.indexOf('usage-note'), true);
+// One heading, and it says what the card is for rather than what the app is called - the sidebar
+// brand is two inches away and already carries the name.
+ck('the heading is what the card does',
+   /<h1>.*>Mathematical Crochet Pattern Validator<\/h1>/.test(html), true);
+// The one heading outside a .panel, so it carries the same icon disc the panel headings do.
+ck('and it wears a heading icon like the panels',
+   /<h1><svg class="ic h-ic tint-[a-z]+"[^>]*><use href="#ic-math">/.test(html), true);
+ck('which names a symbol that exists', /<symbol id="ic-math"/.test(html), true);
+ck('and it does not say the name the sidebar already says', /<h1>[^<]*Stitch Math/.test(html), false);
+ck('no separate subtitle paragraph left behind',
+   /<p>Mathematical Crochet Pattern Validator<\/p>/.test(html), false);
+ck('after the heading', html.indexOf('Mathematical Crochet Pattern Validator') < html.indexOf('usage-note'), true);
+// The card is the measure: a cap left a third of the box empty beside every line.
+ck('the note is not capped short of the card',
+   /\.usage-note \{[^}]*max-width/.test(css), false);
 var note = html.match(/<p class="usage-note">([\s\S]*?)<\/p>/)[1].replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
 var sentences = note.split(/\.\s+|\.$/).filter(function(s){return s.trim().length>0;});
 // Rewritten for a sixth-grade reading level, so the count went up and the length came down. Short
@@ -68,7 +82,21 @@ ck('heading gap uses the token', /\.panel h2 \{[^}]*margin-bottom: var\(--head-g
 print('\n7. One rule per thing, not two kept in sync');
 ck('panel and card share a rule', /\.panel, \.panel-card \{/.test(css), true);
 ck('no separate .panel-card block', /^\.panel-card \{/m.test(css), false);
-ck('h2 and panel-header h3 share a rule', /\.panel h2, \.panel-header h3 \{/.test(css), true);
+// Three heading shapes, one look: the plain panel h2, the gauge card's .panel-header h3, and the h3
+// in a .panel-title-row with a control opposite it. Type in one rule, hairline in the next - the
+// matrix panel had neither and was the one panel on the page with no coral rule under its heading.
+ck('all three headings share the type rule',
+   /\.panel h2, \.panel-header h3, \.panel-title-row h3 \{/.test(css), true);
+// The intro card's h1 is the fourth. It is the one heading in the app outside a .panel, and it takes
+// the same rule rather than a copy of it.
+var HAIRLINE = (css.match(/([^{}\n][^{}]*)\{[^}]*border-bottom: 1\.5px solid var\(--coral\);\s*padding-bottom: var\(--head-rule-gap\)/) || [, ''])[1];
+['.panel h2', '.panel-header h3', '.panel-title-row', '#intro-header h1'].forEach(function (sel) {
+    ck(sel + ' carries the hairline', HAIRLINE.indexOf(sel) !== -1, true);
+});
+// On the ROW, not on its h3: a rule that stopped at the end of the words would leave the button
+// beside them hanging past its end.
+ck('the row is what the rule hangs off, not the heading inside it',
+   /\.panel-title-row h3 \{[^}]*border-bottom/.test(css), false);
 // The .panel-header h3 rule used to be written out twice in a row.
 var dupes = (function () {
     // Media-query bodies are stripped first: a selector restated inside one is a responsive override, not

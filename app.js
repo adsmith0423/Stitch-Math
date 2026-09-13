@@ -224,20 +224,21 @@
 
     /* The build, in one place. Shown in the dashboard strip and stamped into every exported project, so
        a bug report arrives with the version that produced it instead of a guess. Bump it on release. */
-    const APP_VERSION = '1.1.0';
+    const APP_VERSION = '1.2.0';
 
     /**
      * The last line of defence. Without one, a throw anywhere in a render left the page half-drawn with
      * no indication anything had gone wrong - the worst possible failure for a tool whose whole claim is
      * that it checks arithmetic you cannot check by eye. It does not try to recover: it says plainly
      * that a result on screen may be wrong, names the build, and points at the recovery the app already
-     * has. Autosave has run by then, so Recover Previous Version is a real offer rather than a hope.
+     * has. Autosave has run by then, so Recent recovery points is a real offer rather than a hope.
      */
     function reportFatal(what, detail) {
         const host = document.getElementById('fatal-error');
         if (!host) return;
         host.textContent = `Something went wrong ${what}. A figure on this page may be wrong or missing `
-            + `- reload, and use Recover Previous Version if your work is not as you left it. `
+            + `- reload, and use Recent recovery points on the Patterns tab if your work is not as `
+            + `you left it. `
             + `(Stitch Math ${APP_VERSION}: ${detail})`;
         host.classList.remove('hidden');
     }
@@ -265,8 +266,8 @@
             "custom-stitch-table", "custom-stitch-body", "stitch-feedback", "custom-stitch-list",
             "color-form", "color-code", "color-name", "color-table", "color-body", "color-feedback",
             "delete-last-btn", "clear-all-btn", "export-txt-btn", "export-pdf-btn", "export-markup-btn",
-            "save-status", "export-project-btn", "import-project-btn", "import-stitches-btn", "import-file",
-            "recover-btn", "recover-panel", "recover-select", "recover-restore-btn",
+            "save-status", "export-project-btn", "import-project-btn", "import-file",
+            "recover-panel", "recover-select", "recover-restore-btn",
             ...META_FIELD_IDS,
             "print-pattern-title", "print-metadata", "print-stitches-used", "print-stitches-used-section",
             "print-custom-dictionary", "print-custom-dictionary-section", "print-table-body",
@@ -322,7 +323,7 @@
             "construction-con-raglan", "construction-con-setIn", "construction-con-circular",
             "construction-yoke-fields", "construction-yoke-gauge", "construction-yoke-result",
             "construction-impact-panel", "construction-point-picks", "construction-impact-result",
-            "view-title", "view-subtitle", "btn-new-project",
+            "view-title", "view-subtitle", "btn-new-project", "btn-save-project",
             "points-total", "points-bar", "points-next", "points-note",
             "xp-title", "xp-level", "xp-bar", "xp-count", "streak-count", "streak-note",
             "roll-reel", "roll-stitch", "roll-term", "roll-tier", "roll-reward",
@@ -466,18 +467,17 @@
         UI["load-btn"].addEventListener("click", handleLoadProject);
         UI["delete-project-btn"].addEventListener("click", handleDeleteProject);
         UI["new-file-btn"].addEventListener("click", handleNewFile);
-        UI["recover-btn"]?.addEventListener("click", handleRecoverClick);
         UI["export-project-btn"]?.addEventListener("click", handleExportProject);
         // The button is the control; the file input is hidden and only ever opened through it.
         UI["import-project-btn"]?.addEventListener("click", () => {
             importMode = 'project';
             UI["import-file"]?.click();
         });
-        UI["import-stitches-btn"]?.addEventListener("click", () => {
-            importMode = 'stitches';
-            UI["import-file"]?.click();
-        });
         UI["import-file"]?.addEventListener("change", handleImportFile);
+        // Typing a different name IS opening a different project as far as the ring is concerned:
+        // projectIdFor reads this field. On change rather than input - one redraw per name, not one
+        // per keystroke, and each redraw is a store read.
+        UI["project-name"]?.addEventListener("change", refreshRecoverPanel);
         UI["export-txt-btn"].addEventListener("click", handleExportText);
         UI["export-pdf-btn"].addEventListener("click", handleExportPdf);
         UI["export-markup-btn"]?.addEventListener("click", handleExportMarkup);
@@ -653,7 +653,7 @@
         // Absent means never chosen, which is on. Written as a typeof test rather than `|| true`
         // so an explicit false is not read back as a missing value.
         if (typeof saved.practiceMode === "boolean") state.viewPrefs.practiceMode = saved.practiceMode;
-        // Anything but the three known words is 'system' - a hand-edited store cannot pick a theme
+        // Anything but the four known words is 'system' - a hand-edited store cannot pick a theme
         // the stylesheet does not have.
         if (THEME_MODES.indexOf(saved.theme) >= 0) state.viewPrefs.theme = saved.theme;
 
@@ -668,17 +668,27 @@
         applyTheme();
     }
 
-    const THEME_MODES = ['system', 'day', 'night'];
+    const THEME_MODES = ['system', 'day', 'night', 'readable'];
+
+    /** The browser chrome around an installed app, per resolved theme. It follows the sidebar. */
+    const THEME_CHROME = { light: '#B9EBDC', dark: '#171A2C', readable: '#F5F0E2' };
 
     /**
-     * Day or night, on the document. The head script in index.html made the same decision before
-     * the stylesheet loaded, from the same stored word; this is the one that runs when the word
-     * CHANGES - from the Settings control, or from the OS while the preference is 'system'.
+     * The theme, on the document. The head script in index.html made the same decision before the
+     * stylesheet loaded, from the same stored word; this is the one that runs when the word CHANGES
+     * - from the Settings control, or from the OS while the preference is 'system'.
      *
-     * The stylesheet is keyed on a resolved 'dark' | 'light', never on the preference itself, so
-     * 'system' is resolved here and the CSS carries one night block rather than one for each way
-     * of arriving at night. Everything is guarded because the headless stub has neither a
-     * documentElement nor matchMedia, and neither is a reason for a preference not to save.
+     * The stylesheet is keyed on a RESOLVED theme, never on the preference itself, so 'system' is
+     * resolved here and the CSS carries one block per look rather than one per way of arriving at
+     * it. Three resolved values now: light, dark, readable.
+     *
+     * Readable is deliberately not reachable from 'system'. No OS signal means "give me the most
+     * legible page you have" - prefers-contrast: more is the closest and says something narrower,
+     * and inferring it from reduced-motion or a large default font size would be guessing at
+     * something the reader can simply be asked. It is a choice, so it is only ever chosen.
+     *
+     * Everything is guarded because the headless stub has neither a documentElement nor matchMedia,
+     * and neither is a reason for a preference not to save.
      */
     function applyTheme() {
         const picked = UI['theme-mode']?.value;
@@ -688,12 +698,11 @@
 
         const scheme = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)');
         const dark = mode === 'night' || (mode === 'system' && !!(scheme && scheme.matches));
+        const resolved = mode === 'readable' ? 'readable' : (dark ? 'dark' : 'light');
         const root = document.documentElement;
-        if (root && root.dataset) root.dataset.theme = dark ? 'dark' : 'light';
-        // The browser chrome around an installed app follows the sidebar, which is the darkest thing
-        // on the page in either mode.
+        if (root && root.dataset) root.dataset.theme = resolved;
         const chrome = typeof document.querySelector === 'function' && document.querySelector('meta[name="theme-color"]');
-        if (chrome) chrome.setAttribute('content', dark ? '#171A2C' : '#B9EBDC');
+        if (chrome) chrome.setAttribute('content', THEME_CHROME[resolved]);
     }
 
     function saveViewPrefs() {
@@ -1709,6 +1718,10 @@
         const readable = persistence.fromLegacySave(name, project);
         if (!readable.ok) { notify(readable.error.message, 'error'); return; }
         applyProjectRecord(name, project);
+        // The ring is per project, and the panel is on screen the whole time now - so opening a
+        // different file has to redraw it, or it goes on offering the last file's points. Not left to
+        // recordLoadedProject below: that only snapshots when the interval is up.
+        refreshRecoverPanel();
     }
 
     /**
@@ -2124,9 +2137,11 @@
             || (now - state.autosave.lastSnapshotAt >= persistence.SNAPSHOT_MIN_INTERVAL_MS ? 'auto-save' : null);
         if (!due) return;
         state.autosave.lastSnapshotAt = now;
-        // No callback: a snapshot that does not land costs a recovery point, not the save. The current
-        // record above is the one the status line speaks for.
-        projectStore.snapshot(env, due, () => {});
+        // No failure handling: a snapshot that does not land costs a recovery point, not the save. The
+        // current record above is the one the status line speaks for. The callback only redraws the
+        // panel, which is on screen the whole time now and would otherwise go stale the moment the ring
+        // took a point.
+        projectStore.snapshot(env, due, () => { try { refreshRecoverPanel(); } catch (err) { /* see beginPersistence */ } });
     }
 
     /**
@@ -2145,7 +2160,10 @@
         try {
             const env = currentEnvelope();
             state.autosave.lastSnapshotAt = Date.now();
-            projectStore.snapshot(env, reason, () => { try { done(); } catch (err) { /* not ours */ } });
+            projectStore.snapshot(env, reason, () => {
+                try { refreshRecoverPanel(); } catch (err) { /* see beginPersistence */ }
+                try { done(); } catch (err) { /* not ours */ }
+            });
         } catch (err) {
             done();
         }
@@ -2213,11 +2231,12 @@
             state.autosave.failed = false;
             state.recovery.offer = null;
             state.recovery.snapshots = [];
-            // A new session, so the ring is free to take its first snapshot again, and the panel starts
-            // closed. Both are set here rather than left to the markup, which the headless stub cannot
-            // read - and a panel that reopened itself on boot would be an offer nobody made.
+            // A new session, so the ring is free to take its first snapshot again. The panel is drawn
+            // straightaway rather than waiting to be asked for: there is no button to ask with, and a
+            // fire escape nobody can see is not one. It draws its empty state until there is anything
+            // in the ring, and beginRecoveryProbe redraws it if it finds something to offer.
             state.autosave.lastSnapshotAt = 0;
-            UI['recover-panel']?.classList.add('hidden');
+            refreshRecoverPanel();
             renderSaveStatus('on');
             hookSessionFlush();
             beginRecoveryProbe();
@@ -2285,6 +2304,10 @@
         }
     }
 
+    /** The dropdown entry that is the boot offer rather than a snapshot. A string no IndexedDB key
+     *  can be, so it cannot collide with one. */
+    const OFFER_VALUE = 'offer';
+
     /** What each reason means to someone who did not write it. */
     const SNAPSHOT_LABELS = {
         'auto-save': 'autosaved',
@@ -2293,13 +2316,6 @@
         'pre-restore': 'before a restore',
         'pre-destructive-operation': 'before the page was cleared'
     };
-
-    function handleRecoverClick() {
-        const panel = UI['recover-panel'];
-        if (!panel) return;
-        if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
-        refreshRecoverPanel();
-    }
 
     function refreshRecoverPanel() {
         if (!projectStore) { state.recovery.snapshots = []; renderRecoverPanel(); return; }
@@ -2321,9 +2337,11 @@
      * <select> with the time and the reason on each entry. A snapshot written before the digest
      * existed has none, and is kept - an entry that might differ beats one that might be lost.
      *
-     * The offer - unsaved work found on boot - keeps its own row and button above the dropdown: it
-     * is a different question ("do you want this back?") from "which of these?", and it is the one
-     * the panel opens itself to ask.
+     * The offer - unsaved work found on boot - is the newest entry IN that dropdown, and the line
+     * above it only says what happened. It used to carry a Restore of its own, which put two buttons
+     * in a panel that exists to ask one question; the top one also stretched the width of the panel,
+     * so the smaller, more dangerous choice looked like the main one. Preselected, so pressing the
+     * single Restore does exactly what the removed button did.
      *
      * "Recovery points", never "history" and never "versions". The ring lives in storage a browser may
      * clear at any moment, does not travel between machines and does not survive a cleared profile.
@@ -2339,6 +2357,8 @@
         panel.replaceChildren();
         panel.appendChild(elem('h3', 'recover-title', 'Recent recovery points'));
 
+        // What happened, in a sentence. No control on this line: the offer is restored from the
+        // dropdown below like everything else.
         const offer = state.recovery.offer;
         if (offer) {
             const row = elem('div', 'recover-offer');
@@ -2346,22 +2366,29 @@
             row.appendChild(elem('span', 'recover-when',
                 (offer.crashed ? 'Stitch Math closed unexpectedly. ' : '')
                 + `Unsaved work${named} from ${relativeWhen(offer.envelope.savedAt)}`));
-            row.appendChild(button('btn-secondary', 'Restore', 'recover-offer-btn',
-                () => restoreOffer()));
             panel.appendChild(row);
         }
 
         const rows = (state.recovery.snapshots || []).filter((snapshot, i, all) =>
             !snapshot.digest || i === 0 || snapshot.digest !== all[i - 1].digest);
-        if (rows.length) {
+        if (rows.length || offer) {
             const pick = elem('div', 'recover-pick');
-            const label = elem('label', 'recover-pick-label', 'Recovery point');
-            label.htmlFor = 'recover-select';
             const select = elem('select', null, null, 'recover-select');
+            // No visible label: the panel is headed "Recent recovery points" and the dropdown holds
+            // nothing else, so a "Recovery point" caption over it said the heading again. The name a
+            // screen reader needs is still there - it just is not drawn twice.
+            select.setAttribute('aria-label', 'Recovery point');
             UI['recover-select'] = select;
             // Ids are looked up from the option's value rather than carried on it: an IndexedDB key
-            // is a number, and a <select> only ever hands back a string.
+            // is a number, and a <select> only ever hands back a string. OFFER_VALUE cannot collide
+            // with one: it is not a number.
             const byValue = {};
+            if (offer) {
+                const option = elem('option', null,
+                    `Unsaved work from your last session (${relativeWhen(offer.envelope.savedAt)})`);
+                option.value = OFFER_VALUE;
+                select.appendChild(option);
+            }
             rows.forEach(snapshot => {
                 const value = String(snapshot.id);
                 byValue[value] = snapshot.id;
@@ -2370,12 +2397,15 @@
                 option.value = value;
                 select.appendChild(option);
             });
-            select.value = String(rows[0].id);
+            // The offer first when there is one: it is the newest thing here, and it is what the
+            // panel drew itself to ask about.
+            select.value = offer ? OFFER_VALUE : String(rows[0].id);
             const restore = button('btn-secondary', 'Restore', 'recover-restore-btn', () => {
+                if (select.value === OFFER_VALUE) { restoreOffer(); return; }
                 const id = byValue[select.value];
                 if (id !== undefined) restoreSnapshot(id);
             });
-            pick.append(label, select, restore);
+            pick.append(select, restore);
             panel.appendChild(pick);
         }
 
@@ -2386,7 +2416,6 @@
             panel.appendChild(elem('p', 'recover-note',
                 'Recovery points are temporary. Use Export Project to keep a copy you own.'));
         }
-        panel.classList.remove('hidden');
     }
 
     /**
@@ -2496,10 +2525,10 @@
      *  point is to catch a video or a disk image chosen by mistake, not to police a big pattern. */
     const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
 
-    /* Which question the file picker is answering. One <input type="file"> serves both buttons, so the
-       intention has to be recorded before it opens. Reset to 'project' after every read, so a picker
-       reopened by any other route cannot inherit the last button pressed and quietly do the narrower
-       thing to a file the designer meant to open whole. */
+    /* Which question the file picker is answering. Import Project is the only button that opens it
+       now - the stitches-only door was removed from the panel - but the mode is still recorded before
+       the picker opens and reset to 'project' after every read, so importStitchesFrom stays reachable
+       for a caller that wants it and no picker can inherit a mode it did not set. */
     let importMode = 'project';
 
     /** Four lines and a FileReader, so the decision below can be tested without one. */
@@ -2554,7 +2583,7 @@
                     applyEnvelope(env);
                     notify(`Imported "${label}".`);
                 } catch (err) {
-                    notify('That project could not be opened. Your previous work is in Recover Previous Version.', 'error');
+                    notify('That project could not be opened. Your previous work is in Recent recovery points.', 'error');
                 }
             });
         }, { confirmLabel: 'Import' });
@@ -9083,10 +9112,9 @@
         // that cannot be clicked in a test is a control whose behaviour is unverified. Routing
         // across five views is the whole point of this rail, so it has to be clickable in a test.
         // The rail element itself spans the topbar so it lands on its own line; the visible pill is
-        // an inner track that hugs its five stages. Two elements because one cannot do both - a flex
-        // item's main size comes from flex-basis, so the 100% that forces the line break also
-        // defeats width: fit-content, and the pill stretches to the full width with a long empty
-        // tail beside it.
+        // an inner track that spans it in turn, with the .stage-link threads taking up the slack so
+        // the five stages spread from edge to edge. Two elements because the outer one's flex-basis
+        // is what buys the line break and the inner one is what can then be styled as a pill.
         rail.replaceChildren();
         const track = elem('div', 'stage-track');
         rail.appendChild(track);
@@ -9184,8 +9212,12 @@
         // inherits wherever the previous view was scrolled to and can land on blank space. A view WITH
         // one goes straight there - resetting to the top and then animating down is two scrolls for one
         // click, which is the shake this used to have.
-        if (target.focus) {
-            focusPanel(target.focus, target.open);
+        // opts.focus is a caller asking for a panel the destination does not name by itself - the
+        // dashboard's two compiler shortcuts, which go to Studio but want its matrix rather than its
+        // top. It goes through here rather than being scrolled to afterwards so it stays ONE scroll.
+        const landOn = opts.focus || target.focus;
+        if (landOn) {
+            focusPanel(landOn, opts.focus ? null : target.open);
         } else if (typeof window.scrollTo === 'function') {
             window.scrollTo(0, 0);
         }
@@ -9238,20 +9270,32 @@
         });
         UI['nav-scrim']?.addEventListener('click', closeNavDrawer);
 
-        // Summary tiles and card links are shortcuts to the same destinations. The Compiler tile and
-        // Overview card lead to Studio: compiling is something Studio does, not a place of its own.
+        // Summary tiles and card links are shortcuts to the same destinations. Compiling is something
+        // Studio does rather than a place of its own, so the Compiler tile and the Overview card's
+        // "Open compiler" both lead there - but they land ON the compiler, not at the top of the tab.
+        // Sent to Studio bare they were indistinguishable from the Studio tile beside them: three
+        // controls with three different labels and one visible result, which is what made "Open
+        // compiler" read as a link that did not work. A shortcut is either a nav id or a pair of one
+        // and the panel to land on; focusPanel is the same scroll navigateTo does for a nav target
+        // that declares one, so nothing here scrolls twice.
         const SHORTCUTS = {
-            'tile-patterns': 'nav-patterns', 'tile-compiler': 'nav-studio',
+            'tile-patterns': 'nav-patterns',
+            'tile-compiler': { nav: 'nav-studio', focus: 'matrix-section' },
             'tile-sizer': 'nav-sizer', 'tile-studio': 'nav-studio',
             'tile-testers': 'nav-testers', 'tile-analytics': 'nav-analytics',
-            'link-recent': 'nav-patterns', 'link-compiler': 'nav-studio',
+            'link-recent': 'nav-patterns',
+            'link-compiler': { nav: 'nav-studio', focus: 'matrix-section' },
             'link-testers': 'nav-testers', 'link-analytics': 'nav-analytics',
             'link-sizes': 'nav-sizer',
             'link-gauges': 'nav-gauge', 'dash-export-package': 'nav-publish',
             'dash-export-open': 'nav-publish'
         };
         Object.keys(SHORTCUTS).forEach(id => {
-            UI[id]?.addEventListener('click', () => navigateTo(SHORTCUTS[id]));
+            UI[id]?.addEventListener('click', () => {
+                const to = SHORTCUTS[id];
+                if (typeof to === 'string') navigateTo(to);
+                else navigateTo(to.nav, { focus: to.focus });
+            });
         });
 
         // Export options forward to the real controls rather than duplicating them, so there is one
@@ -9273,6 +9317,11 @@
         });
 
         UI['btn-new-project']?.addEventListener('click', handleNewFile);
+        // Save, from anywhere. The same function #save-btn runs, not a second implementation and not
+        // a synthesised click on it: handleSaveProject reads the name and the pattern out of the page
+        // itself, so it does not care which button asked. It says its own no when there is nothing to
+        // save or nothing to call it.
+        UI['btn-save-project']?.addEventListener('click', handleSaveProject);
         UI['dash-export-txt']?.addEventListener('click', handleExportText);
         UI['dash-export-pdf']?.addEventListener('click', handleExportPdf);
         UI['dash-export-history']?.addEventListener('click', exportGaugeHistory);
@@ -9870,6 +9919,18 @@
         { id: 'inc-every-third', tier: 1, available: 18,
           instruction: '[2 sc, inc] * 6',
           teaches: 'The repeat grew but the number of increases did not, so the round still gains six.' },
+        { id: 'ring-nine', tier: 1, available: 0,
+          instruction: '9 sc in magic ring',
+          teaches: 'A ring makes whatever it is told to make - six is a convention, not a rule.' },
+        { id: 'slst-round', tier: 1, available: 14,
+          instruction: 'sl st in each st around',
+          teaches: 'A slip stitch is still a stitch: it works one into one and leaves the count alone.' },
+        { id: 'dec-every-third', tier: 1, available: 15,
+          instruction: '[sc, dec] * 5',
+          teaches: 'Each repeat takes three stitches and gives back two, so a third of the round goes.' },
+        { id: 'inc-four-in-sixteen', tier: 1, available: 16,
+          instruction: '[3 sc, inc] * 4',
+          teaches: 'Four repeats, four increases. Read the number after the bracket, not the stitches inside it.' },
         { id: 'inc-every-fourth', tier: 2, available: 24,
           instruction: '[3 sc, inc] * 6',
           teaches: 'A flat circle adds the same six every round; only the plain run between them lengthens.' },
@@ -9885,6 +9946,18 @@
         { id: 'dec-eighth', tier: 2, available: 48,
           instruction: '[6 sc, dec] * 6',
           teaches: 'Closing a sphere is the increase rounds run backwards, one repeat at a time.' },
+        { id: 'flat-foundation', tier: 2, available: 0,
+          instruction: 'ch 20, sc in 2nd ch from hook and in each ch across',
+          teaches: 'A flat row starts one short: the first chain is the turn, and nothing is worked into it.' },
+        { id: 'dec-all-eleven', tier: 2, available: 22,
+          instruction: '[dec] * 11',
+          teaches: 'Nothing but decreases takes two stitches for every one it leaves, so the row halves.' },
+        { id: 'inc-eleven', tier: 2, available: 22,
+          instruction: '[sc, inc] * 11',
+          teaches: 'Eleven repeats and eleven increases on an odd round - the count does not have to be even.' },
+        { id: 'dec-seven-run', tier: 2, available: 45,
+          instruction: '[7 sc, dec] * 5',
+          teaches: 'A long plain run between decreases changes nothing: five repeats still lose five.' },
         { id: 'dec-nine', tier: 3, available: 45,
           instruction: '[3 sc, dec] * 9',
           teaches: 'Nine repeats is nine decreases. The repeat count is what sets the change, not the stitch count.' },
@@ -9903,6 +9976,18 @@
         { id: 'inc-double', tier: 3, available: 18,
           instruction: '[sc in next st, inc] * 9',
           teaches: 'Nine increases in a round of eighteen is half the stitches doubled, so it gains nine.' },
+        { id: 'dc2tog-thirteen', tier: 3, available: 26,
+          instruction: '[dc2tog] * 13',
+          teaches: 'Height changes nothing about a decrease: thirteen of them leave thirteen stitches.' },
+        { id: 'sc3tog-five', tier: 3, available: 35,
+          instruction: '[sc in next 4 sts, sc3tog] * 5',
+          teaches: 'sc3tog eats three stitches and leaves one, so each repeat spends seven and makes five.' },
+        { id: 'post-rib', tier: 3, available: 26,
+          instruction: '[fpdc, bpdc] * 13',
+          teaches: 'Ribbing is worked around the posts rather than into the tops, and it still counts one for one.' },
+        { id: 'three-into-one', tier: 3, available: 16,
+          instruction: '[sc in next st, 3 sc in next st] * 8',
+          teaches: 'Three into one stitch adds two, not three - one of them replaces the stitch it stands in.' },
         { id: 'inc-five', tier: 4, available: 30,
           instruction: '[5 sc, inc] * 5',
           teaches: 'Five repeats of six stitches uses all thirty and returns thirty-five - the repeat count rules.' },
@@ -9917,7 +10002,22 @@
           teaches: 'A skipped stitch is consumed without being worked, and the chain beside it fills the gap.' },
         { id: 'dec-eight-run', tier: 4, available: 40,
           instruction: '[8 sc, dec] * 4',
-          teaches: 'A long plain run hides how little is happening: four repeats, four stitches lost.' }
+          teaches: 'A long plain run hides how little is happening: four repeats, four stitches lost.' },
+        { id: 'popcorn-alt', tier: 4, available: 28,
+          instruction: '[popcorn in next st, sc in next st] * 14',
+          teaches: 'A popcorn is several stitches gathered into one, and one is what it counts as.' },
+        { id: 'spike-run', tier: 4, available: 20,
+          instruction: '[spike in next st, sc in next 3 sts] * 5',
+          teaches: 'A spike reaches down into an earlier row but still uses the one stitch below it.' },
+        { id: 'dec-five-run', tier: 4, available: 56,
+          instruction: '[sc in next 5 sts, dec] * 8',
+          teaches: 'Eight repeats of seven stitches spends all fifty-six and returns forty-eight.' },
+        { id: 'inc-eleven-run', tier: 4, available: 48,
+          instruction: '[11 sc, inc] * 4',
+          teaches: 'Twelve worked, thirteen made, four times over - the far end of a flat circle.' },
+        { id: 'dtr-inc-seven', tier: 4, available: 14,
+          instruction: '[dtr in next st, 2 dtr in next st] * 7',
+          teaches: 'The tallest stitch in the book increases exactly like the shortest one does.' }
     ];
 
     /* A correct answer is worth about what a swatch is. Deliberately modest: the reason to do this is
@@ -9937,14 +10037,132 @@
         return Math.max(1, Math.min(PRACTICE_TIERS, Math.floor(share * PRACTICE_TIERS) + 1));
     }
 
-    /** The day's row, decided by the date alone within the tiers open to this designer - so the same
-     *  day gives the same row on every device, and a reload is not a second draw. Same reason
-     *  drawStitch seeds off the date. */
+    /** Whole days since the epoch, from a YYYY-MM-DD stamp. The deck below is dealt against this
+     *  rather than against a hash, so consecutive days are consecutive slots. */
+    function dayNumber(stamp) {
+        return Math.floor(Date.parse(stamp + 'T00:00:00Z') / 86400000);
+    }
+
+    /** The answer to a row, memoised. practiceAnswer goes to the engine every time by design; this
+     *  is the same figure, kept because the deal below asks for every row's answer at once and the
+     *  table does not change while the page is open. Keyed by id, so a row edited in the source is a
+     *  different key the next time the file loads. */
+    const practiceAnswerCache = {};
+    function practiceAnswerOf(row) {
+        if (practiceAnswerCache[row.id] === undefined) {
+            practiceAnswerCache[row.id] = practiceAnswer(row);
+        }
+        return practiceAnswerCache[row.id];
+    }
+
+    /**
+     * The day's row: a dealt deck, not a fresh coin toss every morning.
+     *
+     * It used to be `pool[hash(date) % pool.length]`, which is memoryless - nothing stopped two days
+     * running from drawing the same row, and at tier 1 the pool is six rows, so they often did. Worse,
+     * rows that are NOT the same can have the same answer: at tier 1 both "sc in each st around" over
+     * eighteen and "[1 sc, inc] * 6" over twelve come to 18, and a run of four days all answering 18
+     * is what this replaces. A question whose answer you can guess from yesterday is not a question.
+     *
+     * So: shuffle the pool once per cycle of pool.length days and deal one card a day. Every row comes
+     * up exactly once per cycle, and two passes fix the two seams a shuffle alone leaves - a deck whose
+     * first card repeats the last deck's, and neighbours that differ as rows but agree as answers.
+     *
+     * Still decided by the date and the designer's own ceiling alone, so the same day gives the same
+     * row on every device and a reload is not a second draw. Same guarantee it always had; nothing
+     * here reads or writes what was actually served.
+     */
     function practiceDraw(progress) {
         const ceiling = practiceCeiling(progress);
         const open = PRACTICE_ROWS.filter(row => row.tier <= ceiling);
         const pool = open.length ? open : PRACTICE_ROWS;
-        return pool[hashString(today() + '#practice') % pool.length];
+        if (pool.length < 2) return pool[0];
+
+        const day = dayNumber(today());
+        const size = pool.length;
+        // Math.floor, not a truncation: day is positive for every date this app will see, but a
+        // negative cycle index would still deal a valid deck rather than reversing the arithmetic.
+        const cycle = Math.floor(day / size);
+        const slot = ((day % size) + size) % size;
+        return practiceDeck(pool, cycle)[slot];
+    }
+
+    /**
+     * One cycle's deck: shuffle, then DEAL - lay the cards out one at a time, never putting an answer
+     * next to the same answer.
+     *
+     * Two earlier attempts are worth naming, because both look right and neither is.
+     *
+     * A repair pass over a finished shuffle cannot work: a swap that fixes a collision can only look
+     * forward, so a collision landing on the LAST card has nothing left to swap with and survives.
+     *
+     * Dealing "the first card that is not the answer before it" cannot work either, for the mirror
+     * reason: it spends the answers that are easy to place and strands the duplicates. Tier 1 holds
+     * two rows answering 18 and two answering 12; leave one 18 to the end and the card before it is
+     * whatever was left, which is the other 18 half the time.
+     *
+     * So the rule is "the first card carrying the answer with the MOST copies still to place, that is
+     * not the answer before it" - spend the crowded answers while there is still room to separate
+     * them. That is the standard reorganise-a-string greedy, and it finds a valid layout whenever one
+     * exists. The fallback takes whatever is left rather than looping, for a pool where none does.
+     *
+     * Deterministic in (pool, cycle) and nothing else, which is what keeps two devices in step.
+     */
+    function practiceDeck(pool, cycle) {
+        let answerOf;
+        try {
+            // Warm the cache before anything depends on it, so a missing engine fails here - where a
+            // plain shuffle is still a decent deck - rather than halfway through the deal.
+            pool.forEach(practiceAnswerOf);
+            answerOf = practiceAnswerOf;
+        } catch (err) {
+            return practiceShuffle(pool, cycle);   // an unrepeated row still beats a repeated one
+        }
+
+        // What the day before this deck answered, so the seam between cycles is dealt like any other
+        // position. The previous deck is laid out without ITS predecessor - carrying the chain back
+        // would recurse a cycle at a time to the epoch - which makes its first card occasionally not
+        // the one that cycle really served. Its LAST card, the only one read here, is unaffected in
+        // every arrangement this pool produces; and were it ever wrong, being wrong can only avoid a
+        // collision that was not there.
+        const before = practiceLay(pool, cycle - 1, null, answerOf);
+        const previous = before.length ? answerOf(before[before.length - 1]) : null;
+        return practiceLay(pool, cycle, previous, answerOf);
+    }
+
+    /** The deal itself. `previous` is the answer this deck must not open with, or null. */
+    function practiceLay(pool, cycle, previous, answerOf) {
+        const remaining = practiceShuffle(pool, cycle);
+        const dealt = [];
+        while (remaining.length) {
+            // How many of each answer are still to place, recounted every card - cheap at this size,
+            // and the counts are what the choice below turns on.
+            const left = {};
+            remaining.forEach(row => { left[answerOf(row)] = (left[answerOf(row)] || 0) + 1; });
+            let pick = -1;
+            for (let i = 0; i < remaining.length; i++) {
+                if (answerOf(remaining[i]) === previous) continue;
+                if (pick === -1 || left[answerOf(remaining[i])] > left[answerOf(remaining[pick])]) pick = i;
+            }
+            if (pick === -1) pick = 0;
+            previous = answerOf(remaining[pick]);
+            dealt.push(remaining.splice(pick, 1)[0]);
+        }
+        return dealt;
+    }
+
+    /** Fisher-Yates over a copy, driven by a small LCG re-seeded from the cycle number. hashString
+     *  alone gives one number and the shuffle needs pool.length of them; stepping the LCG is how one
+     *  seed becomes a sequence. */
+    function practiceShuffle(pool, cycle) {
+        const deck = pool.slice();
+        let seed = hashString(cycle + '#practice') || 1;
+        const next = () => (seed = (Math.imul(seed, 1103515245) + 12345) >>> 0);
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = next() % (i + 1);
+            const swap = deck[i]; deck[i] = deck[j]; deck[j] = swap;
+        }
+        return deck;
     }
 
     function practiceRowById(id) {
@@ -10074,9 +10292,13 @@
         const done = progress.practice.answered;
 
         setText('practice-read-state', done ? 'Done today' : 'Not done today');
+        // Nothing in hand used to mean a magic ring, because every row starting from nothing was one.
+        // flat-foundation is not: it starts from a chain, and telling a beginner they are working into
+        // a ring when the row in front of them says "ch 20" teaches the wrong thing about both.
         setText('practice-available', row.available
             ? `You have ${row.available} stitches.`
-            : 'You are starting from a magic ring, with nothing to work into yet.');
+            : `You are starting from ${/magic ring/.test(row.instruction) ? 'a magic ring' : 'a foundation chain'}`
+              + ', with nothing to work into yet.');
         setText('practice-instruction', row.instruction);
 
         const box = UI['practice-answer'];

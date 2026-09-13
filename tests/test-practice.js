@@ -32,6 +32,14 @@ function answer(value) {
     $('practice-answer').value = String(value);
     $('practice-check').fire('click');
 }
+/** What the panel should say about what is in hand. Nothing in hand used to mean a magic ring,
+ *  because every row starting from nothing was one; flat-foundation starts from a chain instead. */
+function inHand(row) {
+    if (row.available) return 'You have ' + row.available + ' stitches.';
+    return 'You are starting from '
+        + (/magic ring/.test(row.instruction) ? 'a magic ring' : 'a foundation chain')
+        + ', with nothing to work into yet.';
+}
 /** The rows, read back out of app.js. There is no export for them and there should not be - this is
  *  a curated table, not an interface - so the suite parses the source the way the linter suites do. */
 function practiceRows() {
@@ -50,10 +58,39 @@ function practiceRows() {
 var ROWS = practiceRows();
 
 print('\n1. The table was read, and it is worth reading');
-ok('at least twenty rows are offered', ROWS.length >= 20);
+ok('at least thirty rows are offered, there are ' + ROWS.length, ROWS.length >= 30);
 ok('and they span every tier', [1, 2, 3, 4].every(function (tier) {
     return ROWS.some(function (row) { return row.tier === tier; });
 }));
+
+print('\n1b. The answers are varied, tier by tier');
+/*
+ * The point of the table is that you cannot guess. A pool where four rows out of six come to the
+ * same figure teaches the figure, not the reading - which is how tier 1 spent a run of days all
+ * answering 18. So each tier is held to a share of DISTINCT answers, not just to a row count: the
+ * ceiling opens tiers cumulatively, so tier N is judged on everything at or below it.
+ */
+function answersUpTo(tier) {
+    return ROWS.filter(function (r) { return r.tier <= tier; })
+        .map(function (r) { return E.evaluateStep(0, r.available, r.instruction, 1, 0, 0, 0).calculatedYield; });
+}
+[1, 2, 3, 4].forEach(function (tier) {
+    var answers = answersUpTo(tier);
+    var distinct = new Set(answers).size;
+    ok('tier ' + tier + ' opens at least 10 rows, has ' + answers.length, answers.length >= 10);
+    ok('tier ' + tier + ' spreads over at least 8 answers, has ' + distinct, distinct >= 8);
+    // No single figure may dominate: at worst a third of the pool, so a guesser is wrong most days.
+    var worst = 0;
+    new Set(answers).forEach(function (a) {
+        worst = Math.max(worst, answers.filter(function (x) { return x === a; }).length);
+    });
+    ok('and no one answer covers more than a third of tier ' + tier + ', worst is '
+       + worst + '/' + answers.length, worst * 3 <= answers.length);
+});
+// A beginner sees tier 1 only, so its own spread is what most people meet. Guarded on its own.
+ok('tier 1 alone is not four rows and two answers',
+   new Set(ROWS.filter(function (r) { return r.tier === 1; })
+       .map(function (r) { return E.evaluateStep(0, r.available, r.instruction, 1, 0, 0, 0).calculatedYield; })).size >= 7);
 
 print('\n2. Every row validates clean through the engine');
 // The load-bearing assertion. A practice row the engine cannot read teaches the opposite of what it
@@ -115,14 +152,59 @@ nav('nav-dashboard');
 nav('nav-practice');
 ck('re-drawing on the same date gives the same row again', progress().practice.rowId, drawn);
 
+print('\n6b. And a different row - and a different ANSWER - the next day');
+/*
+ * The draw used to be pool[hash(date) % pool.length], which is memoryless: nothing stopped two days
+ * running from serving the same row, and at tier 1 the pool is six rows so they often did. Worse,
+ * rows that are NOT the same can still have the same answer - "sc in each st around" over eighteen
+ * and "[1 sc, inc] * 6" over twelve both come to 18 - and four days in a row answering 18 is what
+ * this replaces. A question whose answer you can guess from yesterday is not a question.
+ *
+ * Driven by moving the clock rather than by reading the dealer, because what matters is what the
+ * panel serves. A year is long enough to cross many cycle boundaries, which is where the first two
+ * attempts at this leaked.
+ */
+var realNow = Date.now;
+function runYear(days) {
+    var answers = [], rows = [], base = Date.UTC(2026, 0, 1);
+    for (var d = 0; d < days; d++) {
+        Date.now = function (day) { return function () { return base + day * 86400000; }; }(d);
+        seedProgress({ practice: { date: '', rowId: '', answered: false, given: 0, correct: false, met: false } });
+        nav('nav-practice');
+        var id = progress().practice.rowId;
+        var served = ROWS.filter(function (r) { return r.id === id; })[0];
+        rows.push(id);
+        answers.push(E.evaluateStep(0, served.available, served.instruction, 1, 0, 0, 0).calculatedYield);
+    }
+    Date.now = realNow;
+    return { rows: rows, answers: answers };
+}
+function backToBack(list) {
+    var n = 0;
+    for (var i = 1; i < list.length; i++) if (list[i] === list[i - 1]) n++;
+    return n;
+}
+resetProgress();
+var year = runYear(365);
+ck('no day serves the row the day before served', backToBack(year.rows), 0);
+// The one that was actually reported. Two different rows sharing an answer is the case a
+// row-identity check alone would miss.
+ck('and no day serves the same ANSWER as the day before', backToBack(year.answers), 0);
+ok('the year is not one row on repeat either', new Set(year.rows).size >= 6);
+// Every row in the pool comes up once per cycle of pool.length days, so a year uses all of them.
+ok('every row open to this designer gets used', new Set(year.rows).size ===
+   ROWS.filter(function (r) { return r.tier <= 1; }).length);
+// Still the same row all day, and still the same row on another device: the deal is a function of
+// the date and the ceiling, and reads nothing about what was served before.
+no('the dealer keeps no record of what it served', /practice\.(served|history|recent)/.test(SRC));
+resetProgress();
+
 print('\n7. A wrong answer is still shown the working, and still counts as the day');
 resetProgress();
 nav('nav-practice');
 var row = ROWS.filter(function (r) { return r.id === progress().practice.rowId; })[0];
 var right = E.evaluateStep(0, row.available, row.instruction, 1, 0, 0, 0).calculatedYield;
-ck('the panel states what is in hand', $('practice-available').textContent,
-   row.available ? 'You have ' + row.available + ' stitches.'
-                 : 'You are starting from a magic ring, with nothing to work into yet.');
+ck('the panel states what is in hand', $('practice-available').textContent, inHand(row));
 answer(right + 7);
 ok('the verdict names the real count', $('practice-verdict').textContent.indexOf(String(right)) >= 0);
 ck('and what was actually said', $('practice-verdict').textContent.indexOf(String(right + 7)) >= 0, true);

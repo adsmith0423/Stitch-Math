@@ -7,23 +7,26 @@
     <meta name="description" content="Crochet pattern validation, grading and yardage. Your work never leaves this device.">
     <meta name="theme-color" content="#B9EBDC">
     <title>Stitch Math | Pattern Validator</title>
-    <!-- Day or night, decided BEFORE the stylesheet is applied. app.js sets the same attribute
-         once it boots (applyTheme, section 1), but it boots after first paint, and a night user
-         who saw a white flash on every load would be right to call the setting broken. This is
-         the one inline script in the document, and it reads the same stored preference app.js
-         does: "system" (or nothing) follows the OS, "day" and "night" are what they say. -->
+    <!-- The theme, decided BEFORE the stylesheet is applied. app.js sets the same attribute once
+         it boots (applyTheme, section 1), but it boots after first paint, and a night user who saw
+         a white flash on every load would be right to call the setting broken - a Readable user
+         doubly so, since the flash would be a second of exactly the page they turned off. This is
+         the one inline script in the document, and it reads the same stored preference app.js does:
+         "system" (or nothing) follows the OS, "day", "night" and "readable" are what they say. -->
     <script>
     (function () {
         try {
             var prefs = JSON.parse(localStorage.getItem('stitchmath_view_prefs') || '{}') || {};
-            var mode = prefs.theme === 'day' || prefs.theme === 'night' ? prefs.theme : 'system';
+            var known = { day: 1, night: 1, readable: 1 };
+            var mode = known[prefs.theme] ? prefs.theme : 'system';
             var dark = mode === 'night' || (mode === 'system' && window.matchMedia
                 && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            document.documentElement.dataset.theme =
+                mode === 'readable' ? 'readable' : (dark ? 'dark' : 'light');
         } catch (err) { /* No storage, no preference: the stylesheet's default is day. */ }
     })();
     </script>
-    <link rel="stylesheet" href="style.css?v=1.1.0">
+    <link rel="stylesheet" href="style.css?v=1.2.0">
     <!-- Installable, and genuinely offline once served from a URL. See sw.js for the two caching
          strategies and why the page itself is the one thing fetched network-first. -->
     <link rel="manifest" href="manifest.webmanifest">
@@ -51,6 +54,12 @@
     <symbol id="ic-tape" viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="11" rx="3.5"/><circle cx="9" cy="11.5" r="2"/><path d="M15 13.5h6v4h-6"/><path d="M17.2 13.5v1.6M19.4 13.5v2.4"/></symbol>
     <symbol id="ic-book-open" viewBox="0 0 24 24"><path d="M12 7c-1.7-1.4-4-2-7.2-2v13c3.2 0 5.5.6 7.2 2 1.7-1.4 4-2 7.2-2V5c-3.2 0-5.5.6-7.2 2z"/><path d="M12 7v13"/></symbol>
     <symbol id="ic-folder" viewBox="0 0 24 24"><path d="M3.6 7.4a1.8 1.8 0 0 1 1.8-1.8h4.2l2 2.2h7a1.8 1.8 0 0 1 1.8 1.8v8.6a1.8 1.8 0 0 1-1.8 1.8H5.4a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M3.6 11h16.8"/></symbol>
+    <!-- The four operators, one to a quadrant. Legible at the 18px a heading disc gives it, which
+         is the whole test an icon this small has to pass: a summation sigma reads as a maths class
+         and three overlapping bubble numerals read as a smudge, but +, -, x and a divide are four
+         shapes anyone can name at any size. The divide's dots are zero-length strokes with a round
+         cap - a <circle> that small disappears under the shared 1.7 stroke width. -->
+    <symbol id="ic-math" viewBox="0 0 24 24"><path d="M6.6 3.9V9.1M4 6.5h5.2"/><path d="M14.8 6.5h5.2"/><path d="M4.2 14.9l4.6 4.6M8.8 14.9l-4.6 4.6"/><path d="M14.8 17.5h5.2M17.4 14.6v.01M17.4 20.4v.01"/></symbol>
     <symbol id="ic-marker" viewBox="0 0 24 24"><circle cx="12" cy="14.5" r="5.5"/><path d="M12 9V5.2a2.2 2.2 0 0 1 4.4 0V7"/><path d="M8.6 10.6l6.8 7.8"/></symbol>
     <symbol id="ic-note" viewBox="0 0 24 24"><path d="M14.5 4H6.8A1.8 1.8 0 0 0 5 5.8v12.4A1.8 1.8 0 0 0 6.8 20h7.4"/><path d="M8.4 9h5.2M8.4 12.6h3.6"/><path d="m12.6 19.6.7-2.8 6.3-6.3a1.5 1.5 0 0 1 2.1 2.1l-6.3 6.3z"/></symbol>
     <symbol id="ic-pencil" viewBox="0 0 24 24"><path d="m4 20 1.1-4.2L16.6 4.3a2.1 2.1 0 0 1 3 3L8.2 18.9zM14.6 6.3l3.1 3.1"/></symbol>
@@ -59,6 +68,7 @@
     <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4.2 3.8v16.4h16M8 20.2v-6.4M12.4 20.2V8.6M16.8 20.2v-4"/></symbol>
     <symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 6.8C10.4 5.4 8.3 4.8 5.4 4.8v13c2.9 0 5 .6 6.6 2 1.6-1.4 3.7-2 6.6-2v-13c-2.9 0-5 .6-6.6 2zM12 6.8v13"/></symbol>
     <symbol id="ic-swatch" viewBox="0 0 24 24"><path d="M4.4 4.4h15.2v15.2H4.4zM4.4 9.5h15.2M4.4 14.6h15.2M9.5 4.4v15.2M14.6 4.4v15.2"/></symbol>
+    <symbol id="ic-save" viewBox="0 0 24 24"><path d="M4.5 6.4a2 2 0 0 1 2-2h9l4 4v9.2a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2z"/><path d="M8.2 4.4v4.4h6.1V4.4M8.2 19.6v-5.4h7.6v5.4"/></symbol>
     <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 15.4V3.6M8.2 7.4 12 3.6l3.8 3.8M4.4 14.8v3.6a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-3.6"/></symbol>
     <!-- Sliders rather than a cog: eight teeth at this weight turns into a sun at 18px. -->
     <symbol id="ic-gear" viewBox="0 0 24 24"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.2"/><circle cx="9" cy="16" r="2.2"/></symbol>
@@ -129,20 +139,61 @@
             <!-- A ball of yarn. Colors come from the stylesheet, not fill/stroke attributes: a var()
                  in a presentation attribute is not reliably resolved and falls back to black. -->
             <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-                <!-- The pencil first, so the ball sits in front of it: a long butter pencil from
-                     bottom-left to top-right, pink eraser at the top, peach point at the foot. -->
-                <g transform="rotate(-45 24 24)">
-                    <rect class="mark-pencil" x="9" y="20.4" width="26" height="7.2" rx="1.2"></rect>
-                    <rect class="mark-pencil-band" x="35" y="20.4" width="3.2" height="7.2"></rect>
-                    <rect class="mark-pencil-band" x="38.2" y="20.9" width="4.6" height="6.2" rx="2"></rect>
-                    <path class="mark-pencil-tip" d="M9 20.4 2.2 24 9 27.6z"></path>
-                    <path class="mark-pencil-lead" d="M4.8 22.6 2.2 24l2.6 1.4z"></path>
+                <!-- A BALL OF WOUND YARN, not a wireframe globe.
+                     The difference is the construction, not the number of lines. A lattice of lines
+                     crossing at right angles is a net; yarn on a ball is many near-parallel wraps
+                     with the last few wraps crossing OVER them at an angle. So:
+                       - eight wraps running STEEPLY down and a little to the right, near-vertical
+                         rather than diagonal. They are ONE curve offset perpendicular to itself eight
+                         times at an even 3.4 apart, so every band between them is the same width.
+                         Struck from shared poles instead - the obvious way, and how this was first
+                         drawn - the bow has to differ per strand to fan them out, and equal steps of
+                         bow do not give equal gaps: the middle bands came out fat, the outer thin;
+                       - one broad band crossing them top to bottom and bulging right, filled in the
+                         BALL's colour so it hides the wraps behind it, with its two edges stroked as
+                         strands. That occlusion is the whole trick - drawn as two more lines over the
+                         top it reads as a lattice again, and it is what says "this went round last".
+                         Its DIRECTION carries as much as its existence: laid flat across the wraps
+                         the ball reads as a beach ball, and struck corner to corner as a globe. Down
+                         the middle with a rightward bulge is the one that reads as a wound skein.
+                     Everything is clipped to the ball, so wraps and band can be struck past the rim
+                     and simply disappear over the horizon. The rim is redrawn after the clipped
+                     group, or the clip would eat the inner half of its own outline.
+                     Colours come from the stylesheet, not fill/stroke attributes: a var() in a
+                     presentation attribute is not reliably resolved and falls back to black. -->
+                <defs><clipPath id="brand-ball"><circle cx="22" cy="24" r="13"></circle></clipPath></defs>
+                <circle class="mark-ball" cx="22" cy="24" r="13.5"></circle>
+                <g clip-path="url(#brand-ball)">
+                    <path class="mark-strand" d="M27.0 1.3C27.8 13.7 32.2 29.3 38.0 40.3M23.7 2.2C24.5 14.6 28.9 30.2 34.7 41.2M20.4 3.1C21.2 15.5 25.6 31.1 31.4 42.1M17.1 4.0C17.9 16.4 22.3 32.0 28.1 43.0M13.9 5.0C14.7 17.4 19.1 33.0 24.9 44.0M10.6 5.9C11.4 18.3 15.8 33.9 21.6 44.9M7.3 6.8C8.1 19.2 12.5 34.8 18.3 45.8M4.0 7.7C4.8 20.1 9.2 35.7 15.0 46.7"></path>
+                    <path class="mark-wrap" d="M27.6 10.7C18.5 17.2 15.3 28.4 19.6 38.7L14.4 37.3C10.1 26.9 13.3 15.7 22.4 9.3Z"></path>
+                    <path class="mark-strand" d="M27.6 10.7C18.5 17.2 15.3 28.4 19.6 38.7M22.4 9.3C13.3 15.7 10.1 26.9 14.4 37.3"></path>
                 </g>
-                <circle class="mark-ball" cx="29" cy="28" r="12"></circle>
-                <!-- Wound, not gridded: two crossing sets of diagonal strands, and a tail. -->
-                <path class="mark-strand" d="M19.5 21.5c5.5-1.5 12.5 2.5 18.5 11M17.5 27.5c6.5-2.5 14.5 2 20.5 9.5M20 34c5-3 11-1 16 3"></path>
-                <path class="mark-strand" d="M24.5 17.5c-3.5 6-3 13.5 1.5 21.5M31.5 16.5c-4.5 6.5-4.5 15.5 0 23M37.5 20.5c-3 5-2 11.5 1 16"></path>
-                <path class="mark-strand" d="M39.5 33.5c3 2.5 4.5 6 3.5 10.5"></path>
+                <circle class="mark-rim" cx="22" cy="24" r="13.5"></circle>
+                <!-- A long butter pencil from bottom-left to top-right, pink eraser at the top, peach
+                     point at the foot. Drawn after the ball, so it lies in FRONT of it; the translate
+                     is applied after the rotation, so it slides the pencil down its own diagonal and
+                     across the ball's lower-right rather than straight through the middle. The
+                     leading translate is in user space and comes last of the three, so it simply
+                     nudges the finished pencil two to the right - clear of the ball's centre, and
+                     room on the left for the tail to swing through. -->
+                <g transform="translate(2 0) rotate(-45 24 24) translate(0 8)">
+                    <rect class="mark-pencil" x="9" y="20.7" width="26" height="6.6" rx="1.1"></rect>
+                    <rect class="mark-pencil-band" x="35" y="20.7" width="3.2" height="6.6"></rect>
+                    <rect class="mark-pencil-band" x="38.2" y="21.1" width="4.6" height="5.8" rx="2"></rect>
+                    <path class="mark-pencil-tip" d="M9 20.7 2.4 24 9 27.3z"></path>
+                    <path class="mark-pencil-lead" d="M4.9 22.7 2.4 24l2.5 1.3z"></path>
+                </g>
+                <!-- The loose end, and the only strand drawn after the pencil. It leaves the ball at
+                     the lower left, sweeps clear of the barrel and lands on the point at 14.3 44.8 -
+                     the same place the lead triangle comes to. Behind the pencil it vanished under
+                     the barrel a third of the way down and read as a strand that had been cut off;
+                     in front, the pencil is drawing the yarn. It leaves the ball at the lower left
+                     and swings wide before it lands, because a short one read as a snipped end
+                     rather than as yarn still running off the ball.
+                     Move the pencil and this must follow: 16.4 44.9 is where the lead comes to a
+                     point in user space AFTER all three of its transforms, not a coordinate of its
+                     own - it is 2 to the right of where it was because the pencil now is. -->
+                <path class="mark-strand" d="M11.5 32.5C5.5 36 3 41 5.5 44.3C8.2 47.6 13.2 47.2 16.4 44.9"></path>
             </svg>
             <div class="brand-words">
                 <strong>Stitch Math</strong>
@@ -295,6 +346,14 @@
 
                 <button type="button" id="btn-new-project" class="btn-new-project">
                     <svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-plus"></use></svg> New Project
+                </button>
+                <!-- The same save Project Management's Save File does, reachable from every view -
+                     the one file action worth having in the topbar, because it is the one you want
+                     without first navigating away from what you were writing. It runs
+                     handleSaveProject rather than clicking #save-btn: a synthesised click works in a
+                     browser and does nothing headlessly, so the shortcut could never be tested. -->
+                <button type="button" id="btn-save-project" class="btn-save-project">
+                    <svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-save"></use></svg> Save Project
                 </button>
             </div>
 
@@ -520,8 +579,10 @@
 
     <!-- === HEADER === -->
     <header id="intro-header">
-        <h1>Stitch Math</h1>
-        <p>Mathematical Crochet Pattern Validator</p>
+        <!-- What the card is for, not what the app is called. The sidebar brand says "Stitch Math"
+             two inches away, so a heading that said it again - over a subtitle explaining itself -
+             was the name twice and two lines doing one line's work. -->
+        <h1><svg class="ic h-ic tint-lavender" aria-hidden="true" focusable="false"><use href="#ic-math"></use></svg>Mathematical Crochet Pattern Validator</h1>
         <p class="usage-note">
             Paste your pattern into the box on the right. Put one row on each line.
             Write it the normal way, like <code>[sc, inc] x 6</code>.
@@ -776,31 +837,32 @@
             <section class="panel" id="project-panel">
                 <h2><svg class="ic h-ic tint-lavender" aria-hidden="true" focusable="false"><use href="#ic-folder"></use></svg>Project Management</h2>
                 <div class="project-controls">
+                    <!-- The grid fills in source order, two to a row, so this order is the layout:
+                         the two things you CHOOSE on the top row - what to call this file, which file
+                         to open - and the two things you PRESS beneath them. Save used to sit beside
+                         the name box with the load dropdown under it, which read as two unrelated
+                         halves rather than one pair of choices over one pair of actions. -->
                     <input type="text" id="project-name" autocomplete="off" aria-label="Project name" placeholder="Project Name">
-                    <button type="button" id="save-btn" class="btn-dark">Save File</button>
                     <select id="load-select"><option value="">-- Load a project --</option></select>
+                    <button type="button" id="save-btn" class="btn-dark">Save File</button>
                     <button type="button" id="load-btn" class="btn-secondary">Load File</button>
                     <button type="button" id="new-file-btn" class="btn-info">New File</button>
                     <button type="button" id="delete-project-btn" class="btn-danger">Delete File</button>
                     <button type="button" id="export-project-btn" class="btn-secondary">Export Project</button>
                     <button type="button" id="import-project-btn" class="btn-secondary">Import Project</button>
-                    <!-- Same file, same picker, different question: take this designer's stitch
-                         dictionary without taking their pattern. Its own button rather than a prompt
-                         inside the import flow, because it is a different intention rather than a
-                         setting on the same one - and because the import flow already asks a question. -->
-                    <button type="button" id="import-stitches-btn" class="btn-secondary">Import Stitches Only</button>
                     <!-- type="file" deliberately: test-newfile.js harvests every id'd input on the page
                          and asserts none holds data after New File, and its filter passes over a file
                          input. A text input here would be swept into that reset. -->
                     <input type="file" id="import-file" accept="application/json,.json" class="hidden">
-                    <button type="button" id="recover-btn" class="btn-secondary">Recover Previous Version</button>
                 </div>
                 <div class="project-status">
                     <span id="save-status" class="save-status" role="status" aria-live="polite">Autosave on</span>
-                    <!-- Filled in by renderRecoverPanel with createElement, never as assigned markup:
-                         a Restore button written into innerHTML cannot be found by getElementById. -->
-                    <div id="recover-panel" class="recover-panel hidden"></div>
                 </div>
+                <!-- Always on screen, and outside .project-status so it takes the panel's whole width
+                     rather than sharing a flex row with the save line. Filled in by renderRecoverPanel
+                     with createElement, never as assigned markup: a Restore button written into
+                     innerHTML cannot be found by getElementById. -->
+                <div id="recover-panel" class="recover-panel"></div>
             </section>
 
             <!-- === 7. PATTERN METADATA === -->
@@ -1070,22 +1132,24 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                 <h2><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-gear"></use></svg>Settings</h2>
                 <p class="helper-text">Every option in Stitch Math, in one place. Changing one here is the same as changing it on its own panel &mdash; they are the same setting.</p>
                 <!-- The one setting that lives HERE rather than being mirrored from another panel:
-                     nothing else in the app has a reason to carry a day/night switch. Same row
+                     nothing else in the app has a reason to carry an appearance switch. Same row
                      markup the mirrors below are built with, so it reads as the first of them.
                      Wired to applyTheme in app.js section 1; the head script applies the stored
-                     choice before the stylesheet lands. -->
+                     choice before the stylesheet lands. Four words, and the stylesheet resolves
+                     them to three looks - see the Readable block in style.css section 1. -->
                 <div class="settings-list settings-list-fixed">
                     <h3 class="settings-group">Appearance</h3>
                     <div class="setting-row">
                         <div class="setting-text">
-                            <label for="theme-mode">Day or night</label>
-                            <p class="setting-note">Match system follows whatever your device is set to, and changes with it.</p>
+                            <label for="theme-mode">Appearance</label>
+                            <p class="setting-note">Match system follows whatever your device is set to, and changes with it. Readable is a high-contrast page &mdash; near-black on cream, larger and plainer type, no decoration &mdash; for when getting through the pattern matters more than how it looks.</p>
                         </div>
                         <div class="setting-control">
                             <select id="theme-mode">
                                 <option value="system">Match system</option>
                                 <option value="day">Day</option>
                                 <option value="night">Night</option>
+                                <option value="readable">Readable</option>
                             </select>
                         </div>
                     </div>
@@ -1756,16 +1820,16 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
         will replace it and remove the need to remember. tests/test-shell.js section 17 asserts every
         version site agrees, so forgetting one fails CI rather than reaching a user.
     -->
-    <script src="validator.js?v=1.1.0"></script>
-    <script src="analytics.js?v=1.1.0"></script>
-    <script src="persistence.js?v=1.1.0"></script>
-    <script src="pdf.js?v=1.1.0"></script>
+    <script src="validator.js?v=1.2.0"></script>
+    <script src="analytics.js?v=1.2.0"></script>
+    <script src="persistence.js?v=1.2.0"></script>
+    <script src="pdf.js?v=1.2.0"></script>
     <!--
         tests.js is NOT loaded here any more. It put window.RunMathTests into a customer's browser
         along with 22KB they never run, and no build step exists yet to strip it. loadDevOnlyScripts()
         in app.js adds it back on localhost and file://, so the console harness still works while
         writing code and no shipped page carries it.
     -->
-    <script src="app.js?v=1.1.0"></script>
+    <script src="app.js?v=1.2.0"></script>
 </body>
 </html>

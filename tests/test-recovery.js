@@ -1,9 +1,13 @@
 // Start-up recovery and the recover panel.
 //
 // Recovery never blocks, never reorders boot and never applies itself. It is an offer, and it is made
-// only when the page has nothing newer on it. The panel it opens is a fire escape, not an archive: the
-// wording is asserted here because it is the one place the app could imply that five slots in a store
-// the browser may clear are somewhere to keep work.
+// only when the page has nothing newer on it. The panel is a fire escape, not an archive: the wording
+// is asserted here because it is the one place the app could imply that five slots in a store the
+// browser may clear are somewhere to keep work.
+//
+// The panel has no button of its own any more - it is on screen the whole time Project Management is,
+// and it redraws itself whenever the ring takes a point. So "is there an offer" is read off the text
+// rather than off a hidden class, which is what the class used to stand for.
 
 // Both runners have to report the same counts, and they disagree about timers: the Node context has
 // no setTimeout at all, so test-stub.js supplies a synchronous one, while JavaScriptCore's shell has a
@@ -30,16 +34,18 @@ function recoveryOptions() {
     return select ? select.children : [];
 }
 function said() { return ALERTS.length ? String(ALERTS[ALERTS.length - 1]) : ''; }
-// Every boot() leaves another click handler on the same stub element, so by the middle of this suite
-// one fire() toggles the panel once per boot. Forcing it closed first means the first handler always
-// opens and re-renders it, whatever the rest then do to the class.
-function showPanel() { $('recover-panel').classList.add('hidden'); $('recover-btn').fire('click'); }
+// An offer is the start-up row, not the ring below it. Read off the two sentences only that row says.
+function offered() { return /closed unexpectedly|Unsaved work/.test(panelText()); }
 
 print('\n1. The controls are in the markup');
 var HTML = readFile('index.html');
-ok('the Recover button exists', /id="recover-btn"/.test(HTML));
-ok('so does the panel', /id="recover-panel"/.test(HTML));
-ok('and it starts hidden', /id="recover-panel"[^>]*class="recover-panel hidden"/.test(HTML));
+ok('the panel exists', /id="recover-panel"/.test(HTML));
+ok('and it does not start hidden', /id="recover-panel" class="recover-panel">/.test(HTML));
+no('there is no button to open it with', /id="recover-btn"/.test(HTML));
+// Outside .project-status, so it gets the panel's whole width instead of wrapping under the save
+// line. Read as "the save line closes before the panel opens", which is what being a sibling means.
+ok('it is a row of its own, not part of the save line',
+   HTML.indexOf('</div>', HTML.indexOf('id="save-status"')) < HTML.indexOf('id="recover-panel"'));
 ck('still no inline styles in the markup', (HTML.match(/style="/g) || []).length, 0);
 var CSS = readFile('style.css');
 ok('the panel is styled in the stylesheet', /\.recover-panel \{/.test(CSS));
@@ -50,18 +56,14 @@ var render = src.slice(src.indexOf('function renderRecoverPanel'), src.indexOf('
 no('the panel is not built out of assigned markup', /innerHTML/.test(render));
 ok('it is built with the element helper', /elem\(/.test(render));
 
-print('\n2. A fresh browser offers nothing, and the button opens the panel on request');
-// The only place in this suite the toggle itself can be read cleanly: exactly one boot has happened,
-// so exactly one handler is bound.
+print('\n2. A fresh browser draws the panel and offers nothing in it');
 var first = P.memoryAdapter();
 window.STITCH_ADAPTER = first;
 boot();
-ok('the panel stays hidden', $('recover-panel').classList.contains('hidden'));
-$('recover-btn').fire('click');
-no('a click opens it', $('recover-panel').classList.contains('hidden'));
+ok('the panel is on screen from boot', !$('recover-panel').classList.contains('hidden'));
 ok('and it drew itself', panelText().indexOf('Recent recovery points') >= 0);
-$('recover-btn').fire('click');
-ok('a second click closes it again', $('recover-panel').classList.contains('hidden'));
+no('with nothing to offer', offered());
+ok('and nothing to restore', restoreButtons().length === 0 && recoveryOptions().length === 0);
 
 print('\n3. Work done in one session is offered in the next');
 $('project-name').value = 'Kingbird Cardigan';
@@ -70,7 +72,7 @@ $('bulk-input').fire('input');
 // A new session on the same store: the page is blank again, the store is not.
 $('bulk-input').value = '';
 boot();
-ok('the panel is showing', !$('recover-panel').classList.contains('hidden'));
+ok('the offer is made', offered());
 ok('it names the project', panelText().indexOf('Kingbird Cardigan') >= 0);
 ok('and says when', /just now|m ago|h ago|d ago/.test(panelText()));
 
@@ -78,10 +80,15 @@ print('\n4. It is an offer, not a load');
 // A page that rewrites itself on boot is worse than one that forgets: the designer may have arrived to
 // do something else entirely.
 ck('the pattern box is still empty', $('bulk-input').value, '');
-ok('there is a Restore button to press', restoreButtons().length > 0);
+// One Restore in the panel, never two. The offer used to carry its own above the dropdown, which put
+// the smaller and more dangerous choice in the wider button.
+ck('there is exactly one Restore button to press', restoreButtons().length, 1);
+ok('and the offer is the entry it is pointing at',
+   recoveryOptions()[0].textContent.indexOf('Unsaved work from your last session') === 0);
+ck('preselected, so the button does what the removed one did', $('recover-select').value, 'offer');
 
 print('\n5. Pressing it brings the work back');
-$('recover-offer-btn').fire('click');
+$('recover-restore-btn').fire('click');
 ck('the pattern is on the page', $('bulk-input').value.indexOf('Ch 6'), 0);
 ck('and so is its name', $('project-name').value, 'Kingbird Cardigan');
 
@@ -98,13 +105,13 @@ print('\n7. A page with work on it is not offered an older copy');
 // from it snapshots first anyway.
 $('bulk-input').value = 'Ch 30\nRow 1: sc in each ch across. (30)';
 boot();
-ok('no offer over the top of live work', $('recover-panel').classList.contains('hidden'));
+no('no offer over the top of live work', offered());
 ck('and nothing on the page moved', $('bulk-input').value.indexOf('Ch 30'), 0);
 
-print('\n8. An offer opens the panel by itself');
+print('\n8. An offer draws itself into the panel unasked');
 $('bulk-input').value = '';
 boot();
-no('there is something to see, so it is showing', $('recover-panel').classList.contains('hidden'));
+ok('there is something to see, so it is said', offered());
 
 print('\n9. The panel is headed for what it holds');
 // Not "history" and not "versions". Five slots in a store a browser may clear at any moment, that do
@@ -120,7 +127,6 @@ window.STITCH_ADAPTER = bare;
 localStorage.setItem('stitchmath_current_project', '');
 boot();
 $('project-name').value = 'Nothing Here';
-showPanel();
 ok('the empty panel points at the copy the designer owns',
    panelText().indexOf('Recovery points are temporary. Use Export Project to keep a copy you own.') >= 0);
 ok('and offers nothing to restore', restoreButtons().length === 0 && recoveryOptions().length === 0);
@@ -132,12 +138,10 @@ boot();
 $('project-name').value = 'Ringed';
 $('bulk-input').value = 'Ch 6\nRow 1: sc in each ch across. (6)';
 $('bulk-input').fire('input');
-showPanel();
-ok('an autosave is listed as one', panelText().indexOf('autosaved') >= 0);
+ok('an autosave is listed as one, without anyone asking', panelText().indexOf('autosaved') >= 0);
 ok('and offers a restore', recoveryOptions().length >= 1 && restoreButtons().length === 1);
 ok('with the time on the entry', /\d/.test(recoveryOptions()[0].textContent));
 $('save-btn').fire('click');
-showPanel();
 ok('an explicit save is listed as a save', /\bsaved\b/.test(panelText()));
 
 print('\n12. Restoring a recovery point is itself recoverable');
@@ -145,10 +149,8 @@ print('\n12. Restoring a recovery point is itself recoverable');
 var replaced = 'Ch 40\nRow 1: sc in each ch across. (40)';
 $('bulk-input').value = replaced;
 $('bulk-input').fire('input');
-showPanel();
 $('recover-restore-btn').fire('click');
 ck('the earlier work is back', $('bulk-input').value.indexOf('Ch 6'), 0);
-showPanel();
 ok('and what it replaced was kept', panelText().indexOf('before a restore') >= 0);
 
 print('\n13. Snapshots of the same page fold into one row');
@@ -163,7 +165,6 @@ $('bulk-input').fire('input');
 $('save-btn').fire('click');
 $('save-btn').fire('click');
 $('save-btn').fire('click');
-showPanel();
 ck('three saves of one page are one entry', recoveryOptions().length, 1);
 ck('and there is one Restore button, not one per entry', restoreButtons().length, 1);
 // A different page is a different digest, which is what makes it a second row. Asserted on the
@@ -187,7 +188,7 @@ var raised = '';
 try { boot(); } catch (e) { raised = String(e); }
 ck('boot raises nothing', raised, '');
 ok('the page wired itself up', ($('save-btn').listeners.click || []).length > 0);
-ok('nothing was offered', $('recover-panel').classList.contains('hidden'));
+no('nothing was offered', offered());
 ck('and the line says the record is unreadable', $('save-status').textContent, 'Recovery record unreadable');
 
 print('\n14. A store that throws on read does the same');
@@ -205,8 +206,7 @@ localStorage.setItem('stitchmath_current_project', 'project_kingbird-cardigan');
 var noStore = '';
 try { boot(); } catch (e) { noStore = String(e); }
 ck('boot raises nothing', noStore, '');
-ok('nothing is offered', $('recover-panel').classList.contains('hidden'));
-showPanel();
+no('nothing is offered', offered());
 ok('and the panel is honest about having nothing',
    panelText().indexOf('Recovery points are temporary') >= 0);
 
