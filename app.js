@@ -60,7 +60,9 @@
         // US or UK, never off: a project saved before the field existed (or while it still had an
         // "off" choice) carries a blank, and a blank opens as US - the dialect most patterns in the
         // store are written in - rather than as a check quietly switched off.
-        { id: "meta-terminology", key: "terminology", label: "Terminology", onLoad: "us" }
+        { id: "meta-terminology", key: "terminology", label: "Terminology", onLoad: "us" },
+        // Free text: markers, needles, buttons - whatever this pattern needs beyond yarn and hook.
+        { id: "meta-notions",      key: "notions",      label: "Notions",      onLoad: "" }
     ];
     const META_FIELD_IDS = META_FIELDS.map(field => field.id);
 
@@ -90,8 +92,10 @@
      *  printed pattern states, so it is spliced back in at the position its box used to occupy -
      *  the export's field order is the order a reader scans. */
     function metadataForPrint() {
+        // One line per field. Notions is a textarea, and a list typed one item per line reads as
+        // one comma-separated line in the front matter rather than as a broken "- Notions:" entry.
         const fields = META_FIELDS.map(({ id, label, onLoad }) => ({
-            label, val: String(UI[id]?.value || onLoad || '').trim()
+            label, val: String(UI[id]?.value || onLoad || '').trim().split(/\s*\n+\s*/).filter(Boolean).join(', ')
         }));
         fields.splice(4, 0, { label: 'Construction', val: hasInferred() ? inferredConstruction() : '' });
         return fields;
@@ -740,7 +744,7 @@
     ];
 
     /**
-     * Mirrors the Pattern Metadata fields into state, and carries the chosen yarn weight across to the
+     * Mirrors the Pattern Info fields into state, and carries the chosen yarn weight across to the
      * gauge so a logged swatch records which yarn it was worked in.
      *
      * Runs wherever it is needed - on init, on every metadata change, before a gauge calculation, on
@@ -1866,7 +1870,7 @@
             // to its value attribute, which is not always empty, and selectedIndex leaves .value untouched
             // in anything but a real browser - so both can appear to work while leaving data on the page.
             [
-                "bulk-input", "project-name", "meta-designer", "meta-hook",
+                "bulk-input", "project-name", "meta-designer", "meta-hook", "meta-notions",
                 "gauge-width", "gauge-height", "gauge-stitches", "gauge-rows",
                 "gauge-washed-stitches", "gauge-washed-rows",
                 "gauge-hook-size", "gauge-notes", "swatch-weight",
@@ -3556,7 +3560,7 @@
         const meta = window.CrochetMathEngine.parseMetadataStatement(line);
         if (meta) {
             const taken = applyMetadataStatement(meta);
-            if (taken.length) return `read into pattern metadata — ${taken.join(', ')}`;
+            if (taken.length) return `read into Pattern Info — ${taken.join(', ')}`;
         }
 
         // Under a GAUGE heading the statement is the whole line and never repeats the word: "9 hdc + 8
@@ -3567,7 +3571,7 @@
             if (gauge && applyGaugeStatement(gauge)) return 'gauge — read into the gauge calculator';
         }
 
-        return meta ? 'pattern metadata' : null;
+        return meta ? 'pattern info' : null;
     }
 
     function harvestDocumentationLine(docBlock, line, abbreviations) {
@@ -6317,7 +6321,7 @@
     }
 
     /**
-     * How the piece is built, taken from the Pattern Metadata panel rather than asked for twice. Shown
+     * How the piece is built, taken from the Pattern Info panel rather than asked for twice. Shown
      * because it is part of what a base size IS - the same measurements graded flat and in the round
      * are not the same pattern - and omitted when unset, rather than defaulted to a guess.
      */
@@ -7816,7 +7820,7 @@
         return LEGACY_DIFFICULTY[saved] || saved;
     }
 
-    /** Mirrors the calculated difficulty badge into the Pattern Metadata dropdown. Stops as soon as the
+    /** Mirrors the calculated difficulty badge into the Pattern Info dropdown. Stops as soon as the
      *  user picks a level themselves; re-selecting the blank placeholder hands control back. */
     function applyAutoDifficulty(report) {
         const select = UI["meta-difficulty"];
@@ -8289,7 +8293,7 @@
     // Which panels belong to which view. A panel appears exactly once.
     const VIEW_PANELS = {
         dashboard: [],
-        patterns:  ['project-panel', 'metadata-panel', 'color-panel'],
+        patterns:  ['project-panel', 'metadata-panel', 'color-panel', 'notions-panel'],
         // The stitch reference on a page of its own: the designer's own definitions first, then what
         // this pattern works, then the cabinet of what has been worked so far. It used to sit under
         // the colours on Patterns, which made looking a stitch up mean scrolling past the file's
@@ -8492,7 +8496,7 @@
     let currentViewName = 'dashboard';
 
     /* The nav id navigateTo last landed on, as opposed to the view it resolved to - Stitch Library and
-       Pattern Files share a view and are different places. Null until the first navigation, which is
+       Patterns share a view and are different places. Null until the first navigation, which is
        what lets applyPracticeMode run during init without trying to route anywhere. */
     let currentNavId = null;
 
@@ -8546,7 +8550,7 @@
      * cannot drift apart. `apply` is that shared function; `group` only sorts the page into headings.
      */
     /* Two controls are deliberately NOT here. Difficulty is a fact about the pattern, inferred
-       from its stitches and shown with the rest of the metadata on Pattern Files - not a way the app
+       from its stitches and shown with the rest of the metadata on Patterns - not a way the app
        behaves. The converted-swatch unit is an override of the gauge unit that follows it unless
        somebody says otherwise, and a settings page that lists both is asking the same question twice;
        the override stays on the Gauge Profile for the rare swatch that needs it. */
@@ -8975,7 +8979,7 @@
 
         // On every page that belongs to a numbered step - not only the one each step lands on, but
         // every entry under its hub, so the Stitch Library, Construction and the Size Grader carry
-        // the rail as much as Pattern Files and the Studio do. Off on the rest: Settings, and the
+        // the rail as much as Patterns and the Studio do. Off on the rest: Settings, and the
         // Dashboard's entries. A "write a pattern" strip above Analytics would be pointing at work
         // the page in front of you has nothing to do with. The current step is the one whose hub
         // owns the page, so the Stitch Library lights step 1 and the Size Grader step 2.

@@ -228,7 +228,7 @@
             <div class="nav-group">
                 <button type="button" id="hub-setup" class="nav-hub" data-step="1" aria-expanded="false" aria-controls="sub-setup"><span class="nav-step" aria-hidden="true">1</span><span class="nav-label">Setup</span><span class="nav-chevron" aria-hidden="true">›</span></button>
                 <div class="nav-sub" id="sub-setup"><div>
-                    <button type="button" id="nav-patterns" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-folder"></use></svg><span class="nav-label">Pattern Files</span></button>
+                    <button type="button" id="nav-patterns" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-folder"></use></svg><span class="nav-label">Patterns</span></button>
                     <button type="button" id="nav-library"  class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-book-open"></use></svg><span class="nav-label">Stitch Library</span></button>
                     <button type="button" id="nav-gauge"    class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-tape"></use></svg><span class="nav-label">Gauge Profile</span></button>
                 </div></div>
@@ -839,7 +839,7 @@
 
             <!-- === 7. PATTERN METADATA === -->
             <section class="panel" id="metadata-panel">
-                <h2><svg class="ic h-ic tint-lavender" aria-hidden="true" focusable="false"><use href="#ic-doc"></use></svg>Pattern Metadata</h2>
+                <h2><svg class="ic h-ic tint-lavender" aria-hidden="true" focusable="false"><use href="#ic-doc"></use></svg>Pattern Info</h2>
                 <div class="form-container">
                     <div class="form-group">
                         <label for="meta-designer">Designer Name</label>
@@ -905,7 +905,7 @@
                             <input type="text" id="color-name" placeholder="e.g. Creamsicle">
                         </div>
                     </div>
-                    <button type="submit" class="btn-secondary">Add Color</button>
+                    <button type="submit" class="btn-success">Add Color</button>
                 </form>
                 <div id="color-feedback" class="feedback-text"></div>
 
@@ -915,6 +915,20 @@
                         <tbody id="color-body"></tbody>
                     </table>
                 </div>
+            </section>
+
+            <!-- === 7-ii-b. NOTIONS ===
+                 Everything the pattern needs that is not yarn or a hook: markers, a tapestry
+                 needle, buttons, a zip. One free-text box, because a notions list is a list of
+                 whatever this pattern happens to need and no set of fields would fit every one.
+                 It is a META_FIELDS entry, so it saves with the project, prints with the front
+                 matter, and clears with New File like the rest. -->
+            <section class="panel" id="notions-panel">
+                <h2><svg class="ic h-ic tint-butter" aria-hidden="true" focusable="false"><use href="#ic-scissors"></use></svg>Notions</h2>
+                <label class="field-block" for="meta-notions">
+                    <span class="field-label">What else the pattern needs</span>
+                    <textarea class="field-textarea" id="meta-notions" rows="3" placeholder="e.g. 6 stitch markers, tapestry needle, four 20mm buttons"></textarea>
+                </label>
             </section>
 
             <!-- === 7-iii/iv. THE STITCH LIBRARY, AND ITS DOCK ===

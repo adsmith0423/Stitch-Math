@@ -1341,30 +1341,46 @@ main {
    So a field gets the GUMMY half of the language and none of the glass - a deeper corner, a
    pillowed inset that makes the well read as pressed INTO the panel rather than sitting on it, and
    a lit hairline along the bottom lip. No backdrop-filter anywhere near an input. */
+/* Colour-coded by what KIND of field it is, so a form reads at a glance: a word goes in a blue
+   well, a number in a yellow one, a choice from a list in a purple one, and free text - notes,
+   the pattern itself - in mint. Every field used to be mint, and a metadata form of six mint
+   boxes gave no hint which wanted a figure and which a name. The pair is set as --field and
+   --field-ink per type and everything below reads the pair, so a fifth kind is one more line.
+   The fill is the pastel WASHED into the panel's paper at --field-wash, not the pastel itself: at
+   full strength four hues side by side pull the eye off the words in them, and a hint of colour
+   says "number" as well as a block of it. The plain pastel is written first as the fallback for a
+   browser without color-mix, which then sees the stronger tint rather than no tint. */
 textarea, input[type="text"], input[type="number"], select {
+    --field: var(--mint); --field-ink: var(--mint-ink);
+    --field-wash: 21%;
     width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); font-size: var(--fs-base); font-family: inherit;
-    border-radius: var(--r-gum-sm); background-color: var(--surface-subtle); color: var(--text-primary);
+    border-radius: var(--r-gum-sm); color: var(--text-primary);
+    background-color: var(--field);
+    background-color: color-mix(in srgb, var(--field) var(--field-wash), var(--panel-bg));
     box-shadow: inset 0 2px 4px rgba(var(--shade), 0.07), inset 0 -1px 0 rgba(var(--hi), 0.85);
     transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out),
                 box-shadow 0.2s var(--ease-out);
     font-size: var(--fs-nav); box-sizing: border-box;
 }
+input[type="text"]   { --field: var(--sky);      --field-ink: var(--sky-ink); }
+input[type="number"] { --field: var(--butter);   --field-ink: var(--butter-ink); }
+select               { --field: var(--lavender); --field-ink: var(--lavender-ink); }
 textarea { font-family: var(--font-mono); resize: vertical; }
-/* In the brand teal a placeholder reads as an invitation rather than as content, so the boxes still
-   waiting on the user stand out. Teal carries 4.75:1 on the resting field; coral is 2.76:1. opacity
-   is pinned because Firefox fades placeholders by default. select has none to style. */
+/* In the field's own ink a placeholder reads as an invitation rather than as content, so the boxes
+   still waiting on the user stand out. Each ink carries at least 4.5:1 on its pastel by day and by
+   night. opacity is pinned because Firefox fades placeholders by default. select has none to style. */
 textarea::placeholder,
 input[type="text"]::placeholder,
 input[type="number"]::placeholder {
-    color: var(--primary);
+    color: var(--field-ink);
     opacity: 1;
 }
-/* On focus the well fills and rises: the inset pillow relaxes, a soft teal halo appears outside,
-   and the field lifts off the panel by a hair. The ring is teal rather than coral because coral is
-   the app's destructive/invalid colour and a focused field is neither. */
+/* On focus the well fills and rises: the inset pillow relaxes, a halo in the field's own colour
+   appears outside, and the field lifts off the panel by a hair. Never coral, because coral is the
+   app's destructive/invalid colour and a focused field is neither. */
 input:focus, textarea:focus, select:focus {
-    outline: none; border-color: var(--primary); background-color: var(--panel-bg);
-    box-shadow: 0 0 0 4px var(--mint),
+    outline: none; border-color: var(--field-ink); background-color: var(--panel-bg);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--field) 45%, var(--panel-bg)),
                 0 2px 8px -4px rgba(var(--shade), 0.28),
                 inset 0 1px 2px rgba(var(--shade), 0.03);
 }
@@ -1602,8 +1618,8 @@ button:focus-visible {
 
 /* Variants only swap the pair. */
 .btn-dark, .btn-success { --pill: var(--mint); --pill-ink: var(--mint-ink); }
-/* The quiet action: paper with a mint edge. Add Color and Load File are secondary by weight, so
-   they carry no fill of their own. */
+/* The quiet action: paper with a mint edge. Load File and the other secondary buttons are quiet by
+   weight, so they carry no fill of their own. */
 .btn-secondary, #load-btn, .btn-info, .form-controls button {
     --pill: var(--paper); --pill-ink: var(--mint-ink);
     border: 1.5px solid var(--glass-border);
@@ -1612,7 +1628,8 @@ button:focus-visible {
 /* The one peach pill, and it means what peach means everywhere else: this deletes something. */
 .btn-danger { --pill: var(--peach); --pill-ink: var(--peach-ink); }
 /* Add Custom Stitch takes New Project's coral: it is the one call to make something new on the
-   Stitch Library, and the warm pair is what lifts it out of the form above it. */
+   Stitch Library, and the warm pair is what lifts it out of the form above it. Add Color is mint,
+   the working colour, like Save Project. */
 .btn-coral { --pill: var(--coral); --pill-ink: var(--coral-ink); }
 
 .form-controls { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -2085,7 +2102,9 @@ mark.unknown-token {
 .lint-mirror {
     position: absolute; inset: 0; z-index: 0; overflow: hidden;
     pointer-events: none; color: transparent;
-    background-color: var(--surface-subtle); border-color: var(--border);
+    background-color: var(--mint);
+    background-color: color-mix(in srgb, var(--mint) 21%, var(--panel-bg));
+    border-color: var(--border);
 }
 /* One line of the pattern. Transparent text: only the decoration is wanted, the readable glyphs are
    the textarea's own, sitting directly on top. */

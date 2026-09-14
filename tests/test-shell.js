@@ -55,10 +55,10 @@ no('and Tester Feedback is gone', /id="nav-testers"/.test(HTML));
 no('Compiler is no longer a destination of its own', /id="nav-compiler"/.test(HTML));
 no('Schematics is retired', /id="nav-schematics"/.test(HTML));
 no('and the Studio Locker went with the avatar', /id="nav-locker"/.test(HTML));
-// The rail is the workflow now, so document order follows the work: Setup (Pattern Files, Stitch
-// Library, Gauge) before Write (Studio), and Settings last of all. Within Setup, Pattern Files
+// The rail is the workflow now, so document order follows the work: Setup (Patterns, Stitch
+// Library, Gauge) before Write (Studio), and Settings last of all. Within Setup, Patterns
 // still leads into the Stitch Library.
-ok('Pattern Files leads into Stitch Library',
+ok('Patterns leads into Stitch Library',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-library"'));
 ok('and Setup comes before Studio, because you set a pattern up before you write it',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-studio"'));
@@ -284,7 +284,7 @@ $('dock-btn-compiler').fire('click');
 no('and it stops being one on close', !!$('dock-compiler').getAttribute('role'));
 
 // Navigating puts the panels back where the view expects them. Left open, the Stitch Library's
-// panels would be in the floating pane while Pattern Files showed a gap where they belong.
+// panels would be in the floating pane while Patterns showed a gap where they belong.
 $('dock-btn-library').fire('click');
 nav('nav-library');
 no('navigating closes an open dock', dockOpen('dock-library'));
@@ -409,12 +409,30 @@ print('\n4b-ii. Patterns carries the file and its colours; the Stitch Library ca
 nav('nav-patterns');
 ok('the colour panel is on this tab', shown('color-panel'));
 ok('with the project and metadata panels', shown('project-panel') && shown('metadata-panel'));
+ok('and Notions at the foot', shown('notions-panel'));
+ok('below the colours in the markup', HTML.indexOf('id="color-panel"') < HTML.indexOf('id="notions-panel"'));
+ok('as a free-text box', /<textarea[^>]*\bid="meta-notions"/.test(HTML));
+no('and not on the Library', (nav('nav-library'), shown('notions-panel')));
+// Notions is front matter: it rides with the project, prints with the metadata one item per line
+// collapsed to one line, and clears with New File - the sweep in test-newfile.js pins the last.
+nav('nav-patterns');
+load(CLEAN);
+$('meta-notions').value = '6 stitch markers\ntapestry needle';
+$('meta-notions').fire('change');
+$('project-name').value = 'notions-probe';
+$('save-btn').fire('click');
+ck('it saves with the project', JSON.parse(localStorage.getItem('stitchmath_saves'))['notions-probe'].metadata.notions, '6 stitch markers\ntapestry needle');
+BLOBS.length = 0;
+$('export-txt-btn').fire('click');
+ok('and prints in the front matter, on one line', /- Notions: 6 stitch markers, tapestry needle/.test(BLOBS[0]));
+$('meta-notions').value = '';
+$('meta-notions').fire('change');
 nav('nav-library');
 ok('and both stitch panels are on the Library', shown('stitch-usage-panel') && shown('custom-stitch-section'));
 // Reading order down each tab: the metadata, then the colours it annotates; the stitches used, then the
 // dictionary. These are document positions, not view membership - a panel listed on a tab but written
 // elsewhere in the markup would show up in the wrong place on the page and pass every `shown` check above.
-ok('colours sit after Pattern Metadata',
+ok('colours sit after Pattern Info',
    HTML.indexOf('id="metadata-panel"') < HTML.indexOf('id="color-panel"'));
 ok('the Custom Stitch Dictionary sits below Color Codes in the markup',
    HTML.indexOf('id="color-panel"') < HTML.indexOf('id="custom-stitch-section"'));

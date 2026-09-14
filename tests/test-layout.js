@@ -209,35 +209,47 @@ function contrast(a, b) {
     return (hi + 0.05) / (lo + 0.05);
 }
 
-// --primary is an alias for the mint pair's ink, so the hex has to come from that token; the field
-// rests on --surface-subtle, which is the seafoam ground.
-ck('--primary is the mint ink', /--primary:\s*var\(--mint-ink\)/.test(css), true);
-ck('and --surface-subtle is the seafoam ground', /--surface-subtle:\s*var\(--sea-0\)/.test(css), true);
-var placeholderColor = tokenValue('mint-ink');
-var fieldBg = tokenValue('sea-0');
-ck('the mint ink has a value', !!placeholderColor, true);
-ck('and so does the form background it sits on', !!fieldBg, true);
+// Fields are colour-coded by kind - a word in sky, a number in butter, a choice in lavender, free
+// text in mint - and each placeholder is painted in its own pair's ink. So the check is per pair:
+// ink on fill, for every kind a field can be.
+var FIELD_RULE = (css.match(/textarea, input\[type="text"\], input\[type="number"\], select \{[^}]*\}/) || [''])[0];
+ck('the shared field rule sets a default pair', /--field: var\(--mint\); --field-ink: var\(--mint-ink\)/.test(FIELD_RULE), true);
+ck('and fills from it', /background-color: var\(--field\)/.test(FIELD_RULE), true);
+// Washed into the paper, not painted full strength: the hue is a hint, and the words in the box
+// are what the eye should land on. The plain pastel stays as the fallback line before it.
+ck('washed into the panel rather than full strength', /background-color: color-mix\(in srgb, var\(--field\) var\(--field-wash\), var\(--panel-bg\)\)/.test(FIELD_RULE), true);
+var wash = parseInt((FIELD_RULE.match(/--field-wash: (\d+)%/) || [, '100'])[1], 10);
+ck('and the wash is under half strength (currently ' + wash + '%)', wash <= 50, true);
+var KINDS = { 'input\\[type="text"\\]': 'sky', 'input\\[type="number"\\]': 'butter', 'select': 'lavender' };
+Object.keys(KINDS).forEach(function (sel) {
+    var hue = KINDS[sel];
+    var kindRule = (css.match(new RegExp('^' + sel + '\\s*\\{[^}]*\\}', 'm')) || [''])[0];
+    ck(hue + ' is the pair for ' + sel.replace(/\\/g, ''),
+       new RegExp('--field: var\\(--' + hue + '\\);\\s*--field-ink: var\\(--' + hue + '-ink\\)').test(kindRule), true);
+});
 
 var rule = (css.match(/textarea::placeholder,[\s\S]*?\}/) || [''])[0];
 ck('placeholders are styled', rule.length > 0, true);
 ck('text inputs are covered', /input\[type="text"\]::placeholder/.test(rule), true);
 ck('number inputs too', /input\[type="number"\]::placeholder/.test(rule), true);
-ck('through the token, not a raw hex', /color: var\(--primary\)/.test(rule), true);
+ck('through the pair\'s ink, not a raw hex', /color: var\(--field-ink\)/.test(rule), true);
 ck('no raw hex in the rule', /#[0-9a-f]{3,6}/i.test(rule), false);
 // Firefox fades placeholders by default, which would undo the contrast measured below.
 ck('opacity is pinned', /opacity: 1/.test(rule), true);
 
-// The reason the colour is usable at all.
-var ratio = contrast(placeholderColor, fieldBg);
-ck('placeholder clears WCAG AA at 4.5:1 (currently ' + ratio.toFixed(2) + ':1)', ratio >= 4.5, true);
-// Focus lightens the field to --panel-bg, which can only raise the ratio - but if the focus background is
-// ever darkened, the resting check above stops covering the worst case.
-ck('and on the focused field too', contrast(placeholderColor, tokenValue('brand-white')) >= 4.5, true);
+// The reason the colours are usable at all: every ink clears AA on its own fill, at rest and - since
+// focus lightens the field to paper, which can only raise the ratio - when focused.
+['mint', 'sky', 'butter', 'lavender'].forEach(function (hue) {
+    var ink = tokenValue(hue + '-ink'), fill = tokenValue(hue);
+    ck(hue + ' has a fill and an ink', !!ink && !!fill, true);
+    var ratio = contrast(ink, fill);
+    ck(hue + ' placeholder clears WCAG AA at 4.5:1 (currently ' + ratio.toFixed(2) + ':1)', ratio >= 4.5, true);
+    ck('and typed text on ' + hue + ' too', contrast(tokenValue('ink'), fill) >= 4.5, true);
+});
+ck('and on the focused field too', contrast(tokenValue('mint-ink'), tokenValue('brand-white')) >= 4.5, true);
 // The ink carries text; the pastel FILL of the same pair does not, which is why a rule never paints
-// text in a fill. Swapping --mint in would look like a tidy-up and quietly make these unreadable.
-ck('the mint fill would have failed (' + contrast(tokenValue('mint'), fieldBg).toFixed(2) + ':1)',
-   contrast(tokenValue('mint'), fieldBg) < 4.5, true);
-ck('so the rule does not reach for it', /var\(--mint\)/.test(rule), false);
+// text in a fill.
+ck('the placeholder rule does not reach for a fill', /color: var\(--field\)/.test(rule), false);
 ck('nor for the error family', /var\(--accent\)/.test(rule), false);
 
 endSuite();

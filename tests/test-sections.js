@@ -149,8 +149,8 @@ no('and so is the turning-chain box', /id="skipped-chains"/.test(readFile('index
 // Sliced to color-panel rather than structure-section, which now lives on a different tab entirely and
 // would sweep in everything written between the two.
 var META = readFile('index.html');
-META = META.slice(META.indexOf('Pattern Metadata</h2>'), META.indexOf('id="color-panel"'));
-no('meta-row-numbering no longer in Pattern Metadata', META.indexOf('id="meta-row-numbering"') !== -1);
+META = META.slice(META.indexOf('Pattern Info</h2>'), META.indexOf('id="color-panel"'));
+no('meta-row-numbering no longer in Pattern Info', META.indexOf('id="meta-row-numbering"') !== -1);
 ok('metadata keeps designer, hook and yarn weight',
    /meta-designer/.test(META) && /meta-hook/.test(META) && /meta-yarn-weight/.test(META));
 // Row Numbering used to be bound to Construction Style in a .form-pair, because grid auto-placement
