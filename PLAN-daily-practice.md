@@ -72,7 +72,7 @@ professional will find the switch within a minute of wanting it. Defaulting off 
 that needs no protecting, at the cost of the one this block exists for.
 
 It is a view preference, not project data: it belongs with the other `viewPrefs`, never in the project
-envelope. A `.json` a designer sends to a tester must not carry a UI preference with it.
+envelope. A `.json` a designer sends to someone else must not carry a UI preference with it.
 
 ### What it hides
 

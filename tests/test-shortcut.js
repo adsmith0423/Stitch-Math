@@ -48,7 +48,7 @@ no('Cmd+P does not save', saves()['other key project']);
 no('and is left to the browser to print', ev.defaultPrevented);
 
 print('\n3. From any view');
-var VIEWS = ['nav-dashboard', 'nav-patterns', 'nav-library', 'nav-studio', 'nav-sizer', 'nav-testers',
+var VIEWS = ['nav-dashboard', 'nav-patterns', 'nav-library', 'nav-studio', 'nav-sizer',
     'nav-analytics', 'nav-gauge', 'nav-publish',
     'nav-settings'];
 VIEWS.forEach(function (id) {

@@ -827,7 +827,7 @@ ck('and the dimension mode', $('grade-dm-armholedepth').value, 'locked');
 ok('with the locked measurement still locked',
    /locked/.test(tableText(0).match(/<tr><th scope="row">Armhole Depth[\s\S]*?<\/tr>/)[0]));
 
-print('\n30. Motifs, testers, generation and export, through the page');
+print('\n30. Motifs, generation and export, through the page');
 $('new-file-btn').fire('click');
 setVal('gauge-width', 4); setVal('gauge-height', 4);
 setVal('gauge-stitches', 16); setVal('gauge-rows', 12);
@@ -879,42 +879,14 @@ ok('naming what it would need', /yoke depth and four seam lines/.test($('gen-out
 $('gen-construction').value = 'drop'; $('gen-construction').fire('change');
 ok('and drop shoulder generates again', /Row 1: /.test($('gen-output').text()));
 
-print('\n33. Tester feedback through the page');
-setVal('tester-name', 'Rae');
-$('tester-size').value = 'Medium';
-setVal('tester-finished-bust', 43.5);
-setVal('tester-gauge', 3.7);
-$('tester-fit-arm').value = 'tight';
-setVal('tester-notes', 'added 2 rows to the sleeve');
-setVal('tester-freeform', 'Ran big at the bust.\nLoved the cuff.');
-$('tester-add-btn').fire('click');
-var tester = $('tester-output').text().replace(/\s+/g, ' ');
-ok('the tester is listed', /Rae \(Medium\)/.test(tester));
-ok('their finished measurement is compared with the prediction',
-   /predicted 41 in, measured 43\.5 in/.test(tester));
-ok('their gauge difference is reported', /different gauge/.test(tester));
-ok('and their fit rating', /tight at the Upper Arm/.test(tester));
-// Body measurements are real people's data and stay in the project on this machine.
-ok('recorded against the project', /Rae/.test(JSON.stringify(state_saved())));
-// The freeform box in the Tester Notes panel used to be read by nothing: the Record button beneath it
-// saved the fields above and dropped this one, clearing its neighbours so the loss looked like a save.
-var RAE = state_saved().filter(function (t) { return t.name === 'Rae'; })[0];
-ck('their own words are saved with them', RAE.freeform, 'Ran big at the bust.\nLoved the cuff.');
-ck('and stay apart from the one-line modifications field, which the engine quotes back',
-   RAE.modifications, 'added 2 rows to the sleeve');
-function state_saved() {
-    $('project-name').value = 'tester-project';
-    $('save-btn').fire('click');
-    return JSON.parse(localStorage.getItem('stitchmath_saves'))['tester-project'].grading.testers;
-}
-
 print('\n34. The export package');
 var exportRows = $('export-package').text().replace(/\s+/g, ' ');
 ['Finished-measurement table', 'Body-measurement table', 'Schematic labels',
- 'Multi-size instructions', 'Grading calculation report', 'Tester worksheet',
+ 'Multi-size instructions', 'Grading calculation report',
  'Technical-editing report', 'JSON for Stitch Math'].forEach(function (name) {
     ok('the package offers the ' + name.toLowerCase(), exportRows.indexOf(name) !== -1);
 });
+no('and no longer a tester worksheet', /Tester worksheet/.test(exportRows));
 
 // Each artefact is what it says it is, so each is checked by downloading it.
 BLOBS.length = 0;
@@ -926,18 +898,9 @@ $('export-calc').fire('click');
 ok('the calculation report shows the working', /Body chest \/ bust/.test(BLOBS[0]));
 ok('every step of it', /Actual total ease/.test(BLOBS[0]));
 BLOBS.length = 0;
-$('export-tester').fire('click');
-ok('the tester worksheet is blank to fill in', /Tester name: _+/.test(BLOBS[0]));
-ok('with what the pattern predicts beside each line', /pattern predicts/.test(BLOBS[0]));
-BLOBS.length = 0;
 $('export-editing').fire('click');
 ok('the editing report lists what is unresolved', /TECHNICAL-EDITING REPORT/.test(BLOBS[0]));
-ok('including the tester findings', /From testers/.test(BLOBS[0]));
-// The findings are what the engine measured; this is what the tester actually wrote, and it is the
-// half a designer reads first. Printed under the tester's own name so a reply can be addressed.
-ok('and their own words', /In their own words:/.test(BLOBS[0]));
-ok('under the tester who wrote them', /Rae \(Medium\):/.test(BLOBS[0]));
-ok('with the line breaks they typed kept', /Loved the cuff\./.test(BLOBS[0]));
+no('and carries no tester section', /From testers|In their own words/.test(BLOBS[0]));
 BLOBS.length = 0;
 $('export-json').fire('click');
 ok('the JSON parses', (function () { try { JSON.parse(BLOBS[0]); return true; } catch (e) { return false; } })());

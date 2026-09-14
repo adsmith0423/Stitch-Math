@@ -74,18 +74,16 @@
        the streak, the little arrows, the hairline under every heading. Peach keeps the errors. */
     --coral: #FFC9BF;       --coral-ink: #9E3A33;
 
-    /* The five workflow steps each own a pastel, in the sidebar and in the stage rail alike.
-       None of the five is green, and that is the rule rather than the accident: mint is the app's
+    /* The three workflow steps each own a pastel, in the sidebar and in the stage rail alike.
+       None of the three is green, and that is the rule rather than the accident: mint is the app's
        working colour - panels, primary buttons, the practice cards, half the heading icons - so a
        mint step disc read as one more piece of furniture rather than as a place in the workflow.
        Grade was mint and Export was aqua, which is green enough at 22px to make the same mistake.
-       Lavender, sky, butter, pink, peach: five hues that are all clearly NOT the page. The unset
+       Lavender, sky, peach: three hues that are all clearly NOT the page. The unset
        fallback below follows them off green for the same reason. */
     --step-1: var(--lavender); --step-1-ink: var(--lavender-ink);
     --step-2: var(--sky);      --step-2-ink: var(--sky-ink);
-    --step-3: var(--butter);   --step-3-ink: var(--butter-ink);
-    --step-4: var(--pink);     --step-4-ink: var(--pink-ink);
-    --step-5: var(--peach);    --step-5-ink: var(--peach-ink);
+    --step-3: var(--peach);    --step-3-ink: var(--peach-ink);
 
     /* ---- Older names, pointed at the pairs ---- */
     --brand-white: #ffffff;
@@ -859,7 +857,7 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 .brand-words span { display: block; font-size: var(--fs-xs); line-height: 1.35; color: var(--sidebar-ink-dim); }
 
 /* ---- Navigation ----
-   The Dashboard hub, five numbered step hubs, then Settings on its own - each hub followed by its
+   The Dashboard hub, three numbered step hubs, then Settings on its own - each hub followed by its
    own list of destinations. The gap between GROUPS is larger than the gap inside one, which is
    most of what makes the steps read as steps. */
 .sidebar-nav {
@@ -888,8 +886,6 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 [data-step="1"] { --step: var(--step-1); --step-ink: var(--step-1-ink); }
 [data-step="2"] { --step: var(--step-2); --step-ink: var(--step-2-ink); }
 [data-step="3"] { --step: var(--step-3); --step-ink: var(--step-3-ink); }
-[data-step="4"] { --step: var(--step-4); --step-ink: var(--step-4-ink); }
-[data-step="5"] { --step: var(--step-5); --step-ink: var(--step-5-ink); }
 .nav-hub.is-open .nav-step { transform: scale(1.08); }
 .nav-hub.is-done .nav-step {
     background: var(--step-ink, var(--lavender-ink)); color: var(--on-ink);
@@ -966,11 +962,12 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
    Every figure comes from the progress store in app.js section 12, which only records things that
    actually happened in this browser. */
 .sidebar-points {
-    /* Sits 40px below the last menu item, and never shrinks: 24 + the rail's 16px gap. Deliberately
-       NOT margin-top: auto - an auto margin would float this to the foot of the rail and the drop
-       would be a different distance on every screen. Was 54, which left the card marooned halfway
-       down the empty half of the rail rather than reading as the end of the list. */
-    flex: none; margin-top: 24px;
+    /* Sits 18px below the last menu item, and never shrinks: 2 + the rail's 16px gap. That is the
+       rail's own 18px bottom padding, so the card has the same air above it as below it and reads
+       as the end of the list. Deliberately NOT margin-top: auto - an auto margin would float this
+       to the foot of the rail and the drop would be a different distance on every screen. Was 24
+       (40 in all), which pushed the rail into a scroll on ordinary laptop heights. */
+    flex: none; margin-top: 2px;
     background: var(--rail-card); border: 1.5px solid var(--rail-card-border);
     border-radius: var(--radius); padding: 12px;
     box-shadow: var(--glass-dark-sheen), 0 2px 0 rgba(var(--shade), 0.05);
@@ -1150,13 +1147,21 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 /* 215px of findings beside a graph works in a dashboard card and not in a 460px pane. */
 #dock-compiler.is-open .compiler-split { grid-template-columns: minmax(0, 1fr); }
 .dock-head-ic { width: 17px; height: 17px; flex: none; color: var(--primary); }
+/* The link out to the page, the same coral text as the Compiler Overview's "Open compiler" and
+   in the same place: the first line of the body. Gone while the pane is closed, when its panels
+   are already the page. */
+.dock-link { display: none; text-align: left; }
+.dock.is-open > .dock-body > .dock-link { display: block; }
 .dock-title { flex: 1; font-size: var(--fs-sm); font-weight: 700; color: var(--text-primary); }
 .dock-close {
     width: 28px; height: 28px; flex: none; padding: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 19px; line-height: 1; font-weight: 500;
     background-image: none; color: var(--text-muted);
 }
+/* A drawn cross rather than the × glyph: a glyph sits on a baseline, and its ascent and descent
+   put it a pixel or two high in a 28px circle no matter what line-height says. Two strokes in a
+   square box centre by geometry. */
+.dock-close-ic { width: 15px; height: 15px; flex: none; display: block; }
 .dock-close:hover { background: var(--glass-bg-strong); color: var(--text-primary); box-shadow: var(--gum-sheen); }
 
 @keyframes dock-in { from { opacity: 0; transform: translateX(26px) scale(0.98); } }
@@ -1174,10 +1179,10 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 /* ---- Workflow stage rail ----
    Two elements. .stage-rail spans the topbar - flex-basis 100% with a late order - so it drops onto
    its own line below the title and the meters however narrow the bar gets. .stage-track is the
-   visible pill inside it, and it now takes that whole width rather than hugging its five stages:
-   five steps bunched at the left with a third of the page empty beside them read as a stray toolbar,
+   visible pill inside it, and it now takes that whole width rather than hugging its three stages:
+   three steps bunched at the left with a third of the page empty beside them read as a stray toolbar,
    where a rail pinned to both edges reads as the span of the work. The slack goes into the threads
-   BETWEEN the stages, not into the stages themselves - see .stage-link - so the five pills stay the
+   BETWEEN the stages, not into the stages themselves - see .stage-link - so the three pills stay the
    size of their labels and the sequence is what stretches. */
 .stage-rail {
     flex-basis: 100%; order: 10;
@@ -1597,8 +1602,8 @@ button:focus-visible {
 
 /* Variants only swap the pair. */
 .btn-dark, .btn-success { --pill: var(--mint); --pill-ink: var(--mint-ink); }
-/* The quiet action: paper with a mint edge. Add Color, Add Custom Stitch, Record Tester and Load
-   File are secondary by weight, so they carry no fill of their own. */
+/* The quiet action: paper with a mint edge. Add Color and Load File are secondary by weight, so
+   they carry no fill of their own. */
 .btn-secondary, #load-btn, .btn-info, .form-controls button {
     --pill: var(--paper); --pill-ink: var(--mint-ink);
     border: 1.5px solid var(--glass-border);
@@ -1606,6 +1611,9 @@ button:focus-visible {
 .btn-info, .form-controls button { --pill-ink: var(--text-primary); }
 /* The one peach pill, and it means what peach means everywhere else: this deletes something. */
 .btn-danger { --pill: var(--peach); --pill-ink: var(--peach-ink); }
+/* Add Custom Stitch takes New Project's coral: it is the one call to make something new on the
+   Stitch Library, and the warm pair is what lifts it out of the form above it. */
+.btn-coral { --pill: var(--coral); --pill-ink: var(--coral-ink); }
 
 .form-controls { display: flex; gap: 12px; flex-wrap: wrap; }
 .form-controls button { flex: 1; }
@@ -2300,7 +2308,7 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .print-status-box { font-size: 9.5pt; color: var(--text-primary); }
     .print-brand-footnote { font-size: 8pt; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
 }
-/* Motif, tester, generation and export panels. */
+/* Motif, generation and export panels. */
 #grade-motif-panel, #grade-output-panel { margin-top: var(--space-3); }
 #grade-motif-panel > summary, #grade-output-panel > summary {
     cursor: pointer; font-size: var(--fs-sm); font-weight: 600; color: var(--text-muted); padding: var(--space-1) 0;
@@ -2459,9 +2467,9 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 }
 
 /* ---- Summary tiles ---- */
-/* Six columns counted out rather than auto-fit: fitting to a minimum width landed five-and-one at
-   the widths in between, with the orphan beside four columns of nothing. */
-.dash-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+/* Five columns counted out rather than auto-fit: fitting to a minimum width landed four-and-one at
+   the widths in between, with the orphan beside three columns of nothing. */
+.dash-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .dash-tile {
     display: flex; flex-direction: column; gap: 1px; text-align: left;
     background: var(--glass-fill); color: var(--text-primary);
@@ -2488,7 +2496,6 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 .tile-compiler  { --tile: var(--mint);     --tile-ink: var(--mint-ink); }
 .tile-sizer     { --tile: var(--sky);      --tile-ink: var(--sky-ink); }
 .tile-studio    { --tile: var(--pink);     --tile-ink: var(--pink-ink); }
-.tile-testers   { --tile: var(--butter);   --tile-ink: var(--butter-ink); }
 .tile-analytics { --tile: var(--aqua);     --tile-ink: var(--aqua-ink); }
 .dash-tile .tile-art {
     width: 30px; height: 30px; padding: 6px; box-sizing: border-box; border-radius: 50%;
@@ -2510,10 +2517,10 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 }
 /* The body takes the slack the stretch handed it, so a card that grew distributes that height
    through its list instead of pooling it at the bottom. */
-.dash-recent-list, .dash-testers-list, .dash-analytics-body,
+.dash-recent-list, .dash-analytics-body,
 .dash-sizes-body, .dash-schematics-body, .dash-gauges-body { flex: 1; }
 .dash-card > .dash-empty:only-child, .dash-recent-list > .dash-empty:only-child,
-.dash-testers-list > .dash-empty:only-child, .dash-analytics-body > .dash-empty:only-child,
+.dash-analytics-body > .dash-empty:only-child,
 .dash-sizes-body > .dash-empty:only-child, .dash-schematics-body > .dash-empty:only-child,
 .dash-gauges-body > .dash-empty:only-child { margin: auto 0; }
 /* Was coral at 800. Ten cards each shouting in the accent meant the accent pointed at nothing; it is
@@ -2528,13 +2535,12 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 .dash-link:hover { background: none; color: var(--coral-ink); text-decoration: underline; }
 .dash-empty { margin: 0; font-size: var(--fs-xs); font-style: italic; color: var(--text-muted); line-height: 1.5; }
 
-/* Grouped by how tall each card actually gets. The compiler leads a row of three, the six summaries
+/* Grouped by how tall each card actually gets. The compiler leads a row of three, the five summaries
    pair off below it, and the export strip runs full width at the foot. */
 .card-compiler   { grid-column: span 6; }
 .card-recent     { grid-column: span 3; }
-.card-testers    { grid-column: span 4; }
-.card-analytics  { grid-column: span 4; }
-.card-sizes      { grid-column: span 4; }
+.card-analytics  { grid-column: span 6; }
+.card-sizes      { grid-column: span 6; }
 .card-schematics { grid-column: span 6; }
 .card-gauges     { grid-column: span 6; }
 
@@ -2681,15 +2687,6 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 .record-figure:nth-child(6) strong { color: var(--butter-ink); }
 .record-collection .meter-track { margin-top: 6px; width: 100%; }
 
-/* ---- Testers ---- */
-.dash-testers-list { display: flex; flex-direction: column; gap: 9px; }
-.tester-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 9px; align-items: center; }
-.tester-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--glass-thin); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 600; }
-.tester-name { display: block; font-size: var(--fs-xs); font-weight: 700; }
-.tester-note { display: block; font-size: var(--fs-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tester-tag { font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; border-radius: var(--radius-pill); padding: 3px 10px; background: var(--success-bg); color: var(--success-text); white-space: nowrap; }
-.tag-issue { background: var(--danger-bg); color: var(--danger-text); }
-.tag-watch { background: var(--warning-bg); color: var(--warning-text); }
 
 /* ---- Analytics, size charts, schematics, gauges ---- */
 .dash-analytics-body { display: flex; flex-direction: column; gap: 9px; }
@@ -2798,11 +2795,10 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .card-recent { grid-column: span 6; }
     .card-compiler { grid-column: span 12; }
     .card-quest { grid-column: span 6; }
-    .card-testers { grid-column: span 6; }
     .card-analytics { grid-column: span 6; }
     .card-sizes { grid-column: span 6; }
     .card-schematics { grid-column: span 6; }
-    /* Nine cards two to a row leaves the last alone, so the odd one takes the whole row. */
+    /* Eight cards two to a row pair off; the gauges card takes a row to itself for its width. */
     .card-gauges { grid-column: span 12; }
     .card-publish { grid-column: span 12; }
     /* Six figures across a rail-width workspace is ~130px each, which the longer captions do not survive. */
@@ -2844,14 +2840,17 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     }
     #app-main { padding: 16px; }
     .topbar-title h2 { font-size: 1.5rem; }
-    /* Six across survives the icon rail but not the phone. Three, then two - both divide six evenly. */
-    .dash-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    /* Five across survives the icon rail but not the phone. Three and two here: a six-track grid with
+       every tile on two tracks and the last pair on three, so the second row fills rather than
+       leaving a hole beside its orphan. */
+    .dash-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .dash-tile { grid-column: span 2; }
+    .dash-tile:nth-last-child(-n+2) { grid-column: span 3; }
     .dash-grid { grid-template-columns: minmax(0, 1fr); }
     .card-recent { grid-column: span 1; }
     .card-compiler { grid-column: span 1; }
     .card-quest { grid-column: span 1; }
     .card-record { grid-column: span 1; }
-    .card-testers { grid-column: span 1; }
     .card-analytics { grid-column: span 1; }
     .card-sizes { grid-column: span 1; }
     .card-schematics { grid-column: span 1; }
@@ -2862,7 +2861,10 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
 }
 
 @media (max-width: 700px) {
+    /* Two across, and the fifth tile takes the last row on its own rather than half of it. */
     .dash-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-tile, .dash-tile:nth-last-child(-n+2) { grid-column: span 1; }
+    .dash-tile:last-child { grid-column: span 2; }
     .topbar-meters { width: 100%; }
     /* The two file pills share the last row rather than taking one each. The 40% basis is what
        does it: too wide to fit beside the status pill, so both wrap - and narrow enough that the

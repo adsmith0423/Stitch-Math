@@ -112,7 +112,7 @@ ck('trend markers came back on', prefs().showTrendMarkers, true);
 setMode(true);
 
 print('\n7. It is a view preference, and never travels with a pattern');
-// A .json a designer sends to a tester must not carry a UI preference with it. The envelope has a
+// A .json a designer sends to someone else must not carry a UI preference with it. The envelope has a
 // fixed shape, so this is structural rather than a matter of remembering - assert it anyway.
 var envelope = window.StitchPersistence.buildEnvelope({
     projectName: 'shared', body: { rawText: 'Row 1: ch 13, sc in 2nd ch from hook and in each ch across (12)' }

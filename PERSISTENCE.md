@@ -82,7 +82,7 @@ recorded here, not an oversight.
     "gauge": { "width": 4, "height": 4, "stitches": 0, "rows": 0, "unit": "in", "…": "…" },
     "gaugeHistory": [],
     "grading": { "sections": {}, "overrides": {}, "modes": {},
-                 "fields": {}, "testers": [], "customChart": null }
+                 "fields": {}, "customChart": null }
   }
 }
 ```

@@ -156,7 +156,7 @@ var alone = check('raglan', [piece('Yoke', 'yoke', soundRaglan())]);
 ck('with no body or sleeve typed, the agreement is skipped',
    stateOf(alone, 'The yoke meets the pieces'), 'skip');
 has('and the panel says how to un-skip it',
-    detailOf(alone, 'The yoke meets the pieces'), 'Sizer / Grader tab');
+    detailOf(alone, 'The yoke meets the pieces'), 'Size Grader tab');
 ck('the checks that CAN run still run', stateOf(alone, 'Eight stitches a round'), 'pass');
 
 var noYoke = check('raglan', [piece('Body', 'body', [180, 180])]);

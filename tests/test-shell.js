@@ -22,15 +22,15 @@ function addStitch(name, def, cost, yieldVal) {
 
 // Compiler and Studio were two entries onto the same panels and were merged, so the count has never
 // been one per panel group. Construction came in when Schematics was retired; the Studio Locker went
-// with the avatar; Daily Practice is the twelfth.
+// with the avatar; Daily Practice came in and Tester Feedback went, which leaves eleven.
 var NAV_IDS = ['nav-dashboard', 'nav-patterns', 'nav-library', 'nav-studio', 'nav-sizer',
-    'nav-testers', 'nav-analytics', 'nav-gauge', 'nav-practice',
+    'nav-analytics', 'nav-gauge', 'nav-practice',
     'nav-publish', 'nav-construction', 'nav-settings'];
 
 // Every panel the app had before the shell landed, plus Settings, Help and the panels split out of the
 // grader since. Each must still be in the markup and reachable from exactly one view.
 var PANELS = ['intro-header', 'project-panel', 'metadata-panel', 'input-section',
-    'matrix-section', 'structure-section', 'grader-section', 'tester-panel', 'tester-notes-panel',
+    'matrix-section', 'structure-section', 'grader-section',
     'finished-size-panel',
     'pattern-analytics-dashboard', 'output-section', 'complexity-panel',
     'custom-stitch-section', 'gauge-profile-panel', 'gauge-history-dashboard',
@@ -42,7 +42,7 @@ var CLEAN = [
     'Row 3: ch 1, turn, sc in each st across (18)'
 ];
 
-print('\n1. Twelve destinations, none of them a form control');
+print('\n1. Eleven destinations, none of them a form control');
 NAV_IDS.forEach(function (id) {
     ok(id + ' is in the markup', HTML.indexOf('id="' + id + '"') !== -1);
 });
@@ -50,7 +50,8 @@ NAV_IDS.forEach(function (id) {
     var tag = (HTML.match(new RegExp('<(\\w+)[^>]*\\bid="' + id + '"')) || [, ''])[1];
     ck(id + ' is a button', tag, 'button');
 });
-ck('twelve of them', (HTML.match(/class="nav-item"/g) || []).length, 12);
+ck('eleven of them', (HTML.match(/class="nav-item"/g) || []).length, 11);
+no('and Tester Feedback is gone', /id="nav-testers"/.test(HTML));
 no('Compiler is no longer a destination of its own', /id="nav-compiler"/.test(HTML));
 no('Schematics is retired', /id="nav-schematics"/.test(HTML));
 no('and the Studio Locker went with the avatar', /id="nav-locker"/.test(HTML));
@@ -61,35 +62,35 @@ ok('Pattern Files leads into Stitch Library',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-library"'));
 ok('and Setup comes before Studio, because you set a pattern up before you write it',
    HTML.indexOf('id="nav-patterns"') < HTML.indexOf('id="nav-studio"'));
-ok('then the grader', HTML.indexOf('id="nav-studio"') < HTML.indexOf('id="nav-sizer"'));
-ok('then the testers', HTML.indexOf('id="nav-sizer"') < HTML.indexOf('id="nav-testers"'));
-ok('then the export', HTML.indexOf('id="nav-testers"') < HTML.indexOf('id="nav-publish"'));
+ok('then the grader, as the last entry under Write', HTML.indexOf('id="nav-construction"') < HTML.indexOf('id="nav-sizer"'));
+ok('then the export', HTML.indexOf('id="nav-sizer"') < HTML.indexOf('id="nav-publish"'));
 ok('and Settings is the last entry in the rail',
    HTML.indexOf('id="nav-publish"') < HTML.indexOf('id="nav-settings"'));
 
-print('\n1b. Six hubs, and every destination but Settings lives in exactly one');
-var HUB_IDS = ['hub-dashboard', 'hub-setup', 'hub-write', 'hub-grade', 'hub-test', 'hub-export'];
+print('\n1b. Four hubs, and every destination but Settings lives in exactly one');
+var HUB_IDS = ['hub-dashboard', 'hub-setup', 'hub-write', 'hub-export'];
 HUB_IDS.forEach(function (id) {
     ok(id + ' is in the markup', HTML.indexOf('id="' + id + '"') !== -1);
     var tag = (HTML.match(new RegExp('<(\\w+)[^>]*\\bid="' + id + '"')) || [, ''])[1];
     ck(id + ' is a button', tag, 'button');
 });
-ck('six of them', (HTML.match(/class="nav-hub"/g) || []).length, 6);
-ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 6);
+ck('four of them', (HTML.match(/class="nav-hub"/g) || []).length, 4);
+ck('each with a sub-list', (HTML.match(/class="nav-sub"/g) || []).length, 4);
+no('and the Grade hub is gone', /id="hub-grade"/.test(HTML));
 // A hub is not a destination. If one ever gained a NAV_TARGETS entry it would own a route and a
-// view, and the rail would have eighteen places to go rather than twelve.
+// view, and the rail would have fifteen places to go rather than eleven.
 HUB_IDS.forEach(function (id) {
     no(id + ' is not itself a destination', HTML.indexOf('id="' + id + '" class="nav-item"') !== -1);
 });
-// The grouping lives in app.js. Read it back and prove it covers eleven of the twelve exactly once
-// - a thirteenth view added with a route and no hub would otherwise be reachable by URL and
+// The grouping lives in app.js. Read it back and prove it covers ten of the eleven exactly once
+// - a twelfth view added with a route and no hub would otherwise be reachable by URL and
 // invisible in the rail, which is the failure this pins. Settings is the one that is meant to be
 // in no hub: it is not a step in writing a pattern.
 var shellSrc = readFile('app.js');
 var hubBody = shellSrc.slice(shellSrc.indexOf('const NAV_HUBS = {'),
                              shellSrc.indexOf('const HUB_IDS'));
 var grouped = (hubBody.match(/'nav-[a-z]+'/g) || []).map(function (s) { return s.slice(1, -1); });
-ck('NAV_HUBS lists eleven destinations', grouped.length, 11);
+ck('NAV_HUBS lists ten destinations', grouped.length, 10);
 NAV_IDS.forEach(function (id) {
     ck(id + (id === 'nav-settings' ? ' is in no hub' : ' has exactly one hub'),
        grouped.filter(function (g) { return g === id; }).length, id === 'nav-settings' ? 0 : 1);
@@ -101,10 +102,10 @@ ok('and Settings is not inside any sub-list in the markup',
 print('\n1b-ii. The sidebar steps and the stage rail are one list, numbered the same way');
 // STAGES is the table both are drawn from. Read its labels and hubs back out of app.js and prove
 // the markup's numbered hubs carry the same word under the same number, in the same order - the
-// failure this pins is step 4 reading "Test" in one place and something else in the other.
+// failure this pins is step 3 reading "Export" in one place and something else in the other.
 var stageBody = shellSrc.slice(shellSrc.indexOf('const STAGES = ['), shellSrc.indexOf('const STAGE_NAV'));
 var stageRows = stageBody.match(/hub: '([a-z-]+)',\s*nav: '([a-z-]+)',\s*label: '([^']+)'/g) || [];
-ck('five stages, each naming its hub, destination and label', stageRows.length, 5);
+ck('three stages, each naming its hub, destination and label', stageRows.length, 3);
 var stageHubs = [];
 stageRows.forEach(function (row, i) {
     var m = row.match(/hub: '([a-z-]+)',\s*nav: '([a-z-]+)',\s*label: '([^']+)'/);
@@ -122,7 +123,7 @@ stageRows.forEach(function (row, i) {
     if (i > 0) ok('and it comes after step ' + i, HTML.indexOf('id="' + stageHubs[i - 1] + '"') < HTML.indexOf('id="' + hub + '"'));
 });
 ok('the Dashboard sits above step 1', HTML.indexOf('id="hub-dashboard"') < HTML.indexOf('id="' + stageHubs[0] + '"'));
-ck('and the Dashboard is not numbered', (HTML.match(/class="nav-step"/g) || []).length, 5);
+ck('and the Dashboard is not numbered', (HTML.match(/class="nav-step"/g) || []).length, 3);
 
 print('\n1c. Navigating opens the hub that owns where you went, and closes the rest');
 function openHubs() {
@@ -152,22 +153,32 @@ ok('pressing a hub goes to its first entry', $('nav-publish').classList.contains
 ck('and opens that hub', openHubs()[0], 'hub-export');
 ck('while the others close', $('hub-write').getAttribute('aria-expanded'), 'false');
 
-print('\n1d. The workflow rail crosses the five views a pattern is written across');
-var STAGE_NAV = ['nav-patterns', 'nav-studio', 'nav-sizer', 'nav-testers', 'nav-publish'];
+print('\n1d. The workflow rail crosses the three views a pattern is written across');
+var STAGE_NAV = ['nav-patterns', 'nav-studio', 'nav-publish'];
 function stage(navId) { return $('stage-' + navId); }
 function railShown() { return !hidden('stage-rail'); }
 
-// On for the workflow, off everywhere else. A five-step "write a pattern" strip above the Gauge
-// Profile would be pointing at work that page has nothing to do with.
+// On for every page under a numbered step - the one each step lands on and every other entry in
+// its hub - and off everywhere else. A three-step "write a pattern" strip above Analytics would be
+// pointing at work that page has nothing to do with.
 STAGE_NAV.forEach(function (id) {
     nav(id);
     ok(id + ' shows the rail', railShown());
 });
-['nav-dashboard', 'nav-analytics', 'nav-gauge', 'nav-construction', 'nav-settings',
- 'nav-library'].forEach(function (id) {
+['nav-library', 'nav-gauge', 'nav-construction', 'nav-sizer'].forEach(function (id) {
+    nav(id);
+    ok(id + ' shows it too, as an entry under a step', railShown());
+});
+['nav-dashboard', 'nav-analytics', 'nav-practice', 'nav-settings'].forEach(function (id) {
     nav(id);
     no(id + ' does not', railShown());
 });
+// The current step is the one whose hub owns the page, so a sub-entry lights its step rather than none.
+nav('nav-library');
+ck('the Stitch Library is step 1', stage('nav-patterns').getAttribute('aria-current'), 'step');
+nav('nav-sizer');
+ck('and the Size Grader is step 2', stage('nav-studio').getAttribute('aria-current'), 'step');
+no('and not step 3', stage('nav-publish').getAttribute('aria-current') === 'step');
 
 // Every stage is a real destination, and reaching one marks it as the current step.
 nav('nav-studio');
@@ -176,34 +187,32 @@ STAGE_NAV.forEach(function (id) {
     ok('and carries the stage class', stage(id).className.indexOf('stage') >= 0);
 });
 ck('the stage you are on is the current step', stage('nav-studio').getAttribute('aria-current'), 'step');
-no('and the others are not', stage('nav-sizer').getAttribute('aria-current') === 'step');
+no('and the others are not', stage('nav-publish').getAttribute('aria-current') === 'step');
 
 // Clicking a stage navigates. This is the whole point of the rail, so it is clicked rather than
 // inspected - which is why the strip is built element by element and not from an innerHTML string.
-stage('nav-sizer').fire('click');
-ok('a stage press switches view', shown('grader-section'));
-ok('and marks the sidebar entry active', $('nav-sizer').classList.contains('is-active'));
-ok('and opens the hub that owns it', $('hub-grade').classList.contains('is-open'));
-ck('and moves the current step', stage('nav-sizer').getAttribute('aria-current'), 'step');
+stage('nav-publish').fire('click');
+ok('a stage press switches view', shown('publish-panel'));
+ok('and marks the sidebar entry active', $('nav-publish').classList.contains('is-active'));
+ok('and opens the hub that owns it', $('hub-export').classList.contains('is-open'));
+ck('and moves the current step', stage('nav-publish').getAttribute('aria-current'), 'step');
 
 print('\n1d-ii. A stage marks itself off what the pattern actually has, and reports nothing else');
 // The marks are read from live state every redraw, never recorded, so they must follow the pattern
-// rather than the visits. Walking all five above must NOT have marked anything.
+// rather than the visits. Walking all three above must NOT have marked anything.
 $('clear-all-btn').fire('click');
 nav('nav-studio');
 no('an empty pattern has not been written', stage('nav-studio').className.indexOf('is-done') >= 0);
-no('nor graded', stage('nav-sizer').className.indexOf('is-done') >= 0);
-no('nor tested', stage('nav-testers').className.indexOf('is-done') >= 0);
 no('nor is it ready to hand over', stage('nav-publish').className.indexOf('is-done') >= 0);
 
 load(CLEAN);
 ok('a compiled pattern marks Write done', stage('nav-studio').className.indexOf('is-done') >= 0);
 ok('and a clean one is ready to export', stage('nav-publish').className.indexOf('is-done') >= 0);
-no('but grading is still untouched', stage('nav-sizer').className.indexOf('is-done') >= 0);
+no('but Setup is still untouched', stage('nav-patterns').className.indexOf('is-done') >= 0);
 // The sidebar's numbered hubs light off the same predicates, at the same moment.
 ok('and the sidebar lights step 2', $('hub-write').classList.contains('is-done'));
-ok('and step 5', $('hub-export').classList.contains('is-done'));
-no('but not step 3', $('hub-grade').classList.contains('is-done'));
+ok('and step 3', $('hub-export').classList.contains('is-done'));
+no('but not step 1', $('hub-setup').classList.contains('is-done'));
 // A done stage keeps its number. It used to swap the number for a tick, which left step 4 reading
 // "4" in the sidebar and as a checkmark in the rail - the same step, two labels.
 function stageNum(navId) {
@@ -218,11 +227,11 @@ function stageNum(navId) {
     return nums.join('');
 }
 ck('a done stage still shows its number', stageNum('nav-studio'), '2');
-ck('and so does one that is not done', stageNum('nav-sizer'), '3');
+ck('and so does one that is not done', stageNum('nav-patterns'), '1');
 no('and nothing draws a tick any more', /stage-tick/.test(shellSrc) || /stage-tick/.test(CSS));
-ck('the stage words are the sidebar words', ['nav-patterns', 'nav-studio', 'nav-sizer', 'nav-testers', 'nav-publish']
+ck('the stage words are the sidebar words', ['nav-patterns', 'nav-studio', 'nav-publish']
     .map(function (id) { return stage(id).text().replace(/\d|\||\(done\)/g, '').trim(); }).join('|'),
-   'Setup|Write|Grade|Test|Export');
+   'Setup|Write|Publish');
 // Un-marks itself when the thing it reported is gone - which is what "read, never recorded" buys.
 $('clear-all-btn').fire('click');
 no('clearing the pattern un-marks Write', stage('nav-studio').className.indexOf('is-done') >= 0);
@@ -277,9 +286,17 @@ no('and it stops being one on close', !!$('dock-compiler').getAttribute('role'))
 // Navigating puts the panels back where the view expects them. Left open, the Stitch Library's
 // panels would be in the floating pane while Pattern Files showed a gap where they belong.
 $('dock-btn-library').fire('click');
-nav('nav-patterns');
+nav('nav-library');
 no('navigating closes an open dock', dockOpen('dock-library'));
 ok('and the panels are back in the column', shown('stitch-usage-panel'));
+// The pane is a peek at the Stitch Library; its head links to the tab itself, and going there
+// takes the pane down on the way.
+nav('nav-studio');
+$('dock-btn-library').fire('click');
+$('dock-open-library').fire('click');
+ck('the head link opens the Stitch Library tab', $('view-title').textContent, 'Stitch Library');
+no('and the pane is gone', dockOpen('dock-library'));
+ok('with the panels on the page', shown('custom-stitch-section'));
 
 print('\n1e-ii. The compiler dock is live from anywhere, not a snapshot of the Dashboard');
 // This is why floating it is worth anything. The shell hides panels rather than tearing them down,
@@ -326,7 +343,6 @@ var LEFT_SLICE = HTML.slice(HTML.indexOf('id="left-column"'), HTML.indexOf('id="
  ['gauge-profile-panel', true], ['finished-size-panel', true],
  ['gauge-history-dashboard', true], ['project-panel', false], ['metadata-panel', false],
  ['structure-section', false], ['grader-section', false], ['input-section', false],
- ['tester-panel', false], ['tester-notes-panel', false],
  ['matrix-section', false], ['settings-panel', false], ['help-panel', false],
  ['publish-panel', false],
  ['construction-panel', false], ['construction-yoke-panel', false],
@@ -335,25 +351,28 @@ var LEFT_SLICE = HTML.slice(HTML.indexOf('id="left-column"'), HTML.indexOf('id="
        LEFT_SLICE.indexOf('id="' + pair[0] + '"') !== -1, pair[1]);
 });
 
-// Stitch Library no longer owns a view. It lands on Patterns and scrolls to the stitch panels.
+// Stitch Library is a page of its own, apart from the file's metadata.
 nav('nav-library');
 ok('Stitch Library shows the stitch dictionary', shown('custom-stitch-section'));
 ok('and the stitches the pattern works', shown('stitch-usage-panel'));
-ok('on the Patterns tab, colours and all', shown('color-panel'));
+no('and not the colours', shown('color-panel'));
+no('nor the metadata', shown('metadata-panel'));
+no('nor the project panel', shown('project-panel'));
 no('and hides the grader', shown('grader-section'));
 no('and hides the matrix', shown('matrix-section'));
 no('the dashboard is put away', shown('dashboard-view'));
 ck('one column, as every view now is', $('workspace').dataset.cols, 'one');
 no('so the left column is hidden', shown('left-column'));
-// It is a scroll target on Patterns, not a page of its own, so the topbar keeps saying Patterns.
-ck('the page is not retitled', $('view-title').textContent, 'Patterns');
+ck('and the page is titled for it', $('view-title').textContent, 'Stitch Library');
+nav('nav-patterns');
+no('Patterns no longer carries the stitch panels', shown('stitch-usage-panel') || shown('custom-stitch-section'));
+ok('but keeps the colours', shown('color-panel'));
 
 nav('nav-sizer');
 ok('Sizer brings the grader back', shown('grader-section'));
 ok('and the size comparison', shown('finished-size-panel'));
 no('and puts the dictionary away', shown('custom-stitch-section'));
 no('and the structure panel moved to Studio', shown('structure-section'));
-no('and Tester Feedback moved to its own tab', shown('tester-panel'));
 // Both columns carry panels here, but they stack rather than sit side by side. Only the dashboard, which
 // has a card grid of its own, is ever more than one column wide.
 ck('still a single column', $('workspace').dataset.cols, 'one');
@@ -362,36 +381,6 @@ ok('with both columns stacked', shown('left-column') && shown('right-column'));
 nav('nav-dashboard');
 ok('Dashboard shows the summary', shown('dashboard-view'));
 no('and hides the workspace entirely', shown('workspace'));
-
-print('\n4. Tester Feedback owns its own tab, with a blank notes panel beneath it');
-nav('nav-testers');
-ok('it shows the tester fields', shown('tester-panel'));
-ok('and the blank notes panel underneath', shown('tester-notes-panel'));
-no('and not the rest of the grader', shown('grader-section'));
-no('nor the matrix', shown('matrix-section'));
-ck('one column, as every view now is', $('workspace').dataset.cols, 'one');
-no('so the left column is hidden', shown('left-column'));
-// The notes panel is no longer blank. It used to carry an unnamed textarea that nothing read: the
-// Record button directly beneath it saved the fields in the panel above and dropped this one, while
-// clearing the others - so a discard was indistinguishable from a save. It now has an id, is read by
-// recordTester, and is cleared with the rest, which also puts it in test-newfile.js's field sweep.
-var TESTER_NOTES = HTML.slice(HTML.indexOf('id="tester-notes-panel"'));
-TESTER_NOTES = TESTER_NOTES.slice(0, TESTER_NOTES.indexOf('</section>'));
-ok('it holds a textarea', /<textarea/.test(TESTER_NOTES));
-ok('and the textarea is named', /<textarea[^>]*\bid="tester-freeform"/.test(TESTER_NOTES));
-ok('and its label points at it', /<label[^>]*\bfor="tester-freeform"/.test(TESTER_NOTES));
-
-// What the id is for. Recording a tester must now read this box and empty it: it emptying is the
-// observable half of "it was saved", and it staying full while every field beside it cleared was the
-// bug. Where the value ends up - on the tester, and in the worksheet - is asserted in test-grader.js
-// section 30, which already has the saved project to read it back out of.
-$('tester-name').value = 'Marisol';
-$('tester-size').value = 'M';
-$('tester-freeform').value = 'Ran big at the bust.';
-$('tester-add-btn').fire('click');
-// Clearing is the observable half of "it was saved" - and it is also proof the click was accepted
-// rather than turned away by the name-and-size guard, which returns before clearing anything.
-ck('the freeform box is cleared like every other field', $('tester-freeform').value, '');
 
 print('\n4a. A focus target switches view and opens what it names');
 // Publish used to be a focus target on the grader's export disclosure. It owns a view now, and reaches
@@ -416,20 +405,21 @@ ok('structure comes after the pattern input',
 ok('and before the validation matrix',
    HTML.indexOf('id="structure-section"') < HTML.indexOf('id="matrix-section"'));
 
-print('\n4b-ii. Patterns carries the pattern vocabulary: colours, then the stitches');
+print('\n4b-ii. Patterns carries the file and its colours; the Stitch Library carries the stitches');
 nav('nav-patterns');
 ok('the colour panel is on this tab', shown('color-panel'));
 ok('with the project and metadata panels', shown('project-panel') && shown('metadata-panel'));
-ok('and both stitch panels', shown('stitch-usage-panel') && shown('custom-stitch-section'));
-// Reading order down the tab: the metadata, then the colours it annotates, then the stitches. These are
-// document positions, not view membership - a panel listed on the tab but written elsewhere in the markup
-// would show up in the wrong place on the page and pass every `shown` check above.
+nav('nav-library');
+ok('and both stitch panels are on the Library', shown('stitch-usage-panel') && shown('custom-stitch-section'));
+// Reading order down each tab: the metadata, then the colours it annotates; the stitches used, then the
+// dictionary. These are document positions, not view membership - a panel listed on a tab but written
+// elsewhere in the markup would show up in the wrong place on the page and pass every `shown` check above.
 ok('colours sit after Pattern Metadata',
    HTML.indexOf('id="metadata-panel"') < HTML.indexOf('id="color-panel"'));
-ok('Stitches Used sits below Color Codes',
-   HTML.indexOf('id="color-panel"') < HTML.indexOf('id="stitch-usage-panel"'));
-ok('and the Custom Stitch Dictionary below that',
-   HTML.indexOf('id="stitch-usage-panel"') < HTML.indexOf('id="custom-stitch-section"'));
+ok('the Custom Stitch Dictionary sits below Color Codes in the markup',
+   HTML.indexOf('id="color-panel"') < HTML.indexOf('id="custom-stitch-section"'));
+ok('and Stitches Used below that',
+   HTML.indexOf('id="custom-stitch-section"') < HTML.indexOf('id="stitch-usage-panel"'));
 // One of each panel, not a copy left behind in the old column.
 ['stitch-usage-panel', 'custom-stitch-section', 'custom-stitch-form'].forEach(function (id) {
     ck(id + ' appears once', (HTML.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1);
@@ -707,8 +697,9 @@ var ROOT = CSS.slice(CSS.indexOf(':root {'), CSS.indexOf('\n}', CSS.indexOf(':ro
     ok(hue + ' has a fill and an ink by day', new RegExp('--' + hue + ':').test(ROOT) && new RegExp('--' + hue + '-ink:').test(ROOT));
     ok('and by night', new RegExp('--' + hue + ':').test(NIGHT) && new RegExp('--' + hue + '-ink:').test(NIGHT));
 });
-ok('the five steps each own a pastel', [1, 2, 3, 4, 5].every(function (n) { return new RegExp('--step-' + n + ':').test(ROOT); }));
-ok('and the markup tags each hub with its step', [1, 2, 3, 4, 5].every(function (n) { return HTML.indexOf('data-step="' + n + '"') !== -1; }));
+ok('the three steps each own a pastel', [1, 2, 3].every(function (n) { return new RegExp('--step-' + n + ':').test(ROOT); }));
+ok('and the markup tags each hub with its step', [1, 2, 3].every(function (n) { return HTML.indexOf('data-step="' + n + '"') !== -1; }));
+no('and there is no fourth', /data-step="4"/.test(HTML) || /--step-4:/.test(ROOT));
 // The craft icons: five new symbols, and every heading icon points at a symbol that exists.
 ['ic-hook', 'ic-needles', 'ic-scissors', 'ic-tape', 'ic-marker', 'ic-book-open', 'ic-folder'].forEach(function (id) {
     ok(id + ' is in the sprite', HTML.indexOf('<symbol id="' + id + '"') !== -1);
@@ -874,7 +865,7 @@ ok('the first one is open by default', /<details class="help-topic" open>/.test(
        HELPBLOCK.indexOf(label) !== -1 && HTML.indexOf(label) !== -1);
 });
 // It also names the sidebar destinations it tells people to visit.
-['Studio', 'Gauge Profile', 'Sizer / Grader', 'Library', 'Patterns'].forEach(function (dest) {
+['Studio', 'Gauge Profile', 'Size Grader', 'Library', 'Patterns'].forEach(function (dest) {
     ok('help points at the real "' + dest + '" tab', HELPBLOCK.indexOf(dest) !== -1);
 });
 no('no form controls in the help panel', /<(input|select|textarea)\b/.test(HELPBLOCK));
@@ -953,7 +944,6 @@ ck('health has no number to show', $('dash-health').textContent, '—');
 ok('the compiler card says so', /No pattern compiled yet/.test($('dash-findings').innerHTML));
 ok('recent projects says so', /No saved projects yet/.test($('dash-recent').innerHTML));
 ok('gauges says so', /No swatches logged/.test($('dash-gauges').innerHTML));
-ok('testers says so', /No testers recorded/.test($('dash-testers').innerHTML));
 ok('size charts says so', /written for one size/.test($('dash-sizes').innerHTML));
 ok('and so does the schematic', /A schematic is drawn once/.test($('dash-schematics').innerHTML));
 
@@ -1471,14 +1461,13 @@ ok('with the bullet spoken as a full stop rather than the word "bullet"',
    /replace\(\/\\s\*•\\s\*\/g, '\. '\)/.test(describeBody));
 
 print('\n12. Hash routing');
-// Twelve views and one address. The slug is derived from the nav id rather than written
+// Eleven views and one address. The slug is derived from the nav id rather than written
 // beside it, so a view cannot gain a route without a tab or a tab without a route - which is the whole
 // reason to assert the mapping rather than a hand-written list.
 var SLUGS = NAV_IDS.map(function (id) { return id.replace(/^nav-/, ''); });
 ck('every nav id yields a slug', SLUGS.filter(Boolean).length, NAV_IDS.length);
 ck('and no two share one', new Set(SLUGS).size, NAV_IDS.length);
 ok('none of them keeps the nav- prefix', SLUGS.every(function (x) { return x.indexOf('nav-') === -1; }));
-// nav-library shares nav-patterns' view but lands on a different panel, so it keeps its own address.
 ok('library is addressable separately from patterns',
    SLUGS.indexOf('library') !== -1 && SLUGS.indexOf('patterns') !== -1);
 // The stub has no window.location, so the router's writes are no-ops here rather than throwing - which

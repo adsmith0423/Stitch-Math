@@ -1841,7 +1841,7 @@ window.CrochetAnalyticsEngine = (() => {
         if (!span) {
             add('Yoke', 'skip', yoke
                 ? `${yoke.title} has fewer than two rows the validator could resolve, so there is no shape to read.`
-                : 'No section is typed Yoke. Set one on the Sizer / Grader tab and the yoke can be checked.');
+                : 'No section is typed Yoke. Set one on the Size Grader tab and the yoke can be checked.');
             return finish();
         }
         report.span = span;
@@ -1856,7 +1856,7 @@ window.CrochetAnalyticsEngine = (() => {
         if (!isNum(bodyCount) || !isNum(sleeveCount)) {
             add('The yoke meets the pieces', 'skip',
                 'Type one section Body (or a Front and a Back) and one Sleeve on the '
-                + 'Sizer / Grader tab, and the yoke can be checked against what they need.');
+                + 'Size Grader tab, and the yoke can be checked against what they need.');
             return;
         }
         const gap = span.to - separationCount;
@@ -1977,7 +1977,7 @@ window.CrochetAnalyticsEngine = (() => {
             add('Armhole and cap', 'skip',
                 'A set-in sleeve is checked by comparing two pieces, so it needs a section '
                 + 'typed Body (or Front, or Back) and one typed Sleeve. Set them on the '
-                + 'Sizer / Grader tab.');
+                + 'Size Grader tab.');
             return finish();
         }
 
@@ -2114,84 +2114,6 @@ window.CrochetAnalyticsEngine = (() => {
         return `${base} (${rest.join(', ')})`;
     }
 
-    // === 3b3. TESTER FEEDBACK === //
-
-    /**
-     * What a tester actually got, against what the grader said they would. The only check here with
-     * evidence from outside the engine, so the only one that can catch a gauge or a chart being wrong
-     * rather than a sum being wrong.
-     *
-     * tester: { name, size, bodyMeasurements: {point: in}, finished: {point: in},
-     *           fitRatings: {area: 'tight'|'good'|'loose'}, modifications, gauge: {...} }
-     */
-    function CompareTesterFeedback({ tester = null, garment = [], gauge = {} } = {}) {
-        const findings = [];
-        if (!tester || !tester.size) return findings;
-
-        const at = (point) => {
-            const row = garment.find(r => r.point === point);
-            const cell = row && row.sizes.find(c => c.size === tester.size);
-            return cell || null;
-        };
-
-        // Predicted versus what came off the hook. A quarter inch is blocking and measuring; beyond
-        // that the prediction was wrong about something.
-        Object.keys(tester.finished || {}).forEach(point => {
-            const actual = tester.finished[point];
-            const cell = at(point);
-            if (!isNum(actual) || !cell || !isNum(cell.target)) return;
-            const gap = round2(actual - cell.target);
-            if (Math.abs(gap) > 0.25) {
-                findings.push({
-                    tester: tester.name || 'tester', size: tester.size, point,
-                    check: `${MEASUREMENT_LABELS[point] || point} came out ${gap > 0 ? 'larger' : 'smaller'}`,
-                    detail: `predicted ${cell.target} in, measured ${actual} in (${signOf(gap)} in).`,
-                    state: Math.abs(gap) > 1 ? 'fail' : 'warn'
-                });
-            }
-        });
-
-        // A tester working at a different gauge explains size differences that would otherwise look
-        // like a grading fault, so it is reported before them.
-        const effective = EffectiveGauge(gauge);
-        const theirs = tester.gauge || {};
-        if (isNum(theirs.stitchesPerInch) && isNum(effective.stitchesPerInch)
-            && effective.stitchesPerInch > 0) {
-            const off = round1(((theirs.stitchesPerInch - effective.stitchesPerInch)
-                                / effective.stitchesPerInch) * 100);
-            if (Math.abs(off) >= 5) {
-                findings.push({
-                    tester: tester.name || 'tester', size: tester.size, point: 'gauge',
-                    check: 'Tester worked at a different gauge',
-                    detail: `${theirs.stitchesPerInch} sts/in against the pattern's `
-                          + `${round2(effective.stitchesPerInch)} (${signOf(off)}%) - `
-                          + `size differences follow from this before anything else.`,
-                    state: 'warn'
-                });
-            }
-        }
-
-        Object.keys(tester.fitRatings || {}).forEach(area => {
-            const rating = tester.fitRatings[area];
-            if (rating === 'good' || !rating) return;
-            findings.push({
-                tester: tester.name || 'tester', size: tester.size, point: area,
-                check: `Fit reported ${rating} at the ${MEASUREMENT_LABELS[area] || area}`,
-                detail: tester.modifications ? `modifications: ${tester.modifications}` : '',
-                state: 'warn'
-            });
-        });
-
-        (tester.problemRows || []).forEach(label => {
-            findings.push({
-                tester: tester.name || 'tester', size: tester.size, point: 'row',
-                check: `Tester flagged ${label}`, detail: '', state: 'warn'
-            });
-        });
-
-        return findings;
-    }
-
     // === 3b4. GRADING CONFIDENCE === //
 
     /**
@@ -2199,12 +2121,12 @@ window.CrochetAnalyticsEngine = (() => {
      *
      * Built like CalculatePatternHealth: start at 100 and deduct only for signals something else
      * already produced. Nothing here is an opinion about the design - a size scores badly because its
-     * measurements were extrapolated past the chart, its counts round further than the others, or a
-     * tester came back with a problem. Extrapolation is the biggest deduction because it is the one a
+     * measurements were extrapolated past the chart or its counts round further than the others.
+     * Extrapolation is the biggest deduction because it is the one a
      * designer cannot see: a 5XL graded off a chart stopping at 2X looks as confident as a Medium.
      */
     function GradingConfidence({ size = '', garment = [], gauge = {}, chartSizes = null,
-                                 warnings = [], testerFindings = [], modes = {} } = {}) {
+                                 warnings = [], modes = {} } = {}) {
         const reasons = [];
         let score = 100;
         const deduct = (points, reason) => { score -= points; reasons.push({ points, reason }); };
@@ -2277,14 +2199,6 @@ window.CrochetAnalyticsEngine = (() => {
         if (shared.length) {
             deduct(Math.min(8, shared.length * 2),
                 `${plural(shared.length, 'unresolved warning')} across the size run`);
-        }
-
-        // Evidence from outside the engine outranks everything inside it.
-        const theirs = testerFindings.filter(t => t.size === size);
-        if (theirs.length) {
-            const failed = theirs.filter(t => t.state === 'fail').length;
-            deduct(Math.min(30, failed * 15 + (theirs.length - failed) * 5),
-                `${plural(theirs.length, 'tester finding')} on this size`);
         }
 
         score = Math.max(0, Math.min(100, Math.round(score)));
@@ -3118,7 +3032,6 @@ window.CrochetAnalyticsEngine = (() => {
         PlanMotifLayout,
         EstimateSizeEffort,
         CompareSizeEffort,
-        CompareTesterFeedback,
         GradingConfidence,
         CONSTRUCTIONS,
         PlanRaglanYoke,

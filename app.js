@@ -145,7 +145,6 @@
             sections: {},
             overrides: {},
             modes: {},
-            testers: [],
             customChart: null
         },
         analytics: {
@@ -292,9 +291,6 @@
             "grade-rounding", "grade-parity",
             "grade-schematic", "grade-point-detail", "grade-report",
             "grade-motif-panel", "motif-size", "motif-join", "motif-border", "motif-point", "motif-output",
-            "tester-panel", "tester-name", "tester-size", "tester-finished-bust", "tester-gauge",
-            "tester-fit-bust", "tester-fit-arm", "tester-notes", "tester-freeform",
-            "tester-add-btn", "tester-output",
             "grade-output-panel", "gen-notation", "gen-construction", "gen-output", "export-package",
             "grade-measurements", "grade-custom-sizes", "grade-custom-chart",
             "jump-error-btn", "stat-difficulty",
@@ -315,7 +311,7 @@
             "print-area", "pdf-preview", "pub-refresh-preview",
             "pub-export-txt", "pub-export-pdf", "pub-export-markup", "pub-export-history", "pub-export-package",
             "nav-dashboard", "nav-patterns", "nav-sizer", "nav-studio", "nav-practice",
-            "nav-testers", "nav-analytics", "nav-library", "nav-gauge",
+            "nav-analytics", "nav-library", "nav-gauge",
             "nav-publish", "nav-settings", "nav-construction", "nav-toggle", "nav-scrim",
             // Construction (section 8c). Hosts only - everything inside is built at run time, so none of it
             // is in the static field list New File clears.
@@ -345,17 +341,17 @@
             "rec-patterns", "rec-exports", "rec-stitches", "rec-compiles", "rec-best",
             "rec-collected", "rec-collection-bar",
             "tile-patterns", "tile-compiler", "tile-sizer", "tile-studio",
-            "tile-testers", "tile-analytics",
+            "tile-analytics",
             "tile-patterns-value", "tile-compiler-value", "tile-sizer-value",
-            "tile-studio-value", "tile-testers-value", "tile-analytics-value",
-            "link-recent", "link-compiler", "link-testers", "link-analytics",
+            "tile-studio-value", "tile-analytics-value",
+            "link-recent", "link-compiler", "link-analytics",
             "link-sizes", "link-gauges",
             "dash-recent", "dash-findings", "dash-graph", "dash-errors", "dash-warnings",
-            "dash-passed", "dash-health", "dash-health-bar", "dash-testers",
+            "dash-passed", "dash-health", "dash-health-bar",
             "dash-analytics", "dash-sizes", "dash-schematics", "dash-gauges",
             "quest-text", "quest-reward", "quest-bar", "quest-count",
             "dash-export-txt", "dash-export-pdf", "dash-export-history",
-            "dash-export-package", "dash-export-open"
+            "dash-export-package", "dash-export-open", "dock-open-library"
         ];
 
         elementsToCache.forEach(id => {
@@ -515,7 +511,6 @@
         // inputs re-runs the grader rather than a private redraw.
         bind(["motif-size", "motif-join", "motif-border", "motif-point",
               "gen-notation", "gen-construction"], ["input", "change"], renderGrader);
-        UI["tester-add-btn"]?.addEventListener("click", recordTester);
 
         // Each is a named function rather than an inline one because the Settings view mirrors the same
         // controls and runs the SAME function - a mirror that reimplemented the effect would be a second
@@ -1730,7 +1725,7 @@
      *
      * Every field below is defaulted rather than guarded, and each of those defaults is a bug that was
      * found the hard way - a save without a gauge block inheriting the last project's swatch, a save
-     * from before the grader existed leaving the previous designer's testers standing. The reasons are
+     * from before the grader existed leaving the previous designer's grading sections standing. The reasons are
      * written in place. Do not fold them into a loop.
      */
     function applyProjectRecord(name, project) {
@@ -1786,14 +1781,13 @@
 
         // Outside the gauge block, and it matters: the grader is not part of the gauge, and a save
         // written before the gauge existed would otherwise leave the previous project's sections,
-        // overrides and testers standing while its pattern loaded. Every field is defaulted rather than
+        // overrides and modes standing while its pattern loaded. Every field is defaulted rather than
         // assumed present - older saves predate the grader entirely, so an absent block is normal.
         state.grading = project.grading || {};
         state.grading.sections = state.grading.sections || {};
         state.grading.overrides = state.grading.overrides || {};
         state.grading.fields = state.grading.fields || {};
         state.grading.modes = state.grading.modes || {};
-        state.grading.testers = state.grading.testers || [];
         state.grading.customChart = state.grading.customChart || null;
 
         state.gaugeHistory = structuredClone(project.gaugeHistory || []);
@@ -1832,7 +1826,7 @@
             state.patternSteps = [];
             state.gaugeHistory = [];
             state.gauge = defaultGauge();
-            state.grading = { sections: {}, overrides: {}, modes: {}, testers: [], fields: {}, customChart: null };
+            state.grading = { sections: {}, overrides: {}, modes: {}, fields: {}, customChart: null };
             state.convertUnitManuallySet = false;
             state.sizingPieceManuallySet = false;
             // Matrix view preferences are restored too: trend markers are on by default, and leaving
@@ -2509,7 +2503,7 @@
     /**
      * The designer's own copy, and the only thing in this whole layer that is permanent. Snapshots live
      * in storage a browser may clear at any moment and never leave the machine; this is the file they
-     * own, back up and send to a tester.
+     * own, back up and send to someone else.
      *
      * Written through downloadFile like every other export, rather than a Blob built here: that is the
      * one place a download happens and the one place an export is counted.
@@ -4052,7 +4046,7 @@
         health.checks.forEach(c => { section += `- ${c.name}: ${labels[c.state]} - ${c.detail}\n`; });
         health.warnings.forEach(w => { section += `- Warning: ${w}\n`; });
 
-        // The same disclosure the health panel makes, for the copy that leaves the app. A tester
+        // The same disclosure the health panel makes, for the copy that leaves the app. Anyone
         // reading the export needs to know the counts were checked against a construction and a
         // foundation skip that were read off the text rather than stated by the designer.
         (state.inferred?.notices || []).forEach(n => {
@@ -6779,7 +6773,7 @@
         return list;
     }
 
-    // === 8b. MOTIFS, TESTERS, GENERATION AND EXPORT === //
+    // === 8b. MOTIFS, GENERATION AND EXPORT === //
 
     /** A motif panel graded against the finished measurement it has to reach. Fed from the graded table
      *  rather than a typed width, so the motif count and the size run cannot disagree about what the
@@ -6869,67 +6863,6 @@
             garment.map(row => row.point).join(','));
     }
 
-    /** The sizes a tester could have made, kept in step with what is being graded. */
-    function fillTesterSizes(labels) {
-        const select = UI['tester-size'];
-        if (!select) return;
-        fillSelect(select, labels.map(label => [label, label]), labels.join(','));
-    }
-
-    /** Reads the tester form into the project. Real people's measurements stay local. */
-    function recordTester() {
-        const name = (UI['tester-name']?.value || '').trim();
-        const size = UI['tester-size']?.value || '';
-        if (!name || !size) { notify('A tester needs a name and the size they made.', 'warn'); return; }
-
-        const bust = parseFloat(UI['tester-finished-bust']?.value);
-        const gauge = parseFloat(UI['tester-gauge']?.value);
-        const notes = (UI['tester-notes']?.value || '').trim();
-        // Kept separate from `modifications` rather than concatenated onto it. The one-line field is a
-        // list of changes the analytics engine reads and quotes back in a finding; this is whatever the
-        // tester said in their own words, and folding paragraphs into that sentence would put them
-        // inside "modifications: ..." in every report that prints one.
-        const freeform = (UI['tester-freeform']?.value || '').trim();
-
-        state.grading.testers = (state.grading.testers || []).filter(t => t.name !== name);
-        state.grading.testers.push({
-            name, size,
-            finished: Number.isFinite(bust) ? { chest: bust } : {},
-            gauge: Number.isFinite(gauge) ? { stitchesPerInch: gauge } : {},
-            fitRatings: {
-                chest: UI['tester-fit-bust']?.value || '',
-                upperArm: UI['tester-fit-arm']?.value || ''
-            },
-            modifications: notes,
-            freeform
-        });
-        ['tester-name', 'tester-finished-bust', 'tester-gauge', 'tester-notes', 'tester-freeform']
-            .forEach(id => { if (UI[id]) UI[id].value = ''; });
-        renderGrader();
-    }
-
-    /** Every tester's findings, and what they do to each size's confidence. */
-    function testerFindings(garment) {
-        const A = window.CrochetAnalyticsEngine;
-        return (state.grading.testers || []).reduce((all, tester) =>
-            all.concat(A.CompareTesterFeedback({ tester, garment, gauge: graderGauge() })), []);
-    }
-
-    function renderTesterOutput(garment) {
-        const host = UI['tester-output'];
-        if (!host) return;
-        host.replaceChildren();
-        const testers = state.grading.testers || [];
-        if (!testers.length) {
-            host.appendChild(elem('p', 'helper-text', 'No testers recorded. Their measurements stay in this project on this machine.'));
-            return;
-        }
-        host.appendChild(elem('p', 'helper-text', testers.map(t => `${t.name} (${t.size})`).join(', ')));
-        host.appendChild(findingList(testerFindings(garment).map(t => ({
-            size: `${t.tester}, ${t.size}`, check: t.check, detail: t.detail, state: t.state
-        }))));
-    }
-
     /** Confidence per size, and the generated instructions. Both depend on everything else the grader
      *  has worked out, so they are rendered last. */
     function renderConfidence(garment, labels) {
@@ -6945,7 +6878,6 @@
             : (A.CYC_BODY_MEASUREMENTS[category] || { sizes: [] }).sizes.map(s => s[0]);
 
         const warnings = A.CheckFitAndProportion({ garment, sections: sectionProfiles() });
-        const findings = testerFindings(garment);
         // Sizes the pattern writes are measured from their own rows. Sizes it does not write are
         // measured from the counts generated for them, which is still the graded instructions rather
         // than a bust ratio applied to the sample's yardage.
@@ -6956,7 +6888,7 @@
         labels.forEach(size => {
             const confidence = A.GradingConfidence({
                 size, garment, gauge: graderGauge(), chartSizes,
-                warnings, testerFindings: findings, modes: state.grading.modes
+                warnings, modes: state.grading.modes
             });
             const effort = efforts ? efforts.find(e => e.label === size) : null;
 
@@ -7136,9 +7068,6 @@
             { key: 'calc', label: 'Grading calculation report',
               file: `${slug}-calculations.txt`, type: 'text/plain',
               body: calculationReport(garment, labels), empty: !garment.length },
-            { key: 'tester', label: 'Tester worksheet',
-              file: `${slug}-tester.txt`, type: 'text/plain',
-              body: testerWorksheet(labels), empty: !labels.length },
             { key: 'editing', label: 'Technical-editing report',
               file: `${slug}-editing.txt`, type: 'text/plain',
               body: editingReport(warnings, reports), empty: !garment.length },
@@ -7195,31 +7124,6 @@
         return lines.join('\n');
     }
 
-    /** Blank for the tester to fill in, with what the pattern predicts beside it. */
-    function testerWorksheet(labels) {
-        const garment = state.grading.lastGarment || [];
-        const lines = ['TESTER WORKSHEET', '',
-            'Tester name: ______________________   Size made: ______________', '',
-            'Your body measurements, before starting:'];
-        garment.filter(row => row.axis === 'width').forEach(row => {
-            lines.push(`  ${row.label}: ____________`);
-        });
-        lines.push('', 'Your gauge, over 4 in: ________ sts x ________ rows', '',
-            'Finished garment, measured flat:');
-        garment.forEach(row => {
-            const predicted = labels.map(size => {
-                const at = row.sizes.find(c => c.size === size);
-                return at && isNum(at.target) ? at.target : '—';
-            });
-            lines.push(`  ${row.label}: ____________   (pattern predicts ${predicted.join(' / ')} in)`);
-        });
-        lines.push('', 'Fit (tight / good / loose):',
-            '  Bust: ________   Upper arm: ________   Armhole: ________   Length: ________', '',
-            'Modifications made:', '  ______________________________________________', '',
-            'Rows that gave trouble:', '  ______________________________________________');
-        return lines.join('\n');
-    }
-
     /** What a technical editor needs: everything unresolved, in one list. */
     function editingReport(warnings, reports) {
         const A = window.CrochetAnalyticsEngine;
@@ -7242,23 +7146,6 @@
             cross.forEach(c => lines.push(`  [${c.state}] ${c.size}: ${c.check} — ${c.detail}`));
         }
 
-        const findings = testerFindings(state.grading.lastGarment || []);
-        if (findings.length) {
-            lines.push('', 'From testers:');
-            findings.forEach(t => lines.push(`  [${t.state}] ${t.tester}, ${t.size}: ${t.check} ${t.detail}`));
-        }
-
-        // The tester's own words, under their name. Printed whether or not the engine produced a finding
-        // for them: a tester who reported nothing measurable can still have written the most useful
-        // sentence in the file, and this is the copy that goes back to the designer.
-        const spoken = (state.grading.testers || []).filter(t => t.freeform);
-        if (spoken.length) {
-            lines.push('', 'In their own words:');
-            spoken.forEach(t => {
-                lines.push(`  ${t.name} (${t.size}):`);
-                String(t.freeform).split('\n').forEach(line => lines.push(`    ${line}`));
-            });
-        }
         return lines.join('\n');
     }
 
@@ -7695,8 +7582,6 @@
         renderSchematic(garment, labels);
         renderGradeReport(garment, labels);
         renderMotifLayout(garment, labels);
-        fillTesterSizes(labels);
-        renderTesterOutput(garment);
         renderConfidence(garment, labels);
         renderExportPackage(garment, labels);
     }
@@ -8367,7 +8252,7 @@
             return;
         }
         if (!impact.sections.length) {
-            host.appendChild(elem('p', 'placeholder-text', 'None of your sections carries this measurement. A section takes its measurements from the type it is given, on the Sizer / Grader tab.'));
+            host.appendChild(elem('p', 'placeholder-text', 'None of your sections carries this measurement. A section takes its measurements from the type it is given, on the Size Grader tab.'));
             return;
         }
 
@@ -8404,17 +8289,16 @@
     // Which panels belong to which view. A panel appears exactly once.
     const VIEW_PANELS = {
         dashboard: [],
-        // Color Codes, Stitches Used and the Custom Stitch Dictionary are the pattern's vocabulary and
-        // read as one run, so the two stitch panels sit under the colours rather than on a tab of their
-        // own. 'library' is no longer a view; nav-library focuses them here.
-        patterns:  ['project-panel', 'metadata-panel', 'color-panel',
-                    'stitch-usage-panel', 'cabinet-panel', 'custom-stitch-section'],
+        patterns:  ['project-panel', 'metadata-panel', 'color-panel'],
+        // The stitch reference on a page of its own: the designer's own definitions first, then what
+        // this pattern works, then the cabinet of what has been worked so far. It used to sit under
+        // the colours on Patterns, which made looking a stitch up mean scrolling past the file's
+        // metadata to reach it.
+        library:   ['custom-stitch-section', 'stitch-usage-panel', 'cabinet-panel'],
         // Writing a pattern and compiling it are the same desk, so they are one view. Pattern Structure
         // sits under the paste box: how to read what was just written, before the matrix that reads it.
         studio:    ['intro-header', 'input-section', 'structure-section', 'matrix-section'],
         sizer:     ['grader-section', 'finished-size-panel'],
-        // Its own tab now, not a disclosure inside the grader.
-        testers:   ['tester-panel', 'tester-notes-panel'],
         analytics: ['pattern-analytics-dashboard', 'output-section', 'complexity-panel', 'lessons-panel'],
         gauge:     ['gauge-profile-panel', 'gauge-history-dashboard'],
         settings:  ['help-panel', 'settings-panel', 'about-panel'],
@@ -8443,23 +8327,19 @@
         .reduce((all, view) => all.concat(VIEW_PANELS[view]), []);
 
     /*
-     * Where each sidebar entry goes. Eleven own a view; one - Stitch Library - switches to the view that
-     * already contains what it is named for and scrolls to it. Focusing rather than relocating keeps the
-     * stitch panels inside Patterns, where the rest of the app expects them.
+     * Where each sidebar entry goes. Every entry owns a view; `focus` is for a caller that wants to land
+     * on one panel of a view rather than at its top.
      */
     const NAV_TARGETS = {
         'nav-dashboard':  { view: 'dashboard', title: 'Dashboard', sub: 'Your creative command center' },
         'nav-patterns':   { view: 'patterns',  title: 'Patterns',  sub: 'Saved files and pattern metadata' },
-        // Title and subtitle match nav-patterns exactly: Stitch Library is a scroll target on the
-        // Patterns tab, not a page of its own, so arriving here should not retitle the page.
-        'nav-library':    { view: 'patterns',  title: 'Patterns',  sub: 'Saved files and pattern metadata', focus: 'stitch-usage-panel' },
+        'nav-library':    { view: 'library',   title: 'Stitch Library', sub: 'Common & custom stitches' },
         'nav-studio':     { view: 'studio',    title: 'Studio',    sub: 'Write, compile and check your pattern' },
-        'nav-sizer':      { view: 'sizer',     title: 'Sizer / Grader', sub: 'Grade one size into a range' },
-        'nav-testers':    { view: 'testers',   title: 'Testers & Feedback', sub: 'What testers actually made' },
+        'nav-sizer':      { view: 'sizer',     title: 'Size Grader', sub: 'Grade one size into multiple sizes' },
         'nav-analytics':  { view: 'analytics', title: 'Analytics', sub: 'Pattern health and complexity' },
         'nav-practice':   { view: 'practice',  title: 'Daily Practice', sub: 'Three things to do today, and none of them need a pattern' },
         'nav-gauge':      { view: 'gauge',     title: 'Gauge Profile', sub: 'Swatches, density and yardage' },
-        'nav-publish':    { view: 'publish',   title: 'Publish / Export', sub: 'Save your work, or take it out of Stitch Math' },
+        'nav-publish':    { view: 'publish',   title: 'Export', sub: 'Save your work, or take it out of Stitch Math' },
         'nav-construction':    { view: 'construction',   title: 'Construction', sub: 'Plan a yoke, and see what a measurement change disturbs' },
         'nav-settings':   { view: 'settings',  title: 'Settings',  sub: 'Every option, and how to use the app' }
     };
@@ -8467,9 +8347,9 @@
     const NAV_IDS = Object.keys(NAV_TARGETS);
 
     /*
-     * Which hub owns each destination. Twelve entries in a flat rail said nothing about which of
+     * Which hub owns each destination. Eleven entries in a flat rail said nothing about which of
      * them belonged together, or which you needed next - so the rail is now the workflow: the
-     * Dashboard, then the five steps a pattern is written through in the order they happen, then
+     * Dashboard, then the three steps a pattern is written through in the order they happen, then
      * Settings. Grouped and ordered is all they are. Every id below is still its own view with its
      * own route; nothing was merged and nothing was hidden.
      *
@@ -8479,16 +8359,14 @@
      *
      * This table is the ONLY place the grouping is written down. HUB_OF is derived from it rather
      * than kept beside it, and test-shell.js section 1b reads the table back and fails if a
-     * destination other than Settings has no hub - which is exactly how a thirteenth view would
-     * otherwise end up reachable by URL and invisible in the rail. The five numbered hubs are the
-     * five STAGES below, in the same order: hub-setup is step 1 because STAGES[0] says so.
+     * destination other than Settings has no hub - which is exactly how a twelfth view would
+     * otherwise end up reachable by URL and invisible in the rail. The three numbered hubs are the
+     * three STAGES below, in the same order: hub-setup is step 1 because STAGES[0] says so.
      */
     const NAV_HUBS = {
         'hub-dashboard': ['nav-dashboard', 'nav-analytics', 'nav-practice'],
         'hub-setup':     ['nav-patterns', 'nav-library', 'nav-gauge'],
-        'hub-write':     ['nav-studio', 'nav-construction'],
-        'hub-grade':     ['nav-sizer'],
-        'hub-test':      ['nav-testers'],
+        'hub-write':     ['nav-studio', 'nav-construction', 'nav-sizer'],
         'hub-export':    ['nav-publish']
     };
     const HUB_IDS = Object.keys(NAV_HUBS);
@@ -8500,8 +8378,8 @@
     /*
      * The pattern-writing workflow.
      *
-     * Writing one pattern crosses five views - fill in the metadata, draft and compile it, grade it
-     * to a size range, hear back from testers, export it. The sidebar walks those five in order as
+     * Writing one pattern crosses three views - fill in the metadata, draft and compile it, export
+     * it. The sidebar walks those three in order as
      * its numbered hubs; the strip in the topbar repeats them as a compact progress rail on the
      * views they describe. Both are drawn from THIS table, so a step has one number and one word
      * everywhere it appears: `hub` names the sidebar hub the step is, `nav` the destination the
@@ -8516,7 +8394,7 @@
      *
      *   - Nothing is GATED. Every stage is clickable whenever the rail is on screen, the same way
      *     every sidebar entry always was. A done mark reports; it does not unlock. Real work does
-     *     not go in this order - people grade before testing, export a draft to read it on paper,
+     *     not go in this order - people export a draft to read it on paper,
      *     and come back to the metadata last - and a rail that enforced the sequence would be
      *     wrong more often than it was right.
      *
@@ -8532,12 +8410,10 @@
                 || !!(state.metadata.designer || state.metadata.hook || state.metadata.yarnWeight)
         },
         { hub: 'hub-write',  nav: 'nav-studio',  label: 'Write',  done: () => state.patternSteps.length > 0 },
-        { hub: 'hub-grade',  nav: 'nav-sizer',   label: 'Grade',  done: () => Object.keys(state.grading.sections).length > 0 },
-        { hub: 'hub-test',   nav: 'nav-testers', label: 'Test',   done: () => state.grading.testers.length > 0 },
         // Ready to export is not the same as exported: a pattern that compiles with no failed or
         // blocked rows is one you can hand over. isCleanPass is the same test the stitch roll and
         // the daily quest pay out on, so the rail cannot disagree with them about what "clean" is.
-        { hub: 'hub-export', nav: 'nav-publish', label: 'Export', done: () => isCleanPass(state.analytics.lastPass) }
+        { hub: 'hub-export', nav: 'nav-publish', label: 'Publish', done: () => isCleanPass(state.analytics.lastPass) }
     ];
     const STAGE_NAV = STAGES.map(stage => stage.nav);
 
@@ -8547,8 +8423,6 @@
      * back button did nothing, and there was no way to send anyone a link to the Grader.
      *
      * The slug is derived from the nav id rather than written out beside it, so a view cannot be added
-     * with a route and no tab, or a tab and no route. nav-library keeps its own slug even though it
-     * shares nav-patterns' view: it lands on a different panel, and that is a different address.
      *
      * Two deliberate choices about history. A push is done by assigning location.hash rather than by
      * pushState, because pushState with a relative URL throws on file:// in some browsers and the app
@@ -8982,7 +8856,7 @@
     /*
      * Draws the workflow rail, or hides it.
      *
-     * Rebuilt rather than patched, because it is five nodes read off state that is already computed
+     * Rebuilt rather than patched, because it is three nodes read off state that is already computed
      * - the cost is nothing and a diffing version would be more code than the thing it updates.
      *
      * `currentNav` is passed in rather than read back off the DOM: this runs from navigateTo, which
@@ -9004,7 +8878,7 @@
         'dock-library': {
             trigger: 'dock-btn-library', close: 'dock-close-library',
             shellClass: 'dock-library-open',
-            // The panels this dock carries. They belong to the Patterns view, so on any other view
+            // The panels this dock carries. They belong to the Library view, so on any other view
             // showView has hidden them - a dock that opened onto its own hidden panels is an empty
             // pane, which is exactly what the first build of this did.
             panels: ['stitch-usage-panel', 'custom-stitch-section']
@@ -9099,10 +8973,14 @@
         const rail = shellEl('stage-rail');
         if (!rail) return;
 
-        // Off on every view the workflow does not describe - Settings, Analytics, the Gauge
-        // profile. A five-step "write a pattern" strip above the Gauge Profile would be pointing
-        // at work the page in front of you has nothing to do with.
-        const onWorkflow = STAGE_NAV.indexOf(currentNav) >= 0;
+        // On every page that belongs to a numbered step - not only the one each step lands on, but
+        // every entry under its hub, so the Stitch Library, Construction and the Size Grader carry
+        // the rail as much as Pattern Files and the Studio do. Off on the rest: Settings, and the
+        // Dashboard's entries. A "write a pattern" strip above Analytics would be pointing at work
+        // the page in front of you has nothing to do with. The current step is the one whose hub
+        // owns the page, so the Stitch Library lights step 1 and the Size Grader step 2.
+        const currentHub = HUB_OF[currentNav];
+        const onWorkflow = STAGES.some(stage => stage.hub === currentHub);
         setHidden('stage-rail', !onWorkflow);
         if (!onWorkflow) { rail.replaceChildren(); return; }
 
@@ -9110,10 +8988,10 @@
         // A strip built from markup has to be found again with querySelectorAll to be wired, the
         // stub the tests run under does not have it, and a control
         // that cannot be clicked in a test is a control whose behaviour is unverified. Routing
-        // across five views is the whole point of this rail, so it has to be clickable in a test.
+        // across three views is the whole point of this rail, so it has to be clickable in a test.
         // The rail element itself spans the topbar so it lands on its own line; the visible pill is
         // an inner track that spans it in turn, with the .stage-link threads taking up the slack so
-        // the five stages spread from edge to edge. Two elements because the outer one's flex-basis
+        // the three stages spread from edge to edge. Two elements because the outer one's flex-basis
         // is what buys the line break and the inner one is what can then be styled as a pill.
         rail.replaceChildren();
         const track = elem('div', 'stage-track');
@@ -9123,7 +9001,7 @@
             if (i > 0) track.appendChild(elem('span', 'stage-link'));
 
             const done = !!stage.done();
-            const here = stage.nav === currentNav;
+            const here = stage.hub === currentHub;
             const cls = 'stage' + (done ? ' is-done' : '') + (here ? ' is-here' : '');
             const el = button(cls, null, `stage-${stage.nav}`, () => navigateTo(stage.nav));
             UI[el.id] = el;
@@ -9259,6 +9137,20 @@
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && openDockId) closeDock();
         });
+        // So does a click anywhere outside it. Not a scrim - the workspace behind stays live, and
+        // the click still lands on whatever it hit; the dock just goes as it does. Silent, because
+        // the pointer has already put focus where the user wants it. Its own trigger is left out
+        // or a click that just opened it would close it in the same breath, and a target that the
+        // click's own handler has since re-rendered out of the document is left alone, or a
+        // re-render inside the pane would read as a click outside it.
+        document.addEventListener('click', event => {
+            if (!openDockId) return;
+            const target = event.target;
+            if (!(target instanceof Node) || !document.contains(target)) return;
+            if (shellEl(openDockId)?.contains(target)) return;
+            if (shellEl(DOCKS[openDockId].trigger)?.contains(target)) return;
+            closeDock({ silent: true });
+        });
 
         UI['nav-toggle']?.addEventListener('click', () => {
             const shell = shellEl('app-shell');
@@ -9282,13 +9174,15 @@
             'tile-patterns': 'nav-patterns',
             'tile-compiler': { nav: 'nav-studio', focus: 'matrix-section' },
             'tile-sizer': 'nav-sizer', 'tile-studio': 'nav-studio',
-            'tile-testers': 'nav-testers', 'tile-analytics': 'nav-analytics',
+            'tile-analytics': 'nav-analytics',
             'link-recent': 'nav-patterns',
             'link-compiler': { nav: 'nav-studio', focus: 'matrix-section' },
-            'link-testers': 'nav-testers', 'link-analytics': 'nav-analytics',
+            'link-analytics': 'nav-analytics',
             'link-sizes': 'nav-sizer',
             'link-gauges': 'nav-gauge', 'dash-export-package': 'nav-publish',
-            'dash-export-open': 'nav-publish'
+            'dash-export-open': 'nav-publish',
+            // From the floating Stitch Library to the tab it is a peek at.
+            'dock-open-library': 'nav-library'
         };
         Object.keys(SHORTCUTS).forEach(id => {
             UI[id]?.addEventListener('click', () => {
@@ -10630,7 +10524,6 @@
      *   analytics           state.analytics.report
      *   sizes / schematics  computeSizeGrading()
      *   gauges              state.gaugeHistory
-     *   testers             state.grading.testers
      * Anything without a source yet renders an empty state, never a placeholder figure.
      */
     function renderDashboard() {
@@ -10638,29 +10531,26 @@
         const pass = state.analytics.lastPass;
         const health = state.analytics.health;
         const report = state.analytics.report;
-        const testers = state.grading.testers || [];
         const history = state.gaugeHistory || [];
         const sizes = (state.sizeCount > 1) ? computeSizeGrading() : null;
 
         renderProgress();
-        renderDashTiles(saves, pass, health, testers, sizes);
+        renderDashTiles(saves, pass, health, sizes);
         renderDashRecent(saves);
         renderDashCompiler(pass, health);
         renderDashQuest(pass);
         renderDashRecord();
-        renderDashTesters(testers);
         renderDashAnalytics(report, health);
         renderDashSizes(sizes);
         renderDashSchematics(sizes);
         renderDashGauges(history);
     }
 
-    function renderDashTiles(saves, pass, health, testers, sizes) {
+    function renderDashTiles(saves, pass, health, sizes) {
         setText('tile-patterns-value', Object.keys(saves).length);
         setText('tile-compiler-value', pass ? pass.analytics.failedRowsCount : 0);
         setText('tile-sizer-value', sizes ? sizes.length : 0);
         setText('tile-studio-value', state.patternSteps.length);
-        setText('tile-testers-value', testers.length);
         setText('tile-analytics-value', health ? `${health.score}%` : '—');
     }
 
@@ -10852,27 +10742,6 @@
         setText('rec-best', progress.bestStreak);
         setText('rec-collected', `${collected} / ${collectable}`);
         setBarWidth('rec-collection-bar', collectable ? (collected / collectable) * 100 : 0);
-    }
-
-    function renderDashTesters(testers) {
-        if (!testers.length) {
-            setHtml('dash-testers', emptyState('No testers recorded. Add one under Testers & Feedback.'));
-            return;
-        }
-        setHtml('dash-testers', testers.slice(0, 4).map(tester => {
-            const ratings = [tester.fitRatings?.chest, tester.fitRatings?.upperArm].filter(Boolean);
-            const tone = ratings.some(r => r === 'tight' || r === 'loose') ? 'tag-issue'
-                : ratings.length ? '' : 'tag-watch';
-            const tag = ratings.some(r => r === 'tight' || r === 'loose') ? 'Issues'
-                : ratings.length ? 'Good fit' : 'No rating';
-            const note = tester.modifications || `Made size ${tester.size}`;
-            const initials = tester.name.trim().slice(0, 2).toUpperCase();
-            return `<div class="tester-row">
-                <span class="tester-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
-                <span><span class="tester-name">${escapeHtml(tester.name)}</span><span class="tester-note">${escapeHtml(note)}</span></span>
-                <span class="tester-tag ${tone}">${tag}</span>
-            </div>`;
-        }).join(''));
     }
 
     function renderDashAnalytics(report, health) {

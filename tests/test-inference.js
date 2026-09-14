@@ -261,7 +261,7 @@ print('\n10. ...and it reaches the reader, on both surfaces');
  * Everything above is the engine. None of it is delivered unless the page says it: a setting that
  * silently changes the reader's numbers is worse than the box it replaced, so the disclosure is the
  * feature, not a nicety. Pinned on the health panel AND the text export, because the export is the
- * copy that leaves the app and reaches a tester who never saw the panel.
+ * copy that leaves the app and reaches a reader who never saw the panel.
  */
 function load(text) { $('bulk-input').value = text; $('bulk-parse-btn').fire('click'); }
 function panel() { return $('cumulative-status').innerHTML; }

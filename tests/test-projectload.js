@@ -14,10 +14,9 @@ boot();
 
 function saves() { return JSON.parse(localStorage.getItem('stitchmath_saves') || '{}'); }
 function writeOut(as) { $('project-name').value = as; $('save-btn').fire('click'); return saves()[as]; }
-function testersOf(as) { return (writeOut(as).grading.testers || []).map(function (t) { return t.name; }).join(','); }
 
 localStorage.setItem('stitchmath_saves', JSON.stringify({
-    // A modern save: gauge, grader block, testers, a hand-picked difficulty and piece.
+    // A modern save: gauge, grader block, a hand-picked difficulty and piece.
     'A modern file': {
         version: 2,
         rawText: 'Ch 6\nRow 1: sc in each ch across. (6)',
@@ -27,7 +26,7 @@ localStorage.setItem('stitchmath_saves', JSON.stringify({
         gauge: { width: 4, height: 4, stitches: 14, rows: 16, unit: 'in', sizingPiece: 'round' },
         gaugeHistory: [],
         grading: {
-            sections: { Body: { repeat: 6 } }, testers: [{ name: 'Ana', size: 'M' }],
+            sections: { Body: { repeat: 6 } },
             overrides: {}, modes: {}, fields: {}, customChart: null
         }
     },
@@ -40,7 +39,6 @@ $('load-select').fire('change');
 print('\n1. The modern file restores its own work');
 $('load-select').value = 'A modern file';
 $('load-btn').fire('click');
-ck('its tester comes back', testersOf('probe-modern'), 'Ana');
 ck('its grader section comes back',
    Object.keys(writeOut('probe-modern').grading.sections).join(','), 'Body');
 ck('its difficulty comes back', $('meta-difficulty').value, 'Complex');
@@ -52,9 +50,8 @@ print('\n2. Opening an older file inherits none of it');
 $('load-select').value = 'A version 1 file';
 $('load-btn').fire('click');
 // Each of these was the previous project's value before the restores moved out of the gauge and metadata
-// guards. The tester is the one that did visible harm: saving the older file wrote another designer's
-// tester into it.
-ck('no tester carried over', testersOf('probe-v1'), '');
+// guards. The grading block is the one that did visible harm: saving the older file wrote another
+// designer's grading into it.
 ck('no grader section carried over',
    Object.keys(writeOut('probe-v1').grading.sections).length, 0);
 ck('no custom chart carried over', writeOut('probe-v1').grading.customChart, 'null');

@@ -17,7 +17,7 @@ function score(opts) {
     return A.GradingConfidence({
         size: opts.size || 'Medium', garment: opts.garment || garment(),
         gauge: opts.gauge || GAUGE, chartSizes: opts.chartSizes,
-        warnings: opts.warnings || [], testerFindings: opts.testerFindings || [],
+        warnings: opts.warnings || [],
         modes: opts.modes || {}
     });
 }
@@ -71,56 +71,16 @@ ok('and the run\'s as the run\'s',
 ck('a warning about another size is ignored',
    score({ warnings: [{ size: 'Large', check: 'a', detail: '' }] }).score, medium.score);
 
-print('\n6. Evidence from a tester outranks anything worked out here');
-var tested = score({ testerFindings: [
-    { size: 'Medium', state: 'fail', check: 'came out larger' }
-]});
-ok('a failed tester finding costs heavily', tested.score <= medium.score - 15);
-ok('and is named', tested.reasons.some(function (r) { return /tester finding/.test(r.reason); }));
-ck('a finding on another size does not count',
-   score({ testerFindings: [{ size: 'Large', state: 'fail', check: 'x' }] }).score, medium.score);
-
 print('\n7. The score is bounded and always explained');
 var awful = score({
     size: '5X', chartSizes: CHART,
     gauge: {},
-    warnings: [1,2,3,4,5,6].map(function () { return { size: '5X', check: 'x', detail: '' }; }),
-    testerFindings: [1,2,3].map(function () { return { size: '5X', state: 'fail', check: 'x' }; })
+    warnings: [1,2,3,4,5,6].map(function () { return { size: '5X', check: 'x', detail: '' }; })
 });
 ok('never below zero', awful.score >= 0);
 ck('and banded honestly', awful.band, 'very low');
 ok('with every deduction listed', awful.reasons.length > 3);
 ok('an ungraded size scores nothing', score({ size: 'nope' }).score === 0);
 ok('and says so', /was not graded/.test(score({ size: 'nope' }).mainIssue));
-
-print('\n8. Tester feedback, compared against what was predicted');
-var g = garment();
-function feedback(tester) { return A.CompareTesterFeedback({ tester: tester, garment: g, gauge: GAUGE }); }
-var out = feedback({ name: 'Rae', size: 'Medium', finished: { chest: 43.5 } });
-ck('a finished measurement well off prediction is flagged', out.length, 1);
-ok('naming both numbers', /predicted 41 in, measured 43\.5 in/.test(out[0].detail));
-ok('and the direction', /came out larger/.test(out[0].check));
-ck('an inch and a half out is a failure, not a note', out[0].state, 'fail');
-ck('a quarter inch is blocking and measuring, not a fault',
-   feedback({ name: 'Rae', size: 'Medium', finished: { chest: 41.2 } }).length, 0);
-ck('half an inch is worth a note', feedback({ name: 'Rae', size: 'Medium', finished: { chest: 41.6 } })[0].state, 'warn');
-
-// A tester at a different gauge explains size differences that would otherwise read
-// as a grading fault, so it is reported in its own right.
-var offGauge = feedback({ name: 'Sam', size: 'Medium', gauge: { stitchesPerInch: 3.7 } });
-ok('a different tester gauge is reported', /different gauge/.test(offGauge[0].check));
-ok('with the percentage', /-7\.5%/.test(offGauge[0].detail));
-ck('a gauge within a few per cent is not worth reporting',
-   feedback({ name: 'Sam', size: 'Medium', gauge: { stitchesPerInch: 4.1 } }).length, 0);
-
-var rated = feedback({ name: 'Jo', size: 'Medium', fitRatings: { upperArm: 'tight', chest: 'good' },
-                       modifications: 'added 2 rows', problemRows: ['Row 24'] });
-ck('a poor fit rating and a problem row', rated.length, 2);
-ok('the area is named properly', /Upper Arm/.test(rated[0].check));
-ok('with the modification carried through', /added 2 rows/.test(rated[0].detail));
-ok('and the flagged row', /Row 24/.test(rated[1].check));
-ck('a good rating raises nothing',
-   feedback({ name: 'Jo', size: 'Medium', fitRatings: { chest: 'good' } }).length, 0);
-ck('no tester, nothing to compare', A.CompareTesterFeedback({}).length, 0);
 
 endSuite();

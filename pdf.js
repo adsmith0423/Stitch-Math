@@ -3,7 +3,7 @@
  *
  * WHY THIS EXISTS. "Print / Save PDF" was window.print(), which is fine on a desktop where every
  * browser puts "Save as PDF" in the print dialog, and not fine anywhere else: on iOS Safari and
- * Android Chrome the print sheet is inconsistent and sometimes AirPrint-only, so a tester on an iPad
+ * Android Chrome the print sheet is inconsistent and sometimes AirPrint-only, so someone on an iPad
  * taps the button and gets a system sheet with no way to save. Phones and tablets are supported
  * targets, so the file has to be generated rather than requested.
  *

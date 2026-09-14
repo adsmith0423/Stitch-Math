@@ -116,8 +116,8 @@ no('no date is invented for it', /First worked true/.test($('cabinet-grid').text
 
 print('\n7. It lives beside the Stitch Library, which is the same subject');
 var HTML = readFile('index.html');
-ok('the cabinet is a panel on the Patterns view',
-   /cabinet-panel/.test(SRC.slice(SRC.indexOf('patterns:  ['), SRC.indexOf('studio:    ['))));
+ok('the cabinet is a panel on the Stitch Library view',
+   /cabinet-panel/.test(SRC.slice(SRC.indexOf('library:   ['), SRC.indexOf('studio:    ['))));
 ok('and sits next to the stitch reference in the markup',
    HTML.indexOf('id="cabinet-panel"') > HTML.indexOf('id="stitch-usage-panel"'));
 ok('the panel is inside the practice-mode gate',

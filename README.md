@@ -11,7 +11,7 @@ so a designer learns why a pattern was wrong rather than only that it was. The s
 the upstream-cause ranking and the plain-language errors all exist for that reason.
 
 **Your work never leaves your device.** No account, no server, no network requests. Patterns, gauge
-history, your stitch dictionary and your testers' measurements live in your browser and nowhere else.
+history, your stitch dictionary and your saved projects live in your browser and nowhere else.
 
 ## Running it
 

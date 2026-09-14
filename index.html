@@ -64,7 +64,6 @@
     <symbol id="ic-note" viewBox="0 0 24 24"><path d="M14.5 4H6.8A1.8 1.8 0 0 0 5 5.8v12.4A1.8 1.8 0 0 0 6.8 20h7.4"/><path d="M8.4 9h5.2M8.4 12.6h3.6"/><path d="m12.6 19.6.7-2.8 6.3-6.3a1.5 1.5 0 0 1 2.1 2.1l-6.3 6.3z"/></symbol>
     <symbol id="ic-pencil" viewBox="0 0 24 24"><path d="m4 20 1.1-4.2L16.6 4.3a2.1 2.1 0 0 1 3 3L8.2 18.9zM14.6 6.3l3.1 3.1"/></symbol>
     <symbol id="ic-ruler" viewBox="0 0 24 24"><path d="M3.2 15.4 15.4 3.2l5.4 5.4L8.6 20.8zM7.6 8.2l2 2M10.6 5.2l2 2M4.6 11.2l2 2"/></symbol>
-    <symbol id="ic-people" viewBox="0 0 24 24"><circle cx="9.2" cy="8" r="3.3"/><path d="M2.8 19.6c0-3.4 2.9-5.6 6.4-5.6s6.4 2.2 6.4 5.6M15.8 5.2a3.3 3.3 0 0 1 0 5.9M17.4 14.4c2.2.7 3.8 2.5 3.8 5.2"/></symbol>
     <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4.2 3.8v16.4h16M8 20.2v-6.4M12.4 20.2V8.6M16.8 20.2v-4"/></symbol>
     <symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 6.8C10.4 5.4 8.3 4.8 5.4 4.8v13c2.9 0 5 .6 6.6 2 1.6-1.4 3.7-2 6.6-2v-13c-2.9 0-5 .6-6.6 2zM12 6.8v13"/></symbol>
     <symbol id="ic-swatch" viewBox="0 0 24 24"><path d="M4.4 4.4h15.2v15.2H4.4zM4.4 9.5h15.2M4.4 14.6h15.2M9.5 4.4v15.2M14.6 4.4v15.2"/></symbol>
@@ -81,6 +80,7 @@
     <symbol id="ic-trend" viewBox="0 0 24 24"><path d="m4 16.6 5.2-5.2 3.4 3.4 6.8-6.8M15.2 8h4.2v4.2"/></symbol>
     <symbol id="ic-package" viewBox="0 0 24 24"><path d="M12 3.2 20 7.4v9.2L12 20.8 4 16.6V7.4zM4 7.4l8 4.2 8-4.2M12 11.6v9.2"/></symbol>
     <symbol id="ic-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="ic-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
     <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M12 3.8 21 19.6H3zM12 9.6v4.6M12 16.8v.1"/></symbol>
     <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="ic-check" viewBox="0 0 24 24"><path d="m4.8 12.4 4.6 4.6 9.8-9.8"/></symbol>
@@ -201,11 +201,11 @@
             </div>
         </div>
 
-        <!-- Dashboard, then the five numbered steps a pattern is written through, then Settings.
-             Reading down the rail IS the workflow: 1 Setup, 2 Write, 3 Grade, 4 Test, 5 Export -
+        <!-- Dashboard, then the three numbered steps a pattern is written through, then Settings.
+             Reading down the rail IS the workflow: 1 Setup, 2 Write, 3 Publish -
              the same numbers and the same words the stage rail in the topbar uses, because the
              two used to say the same thing in different words and nothing tied them together.
-             The twelve destinations are unchanged - same ids, same class, same targets.
+             The eleven destinations are unchanged - same ids, same class, same targets.
              A hub is not a destination: clicking one opens it AND goes to its first entry, so a
              press always puts something on screen. Only one hub is open at a time; navigating to
              any destination opens the hub that owns it, so the rail always shows where you are.
@@ -235,35 +235,23 @@
             </div>
 
             <!-- 2. Write: the Studio is where a pattern is written AND compiled. Construction is an
-                 engine with no other way in, and planning a yoke is part of writing it. -->
+                 engine with no other way in, and planning a yoke is part of writing it; grading the
+                 finished draft to a size range is the last thing writing it involves. -->
             <div class="nav-group">
                 <button type="button" id="hub-write" class="nav-hub" data-step="2" aria-expanded="false" aria-controls="sub-write"><span class="nav-step" aria-hidden="true">2</span><span class="nav-label">Write</span><span class="nav-chevron" aria-hidden="true">›</span></button>
                 <div class="nav-sub" id="sub-write"><div>
                     <button type="button" id="nav-studio"       class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-pencil"></use></svg><span class="nav-label">Studio</span></button>
                     <button type="button" id="nav-construction" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-frame"></use></svg><span class="nav-label">Construction</span></button>
+                    <button type="button" id="nav-sizer" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-needles"></use></svg><span class="nav-label">Size Grader</span></button>
                 </div></div>
             </div>
 
-            <!-- 3, 4, 5 each hold one destination. They keep the hub-and-entry shape anyway, so
-                 every step down the rail reads the same way as the one above it. -->
+            <!-- 3 holds one destination. It keeps the hub-and-entry shape anyway, so every step down
+                 the rail reads the same way as the one above it. -->
             <div class="nav-group">
-                <button type="button" id="hub-grade" class="nav-hub" data-step="3" aria-expanded="false" aria-controls="sub-grade"><span class="nav-step" aria-hidden="true">3</span><span class="nav-label">Grade</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-                <div class="nav-sub" id="sub-grade"><div>
-                    <button type="button" id="nav-sizer" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-needles"></use></svg><span class="nav-label">Sizer / Grader</span></button>
-                </div></div>
-            </div>
-
-            <div class="nav-group">
-                <button type="button" id="hub-test" class="nav-hub" data-step="4" aria-expanded="false" aria-controls="sub-test"><span class="nav-step" aria-hidden="true">4</span><span class="nav-label">Test</span><span class="nav-chevron" aria-hidden="true">›</span></button>
-                <div class="nav-sub" id="sub-test"><div>
-                    <button type="button" id="nav-testers" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg><span class="nav-label">Testers &amp; Feedback</span></button>
-                </div></div>
-            </div>
-
-            <div class="nav-group">
-                <button type="button" id="hub-export" class="nav-hub" data-step="5" aria-expanded="false" aria-controls="sub-export"><span class="nav-step" aria-hidden="true">5</span><span class="nav-label">Export</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+                <button type="button" id="hub-export" class="nav-hub" data-step="3" aria-expanded="false" aria-controls="sub-export"><span class="nav-step" aria-hidden="true">3</span><span class="nav-label">Publish</span><span class="nav-chevron" aria-hidden="true">›</span></button>
                 <div class="nav-sub" id="sub-export"><div>
-                    <button type="button" id="nav-publish" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg><span class="nav-label">Publish / Export</span></button>
+                    <button type="button" id="nav-publish" class="nav-item"><svg class="ic nav-icon" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg><span class="nav-label">Export</span></button>
                 </div></div>
             </div>
 
@@ -358,8 +346,8 @@
             </div>
 
             <!-- The pattern-writing workflow, and the one piece of navigation that follows the JOB
-                 rather than the app's structure. Writing a pattern crosses five views - metadata,
-                 the editor, the grader, tester feedback, the export - and nothing used to say so.
+                 rather than the app's structure. Writing a pattern crosses three views - metadata,
+                 the editor, the export - and nothing used to say so.
                  Rendered by renderStageRail, app.js section 12. Hidden on the views it does not
                  describe, so it never appears above Settings or the Gauge Profile.
                  Same numbers and words as the sidebar's steps. Every stage stays clickable at all
@@ -390,7 +378,7 @@
                 </button>
                 <button type="button" id="tile-sizer" class="dash-tile tile-sizer">
                     <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-needles"></use></svg>
-                    <span class="tile-name">Sizer / Grader</span>
+                    <span class="tile-name">Size Grader</span>
                     <strong id="tile-sizer-value" class="tile-value">0</strong>
                     <span class="tile-note">Sizes graded</span>
                     <span class="tile-link">Grade now →</span>
@@ -401,13 +389,6 @@
                     <strong id="tile-studio-value" class="tile-value">0</strong>
                     <span class="tile-note">Rows in progress</span>
                     <span class="tile-link">Continue →</span>
-                </button>
-                <button type="button" id="tile-testers" class="dash-tile tile-testers">
-                    <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg>
-                    <span class="tile-name">Testers</span>
-                    <strong id="tile-testers-value" class="tile-value">0</strong>
-                    <span class="tile-note">Recorded testers</span>
-                    <span class="tile-link">See feedback →</span>
                 </button>
                 <button type="button" id="tile-analytics" class="dash-tile tile-analytics">
                     <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-chart"></use></svg>
@@ -434,7 +415,7 @@
                 <div class="dock-head">
                     <svg class="ic dock-head-ic" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
                     <strong class="dock-title">Compiler Overview</strong>
-                    <button type="button" id="dock-close-compiler" class="dock-close" aria-label="Close the Compiler Overview">×</button>
+                    <button type="button" id="dock-close-compiler" class="dock-close" aria-label="Close the Compiler Overview"><svg class="ic dock-close-ic" aria-hidden="true" focusable="false"><use href="#ic-close"></use></svg></button>
                 </div>
                 <div class="dock-body">
 
@@ -511,14 +492,6 @@
                     </div>
                 </section>
 
-                <section class="dash-card card-testers">
-                    <div class="dash-card-head">
-                        <h3>Tester Feedback</h3>
-                        <button type="button" id="link-testers" class="dash-link">View all</button>
-                    </div>
-                    <div id="dash-testers" class="dash-testers-list"></div>
-                </section>
-
                 <section class="dash-card card-analytics">
                     <div class="dash-card-head">
                         <h3>Analytics</h3>
@@ -553,22 +526,22 @@
                 <!-- Every button here forwards to a real control elsewhere on the page. No export
                      format is offered that the app cannot actually produce. -->
                 <section class="dash-card card-publish">
-                    <h3>Publish / Export</h3>
+                    <h3>Export</h3>
                     <div class="publish-grid">
                         <button type="button" id="dash-export-txt" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-doc"></use></svg> Pattern text</button>
                         <button type="button" id="dash-export-pdf" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg> Save as PDF</button>
                         <button type="button" id="dash-export-history" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-trend"></use></svg> Gauge history</button>
                         <button type="button" id="dash-export-package" class="publish-option"><svg class="ic option-ic" aria-hidden="true" focusable="false"><use href="#ic-package"></use></svg> Multi-size pack</button>
                     </div>
-                    <button type="button" id="dash-export-open" class="publish-cta">Open Publish / Export</button>
+                    <button type="button" id="dash-export-open" class="publish-cta">Open Export</button>
                 </section>
             </div>
 
             <div class="dash-footer-strip">
-                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Catch errors before testers do</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Catch errors before they ship</span>
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Grade with confidence</span>
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Design with precision</span>
-                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Test smarter</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Compile smarter</span>
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Publish beautifully</span>
                 <!-- The build. Set from APP_VERSION at start-up rather than written here, so the number
                      cannot be bumped in one place and left stale in the other. -->
@@ -945,8 +918,8 @@
             </section>
 
             <!-- === 7-iii/iv. THE STITCH LIBRARY, AND ITS DOCK ===
-                 The two stitch panels can be read either in place on Pattern Files, or floated over
-                 whatever you are working on - looking a stitch up should not cost you the screen
+                 The two stitch panels can be read either in place on their own Stitch Library view, or
+                 floated over whatever you are working on - looking a stitch up should not cost you the screen
                  you were writing on.
 
                  They are NOT moved to do that. The shell's one rule is that a panel is hidden,
@@ -960,26 +933,15 @@
             <div class="dock-head">
                 <svg class="ic dock-head-ic" aria-hidden="true" focusable="false"><use href="#ic-book"></use></svg>
                 <strong class="dock-title">Stitch Library</strong>
-                <button type="button" id="dock-close-library" class="dock-close" aria-label="Close the Stitch Library">×</button>
+                <button type="button" id="dock-close-library" class="dock-close" aria-label="Close the Stitch Library"><svg class="ic dock-close-ic" aria-hidden="true" focusable="false"><use href="#ic-close"></use></svg></button>
             </div>
             <div class="dock-body">
 
-            <section class="panel" id="stitch-usage-panel">
-                <h2><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-note"></use></svg>Stitches Used In This Pattern</h2>
-                <div id="stitch-usage-content"></div>
-            </section>
-
-            <!-- === 7-iv-b. THE STITCH CABINET ===
-                 What progress.collection has been recording all along, shown as something you can
-                 browse. It sits beside the Stitch Library because that is the stitch reference and
-                 this is the same subject; a collection you cannot look at is not a collection, and
-                 the pull comes from seeing the holes. Built in app.js section 12. -->
-            <section class="panel" id="cabinet-panel">
-                <h2><svg class="ic h-ic tint-butter" aria-hidden="true" focusable="false"><use href="#ic-package"></use></svg>Stitch Cabinet</h2>
-                <p class="helper-text">Every stitch the daily roll can ask for. One is unlocked the first time you work it into a pattern that compiles clean.</p>
-                <p id="cabinet-count" class="cabinet-count">0 of 0 stitches worked</p>
-                <div id="cabinet-grid" class="cabinet-grid"></div>
-            </section>
+            <!-- The pane is a peek; this is the way to the page itself, sitting where the Compiler
+                 Overview's "Open compiler" sits. Only drawn while the pane is open - closed, the
+                 body is display: contents and the panels are simply on their tab, which is where
+                 this would otherwise point. navigateTo closes the dock on its way there. -->
+            <button type="button" id="dock-open-library" class="dash-link dock-link">Open library</button>
 
             <!-- === 7-iv. CUSTOM STITCH DICTIONARY === -->
             <section class="panel" id="custom-stitch-section">
@@ -1008,7 +970,7 @@
                             <input type="number" id="custom-st-yield" placeholder="Yield" required min="0">
                         </div>
                     </div>
-                    <button type="submit" class="btn-secondary">Add Custom Stitch</button>
+                    <button type="submit" class="btn-coral">Add Custom Stitch</button>
                 </form>
 
                 <div class="table-responsive">
@@ -1018,6 +980,23 @@
                     </table>
                 </div>
 
+            </section>
+
+            <section class="panel" id="stitch-usage-panel">
+                <h2><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-note"></use></svg>Stitches Used In This Pattern</h2>
+                <div id="stitch-usage-content"></div>
+            </section>
+
+            <!-- === 7-iv-b. THE STITCH CABINET ===
+                 What progress.collection has been recording all along, shown as something you can
+                 browse. It sits on the Stitch Library view because that is the stitch reference and
+                 this is the same subject; a collection you cannot look at is not a collection, and
+                 the pull comes from seeing the holes. Built in app.js section 12. -->
+            <section class="panel" id="cabinet-panel">
+                <h2><svg class="ic h-ic tint-butter" aria-hidden="true" focusable="false"><use href="#ic-package"></use></svg>Stitch Cabinet</h2>
+                <p class="helper-text">Every stitch the daily roll can ask for. One is unlocked the first time you work it into a pattern that compiles clean.</p>
+                <p id="cabinet-count" class="cabinet-count">0 of 0 stitches worked</p>
+                <div id="cabinet-grid" class="cabinet-grid"></div>
             </section>
 
             </div><!-- /.dock-body -->
@@ -1078,7 +1057,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <details class="help-topic">
                         <summary>5. Grade it to other sizes</summary>
                         <div class="help-body">
-                            <p><strong>Sizer / Grader</strong> turns one size into a range. Give it the size the pattern was written for, pick a size chart, and it works out the rest.</p>
+                            <p><strong>Size Grader</strong> turns one size into a range. Give it the size the pattern was written for, pick a size chart, and it works out the rest.</p>
                             <p>Ease is never assumed. Give any two of <strong>body</strong>, <strong>finished</strong> and <strong>ease</strong>, and the third is worked out and labeled as derived.</p>
                             <p>Every measurement on the <strong>schematic</strong> is clickable, and shows the full working behind its stitch count.</p>
                         </div>
@@ -1100,7 +1079,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                                 <li><strong>Patterns</strong> &mdash; name a project and Save File. It stays in this browser.</li>
                                 <li><strong>Save as Text</strong> &mdash; your pattern with the counts corrected.</li>
                                 <li><strong>Save as PDF</strong> &mdash; the pattern as a PDF file, with the metadata and stitch table.</li>
-                                <li><strong>Publish / Export</strong> &mdash; generated multi-size instructions once a pattern is graded.</li>
+                                <li><strong>Export</strong> &mdash; generated multi-size instructions once a pattern is graded.</li>
                             </ul>
                             <p class="help-warning">Everything is stored in this browser only. Clearing your browser data removes your saved projects, so export anything you want to keep.</p>
                         </div>
@@ -1166,7 +1145,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                 <p class="about-privacy">
                     <svg class="ic about-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg>
                     <span><strong>Your work never leaves this device.</strong> Patterns, gauge history, your
-                    stitch dictionary and your testers&rsquo; measurements are stored in this browser and
+                    stitch dictionary and your saved projects are stored in this browser and
                     nowhere else. Stitch Math has no account, no server and makes no network requests. The
                     only way anything leaves is when you export it yourself.</span>
                 </p>
@@ -1325,7 +1304,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                  the job - one implementation of each export, and no format offered that the app cannot
                  produce. Project Management is not copied here; the same panel is shown on both tabs. -->
             <section class="panel" id="publish-panel">
-                <h2><svg class="ic h-ic tint-aqua" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg>Publish &amp; Export</h2>
+                <h2><svg class="ic h-ic tint-aqua" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg>Export</h2>
                 <p class="helper-text">Save your work, or take it out of Stitch Math. The preview shows the printed pattern as it will come out.</p>
 
                 <div class="publish-actions">
@@ -1523,76 +1502,6 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <div id="gen-output"></div>
                     <div id="export-package"></div>
                 </details>
-            </section>
-
-            <!-- === 7c-ii. TESTER FEEDBACK ===
-                 Its own tab now, not a disclosure inside the grader. What a tester actually got, against
-                 what the grader said they would - the only check here with evidence from outside the
-                 engine. -->
-            <section class="panel" id="tester-panel">
-                <h2><svg class="ic h-ic tint-pink" aria-hidden="true" focusable="false"><use href="#ic-people"></use></svg>Tester Feedback</h2>
-                <p class="helper-text">Record what a tester made against what the grader predicted for their size.</p>
-                <div class="form-pair">
-                    <div class="form-group">
-                        <label for="tester-name">Tester</label>
-                        <input type="text" id="tester-name" autocomplete="off" placeholder="name or initials">
-                    </div>
-                    <div class="form-group">
-                        <label for="tester-size">Size made</label>
-                        <select id="tester-size"></select>
-                    </div>
-                </div>
-                <div class="form-pair">
-                    <div class="form-group">
-                        <label for="tester-finished-bust">Finished bust, measured</label>
-                        <input type="number" id="tester-finished-bust" step="0.25" min="0" placeholder="in">
-                    </div>
-                    <div class="form-group">
-                        <label for="tester-gauge">Their stitch gauge</label>
-                        <input type="number" id="tester-gauge" step="0.1" min="0" placeholder="sts per in">
-                    </div>
-                </div>
-                <div class="form-pair">
-                    <div class="form-group">
-                        <label for="tester-fit-bust">Fit at the bust</label>
-                        <select id="tester-fit-bust">
-                            <option value="">not rated</option>
-                            <option value="good">good</option>
-                            <option value="tight">tight</option>
-                            <option value="loose">loose</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="tester-fit-arm">Fit at the upper arm</label>
-                        <select id="tester-fit-arm">
-                            <option value="">not rated</option>
-                            <option value="good">good</option>
-                            <option value="tight">tight</option>
-                            <option value="loose">loose</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="tester-notes">Modifications and problem rows</label>
-                    <input type="text" id="tester-notes" autocomplete="off" placeholder="e.g. added 2 rows to the sleeve">
-                </div>
-                <div id="tester-output"></div>
-            </section>
-
-            <!-- === 7c-iii. TESTER NOTES ===
-                 Anything that does not fit the fields above, in the tester's own words. Record this
-                 tester sits at the bottom of this panel rather than the one above, so it is the last
-                 thing pressed once both the fields and the freeform notes are filled in - and it now
-                 saves both. It used to save only the fields: the box was read by nothing, cleared by
-                 nothing, and its contents were dropped by the button directly beneath it while the
-                 fields around it emptied, so the discard looked exactly like a successful save. -->
-            <section class="panel" id="tester-notes-panel">
-                <h2><svg class="ic h-ic tint-pink" aria-hidden="true" focusable="false"><use href="#ic-doc"></use></svg>Tester Notes</h2>
-                <label class="field-block" for="tester-freeform">
-                    <span class="field-label">Freeform notes</span>
-                    <textarea class="field-textarea" id="tester-freeform" rows="6" placeholder="Anything else a tester said, in their own words."></textarea>
-                </label>
-                <button type="button" id="tester-add-btn" class="btn-secondary">Record this tester</button>
             </section>
 
             <!-- === 8. PATTERN INPUT (whole pattern, or one row at a time) === -->

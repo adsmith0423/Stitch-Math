@@ -438,7 +438,7 @@ already said:
 **Nothing is applied silently.** Every reading returns a `notice` naming the value and the text it
 came from, with `confident: false` where no signal was found and a prevalence default stood in.
 `renderInferenceNotices` renders those under the health panel as "Read from your pattern", and
-`buildHealthSection` repeats them in the text export, which is the copy a tester sees.
+`buildHealthSection` repeats them in the text export, which is the copy a reader of the export sees.
 
 **Two controls survived an audit that expected to remove them**, both for the same reason — a
 default is not a derivation, and the override carried information no pattern text contains:
