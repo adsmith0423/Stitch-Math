@@ -227,10 +227,10 @@ ok('the card sits with the other two', /stat-total-stitches[\s\S]*stat-difficult
 print('\n17. Pattern Input wording and actions');
 var IH = readFile('index.html');
 ok('summary names the foundation row', /<summary>Add foundation row \/ single row<\/summary>/.test(IH));
-ok('label reads # of Initial Chains', /# of Initial Chains \(Step 1 only\):/.test(IH));
-ok('label reads Row Instructions', /<label for="tokens-input">Row Instructions:/.test(IH));
-ok('label reads Expected Stitch Count', /<label for="expected-yield-input">Expected Stitch Count:/.test(IH));
-no('the old wording is gone', /Initial Foundation Chain|Pattern Instructions:|Expected Final Stitch Count/.test(IH));
+ok('label reads Starting Chains', /<label for="initial-chain-input">Starting Chains \(first row only\)</.test(IH));
+ok('label reads Row Instructions', /<label for="tokens-input">Row Instructions</.test(IH));
+ok('label reads Expected Stitch Count', /<label for="expected-yield-input">Expected Stitch Count</.test(IH));
+no('the old wording is gone', /Initial Foundation Chain|Pattern Instructions:|Expected Final Stitch Count|# of Initial Chains|Sequence Multiplier/.test(IH));
 // The four whole-pattern buttons moved inside the panel, after the collapsible.
 var panel = IH.slice(IH.indexOf('Pattern Input</h2>'));
 panel = panel.slice(0, panel.indexOf('</section>'));

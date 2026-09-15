@@ -862,6 +862,11 @@ window.CrochetAnalyticsEngine = (() => {
      */
     const EASED_POINTS = new Set(['chest', 'waist', 'hip', 'upperArm']);
 
+    // The measurements a front-and-back body worked flat splits in two. Each of the pair is half the
+    // bust, waist and hip; nothing else is shared out. The cross back is measured flat across one
+    // piece, and a sleeve carries the whole upper arm whether seamed or worked in the round.
+    const HALVED_POINTS = new Set(['chest', 'waist', 'hip']);
+
     /**
      * Body, finished and ease are tied by `finished = body + ease`, so any two give the third. Which
      * was supplied and which was worked out is always reported: the brief is "never infer ease
@@ -907,6 +912,12 @@ window.CrochetAnalyticsEngine = (() => {
         const derived = given.length === 3 ? null
             : (b === null ? 'body' : f === null ? 'finished' : 'ease');
 
+        // What the grader applies to every size. A percentage the designer typed stays a percentage,
+        // so a 10% ease is 2.9 in on an X-Small and 4.9 in on a 2X - the way ease scales in practice.
+        // Anything else - inches, centimetres, or an ease derived from body and finished - is the one
+        // figure it was, for every size. Nothing is converted behind the designer's back: a derived
+        // 4 in is not read as "10.5%, scaling".
+        const scales = !!(ease && isNum(ease.value) && ease.mode === 'percent' && e !== null);
         return {
             complete: true, missing: [], derived,
             body: round1(resolvedBody),
@@ -914,7 +925,10 @@ window.CrochetAnalyticsEngine = (() => {
             easeInches: round1(resolvedEase),
             // Ease as a share of the BODY measurement: 4 in over a 38 in bust is 10.5%.
             easePercent: resolvedBody ? Math.round((resolvedEase / resolvedBody) * 1000) / 10 : null,
-            band: easeBandFor(resolvedEase)
+            band: easeBandFor(resolvedEase),
+            easeApplied: scales ? { value: ease.value, mode: 'percent' }
+                                : { value: round1(resolvedEase), mode: 'in' },
+            easeScales: scales
         };
     }
 
@@ -934,9 +948,16 @@ window.CrochetAnalyticsEngine = (() => {
         return Math.round(inchesAcross * stitchesPerInch);
     }
 
-    function MeasurementToRows(inchesDown, rowsPerInch) {
+    /**
+     * Target length -> rows. `parity: 'even'` rounds to the nearest even row count (never below two),
+     * which is how a grader keeps every new action starting on the right side of the fabric. A tie
+     * goes up, as RoundStitchCount's does.
+     */
+    function MeasurementToRows(inchesDown, rowsPerInch, parity = 'any') {
         if (!isNum(inchesDown) || !isNum(rowsPerInch) || rowsPerInch <= 0) return null;
-        return Math.round(inchesDown * rowsPerInch);
+        const raw = inchesDown * rowsPerInch;
+        if (parity === 'even') return Math.max(2, 2 * Math.round(raw / 2));
+        return Math.round(raw);
     }
 
     /**
@@ -1002,11 +1023,19 @@ window.CrochetAnalyticsEngine = (() => {
      * Grades one measurement across the chosen sizes. Ease is global unless a section names its own,
      * so a sweater can carry +4 at the bust and none at the cuff.
      *
-     * `rounding` is optional and off by default. Given `{ repeat, strategy, parity }` it fits every
-     * width to the repeat and reports what that cost - see RoundStitchCount. Left null the count is
-     * the plain conversion, byte for byte: a repeat belongs to a SECTION, and this grades a
-     * MEASUREMENT POINT across sizes, which is not the same thing. The caller that knows about
-     * sections supplies it.
+     * `rounding` is optional and off by default. Left null the count is the plain conversion, byte
+     * for byte: a repeat belongs to a SECTION, and this grades a MEASUREMENT POINT across sizes, which
+     * is not the same thing. The caller that knows about sections supplies it, in one of two shapes:
+     *
+     *   { repeat, strategy, parity }            every width fitted to the one repeat
+     *   { byPoint: { chest: {multiple, plus}, upperArm: null, ... }, strategy, parity, rowParity }
+     *
+     * With `byPoint`, a width is fitted only when its point is a key - the piece worked to that point
+     * has been named, and its repeat (or `null`, whole stitches) is what the count lands on. A point
+     * that is not a key is left as the plain conversion. Either way a fitted cell reports what the
+     * rounding cost - see RoundStitchCount - and `actualTarget`, the finished measurement the rounded
+     * count really gives, back at the circumference the target was stated at. `rowParity: 'even'`
+     * rounds every length to an even row count and reports the same actual-versus-target for it.
      *
      * Applied to `across` rather than `target` - the per-piece count, not the circumference. That is
      * the number the designer chains, and a multiple describes one row of fabric. Fitting a
@@ -1030,9 +1059,18 @@ window.CrochetAnalyticsEngine = (() => {
         else if (section && sectionEase[section] && EASED_POINTS.has(point)) applied = sectionEase[section];
         else if (EASED_POINTS.has(point)) applied = ease;
 
-        // A piece worked flat is half the circumference; in the round it is all of it. Lengths are
-        // unaffected either way.
-        const factor = piece === 'half' && axis === 'width' ? 0.5 : 1;
+        // A body worked flat is a front and a back, each half of the circumferences it is measured
+        // by. Nothing else halves: the cross back is a flat span already, and a sleeve is one piece
+        // around the arm whether it is seamed or worked in the round. Lengths are unaffected.
+        const factor = piece === 'half' && HALVED_POINTS.has(point) ? 0.5 : 1;
+
+        // Which repeat this point lands on, if the caller has said. `undefined` means "not fitted";
+        // `null` means "fitted to whole stitches", which still reports the actual measurement.
+        const byPoint = rounding && rounding.byPoint;
+        const fitThis = !!rounding && axis === 'width'
+            && (byPoint ? Object.prototype.hasOwnProperty.call(byPoint, point) : true);
+        const repeat = byPoint ? byPoint[point] : (rounding ? rounding.repeat : null);
+        const rowParity = rounding && rounding.rowParity === 'even' ? 'even' : 'any';
 
         const entries = (chart ? chart.sizes : [])
             .filter(([label]) => !sizes || sizes.includes(label));
@@ -1046,16 +1084,27 @@ window.CrochetAnalyticsEngine = (() => {
             const across = isNum(target) ? round1(target * factor) : null;
             // Only computed when the caller asked, so a cell that was never fitted to a repeat carries
             // no fit fields at all rather than a row of nulls reading as "checked, nothing wrong".
-            const fitted = rounding && axis === 'width'
+            const fitted = fitThis
                 ? RoundStitchCount({
                     targetInches: across, stitchesPerInch: effective.stitchesPerInch,
-                    repeat: rounding.repeat, strategy: rounding.strategy,
-                    parity: rounding.parity, piece
+                    repeat, strategy: rounding.strategy, parity: rounding.parity, piece
                 })
+                : null;
+            const rows = axis === 'length'
+                ? MeasurementToRows(target, effective.rowsPerInch, rowParity) : null;
+            // An even row count is a rounding too, and is reported as one: what it really measures,
+            // and by how much that misses the target.
+            const evenRows = axis === 'length' && rowParity === 'even' && isNum(rows)
+                && effective.rowsPerInch > 0
+                ? { gradedInches: round2(rows / effective.rowsPerInch),
+                    differenceInches: round2(rows / effective.rowsPerInch - target) }
                 : null;
             return {
                 size: label,
                 point, axis, piece,
+                // The share of the measurement this piece carries: 0.5 for a body circumference
+                // worked flat, 1 for everything else.
+                share: factor,
                 body: isNum(bodyInches) ? round1(bodyInches) : null,
                 fromChart: !isNum(override),
                 target,
@@ -1065,14 +1114,22 @@ window.CrochetAnalyticsEngine = (() => {
                 stitches: axis === 'width'
                     ? (fitted ? fitted.stitches : MeasurementToStitches(across, effective.stitchesPerInch))
                     : null,
-                rows: axis === 'length' ? MeasurementToRows(target, effective.rowsPerInch) : null,
+                rows,
                 gaugeSource: effective.source,
                 ...(fitted ? {
                     gradedInches: fitted.gradedInches,
                     differenceInches: fitted.differenceInches,
+                    // Back at the circumference: what the garment will measure around.
+                    actualTarget: isNum(fitted.gradedInches) ? round2(fitted.gradedInches / factor) : null,
                     fits: fitted.fits,
                     plusSuppressed: fitted.plusSuppressed,
-                    options: fitted.options
+                    options: fitted.options,
+                    repeat: fitted.repeat
+                } : {}),
+                ...(evenRows ? {
+                    gradedInches: evenRows.gradedInches,
+                    differenceInches: evenRows.differenceInches,
+                    actualTarget: evenRows.gradedInches
                 } : {})
             };
         });
@@ -1312,9 +1369,14 @@ window.CrochetAnalyticsEngine = (() => {
      * chart relationship and manual ones arrive as overrides, which GradeSizes has always honoured.
      * Marking them is what lets the UI say which is which.
      */
-    function ApplyDimensionModes({ garment = [], modes = {}, baseSize = '', gauge = {},
+    function ApplyDimensionModes({ garment = [], modes = {}, baseSize = '',
                                    graph = MEASUREMENT_DEPENDS_ON } = {}) {
-        const effective = EffectiveGauge(gauge);
+        // A locked cell takes the base's figures as they are, fit fields included - the base size was
+        // graded through the same rounding, so recomputing the count here would only put a plain
+        // conversion beside a fitted one and leave the fit fields describing a size that is no longer
+        // in the cell.
+        const CARRIED = ['target', 'across', 'stitches', 'rows', 'gradedInches', 'differenceInches',
+                         'actualTarget', 'fits', 'plusSuppressed', 'options', 'repeat'];
         return garment.map(row => {
             const mode = DIMENSION_MODES.indexOf(modes[row.point]) === -1 ? 'graded' : modes[row.point];
             const base = row.sizes.find(cell => cell.size === baseSize);
@@ -1325,17 +1387,12 @@ window.CrochetAnalyticsEngine = (() => {
 
                 // Everything downstream has to move with it, or the row reports a locked measurement
                 // beside a graded stitch count.
-                const across = isNum(base.across) ? base.across : base.target;
-                return {
-                    ...tagged,
-                    target: base.target,
-                    across,
-                    stitches: row.axis === 'width'
-                        ? MeasurementToStitches(across, effective.stitchesPerInch) : null,
-                    rows: row.axis === 'length'
-                        ? MeasurementToRows(base.target, effective.rowsPerInch) : null,
-                    lockedTo: baseSize
-                };
+                const locked = { ...tagged, lockedTo: baseSize };
+                CARRIED.forEach(key => {
+                    if (Object.prototype.hasOwnProperty.call(base, key)) locked[key] = base[key];
+                    else delete locked[key];
+                });
+                return locked;
             });
 
             return { ...row, mode, dependsOn: graph[row.point] || [], sizes };
@@ -1676,6 +1733,68 @@ window.CrochetAnalyticsEngine = (() => {
         };
     }
 
+    /**
+     * One size's construction plan, from the cells the grader has already worked out for it.
+     *
+     * The three planners above take typed counts because, on the Construction tab, nothing else
+     * knows them. The grader does: the bust, upper arm, cross back and armhole depth are graded for
+     * every size, so a raglan's separation count, a set-in armhole's shoulder count and a circular
+     * yoke's separation all follow from the chart. Only what no chart carries is asked for - the
+     * neck circumference a yoke casts on at, a set-in cap's height and top, how many rounds a
+     * circular yoke spreads its increases over - and a size that is missing one of those says which,
+     * rather than planning from a number nobody gave.
+     *
+     * `chest` is the per-piece count and `chestShare` what share of the bust it is (0.5 for a body
+     * worked flat), so the front-and-back at a yoke's separation is the whole bust again. Everything
+     * else is per size as graded. A drop shoulder has no yoke or cap and returns `planner: null`.
+     */
+    function PlanConstructionAtSize({ construction = 'drop', chest = null, chestShare = 0.5,
+                                      upperArm = null, crossBack = null, armholeRows = null,
+                                      neckCount = null, underarmCount = 0, capRows = null,
+                                      capTopCount = null, increaseRounds = null,
+                                      stitchesPerInch = null, rowsPerInch = null } = {}) {
+        const kind = CONSTRUCTIONS[construction] || CONSTRUCTIONS.drop;
+        const planner = kind.yoke || null;
+        const blank = { construction, planner, inputs: {}, plan: null, feasible: false,
+                        needs: [], warning: '' };
+        if (!planner) return { ...blank, warning: `${kind.label} has no yoke or cap to plan.` };
+
+        const fullChest = isNum(chest) && isNum(chestShare) && chestShare > 0
+            ? Math.round(chest / chestShare) : (isNum(chest) ? chest : null);
+        const needs = [];
+        const need = (ok, what) => { if (!ok) needs.push(what); };
+
+        let inputs = {};
+        if (planner === 'raglan') {
+            need(isNum(neckCount), 'the neck circumference');
+            need(isNum(fullChest), 'a graded bust');
+            need(isNum(upperArm), 'a graded upper arm');
+            need(isNum(armholeRows), 'a graded armhole depth');
+            inputs = { neckCount, frontBackCount: fullChest, sleeveCount: upperArm, yokeRows: armholeRows };
+        } else if (planner === 'setIn') {
+            need(isNum(chest), 'a graded bust');
+            need(isNum(crossBack), 'a graded cross back');
+            need(isNum(armholeRows), 'a graded armhole depth');
+            inputs = { bodyCount: chest, shoulderCount: crossBack, armholeRows,
+                       underarmCount: isNum(underarmCount) ? Math.round(underarmCount) : 0,
+                       sleeveCount: upperArm, capRows, capTopCount };
+        } else {
+            need(isNum(neckCount), 'the neck circumference');
+            need(isNum(fullChest) && isNum(upperArm), 'a graded bust and upper arm');
+            need(isNum(armholeRows), 'a graded armhole depth');
+            inputs = { neckCount, separationCount: isNum(fullChest) && isNum(upperArm) ? fullChest + 2 * upperArm : null,
+                       yokeRows: armholeRows, increaseRounds: isNum(increaseRounds) ? increaseRounds : 3 };
+        }
+        if (needs.length) {
+            return { ...blank, inputs, needs, warning: `Needs ${needs.join(', ')}.` };
+        }
+
+        const plan = planner === 'raglan' ? PlanRaglanYoke({ ...inputs, rowsPerInch })
+            : planner === 'setIn' ? PlanSetInSleeve({ ...inputs, stitchesPerInch, rowsPerInch })
+            : PlanCircularYoke({ ...inputs, rowsPerInch });
+        return { ...blank, inputs, plan, feasible: !!plan.feasible, warning: plan.warning || '' };
+    }
+
     // === 3b-ii. CHECKING A WRITTEN GARMENT AGAINST ITS CONSTRUCTION === //
 
     /*
@@ -1776,6 +1895,28 @@ window.CrochetAnalyticsEngine = (() => {
             from: rows[start].count, to: rows[end].count, rows: end - start,
             direction, events: steps.length, steps, straightAfter
         };
+    }
+
+    /**
+     * Every shaped run of a piece, in the order they are worked - a sleeve's taper and then its cap.
+     *
+     * ShapedTail finds the last one. The rows before that run's `start` are a shorter piece ending
+     * exactly where the previous run ends, so walking back is ShapedTail again on the prefix, until
+     * nothing moves. Each run carries `start` (the last row before its first move) and `end` (its last
+     * moving row) as indices into `worked`; a prefix keeps its indices, so no offset is needed.
+     */
+    function ShapedRuns(worked = []) {
+        const runs = [];
+        let rows = (worked || []).filter(row => row && isNum(row.count));
+        for (;;) {
+            const tail = ShapedTail(rows);
+            if (tail.direction === 'none' || !tail.events) break;
+            const start = tail.steps[0].at - 1;
+            const end = tail.steps[tail.events - 1].at;
+            runs.unshift({ ...tail, start, end });
+            rows = rows.slice(0, start + 1);
+        }
+        return runs;
     }
 
     /**
@@ -2054,9 +2195,18 @@ window.CrochetAnalyticsEngine = (() => {
      * A row is scaled only where its number is a stitch count spanning the piece. A repeat length, a
      * turning chain or a fixed edging is left alone - scaling "ch 1, turn" into "ch 2, turn" would be
      * the generator inventing a fabric. Only the row's own resolved count is scaled, never its text.
+     *
+     * `baseCount` is the row's own count, as written. `baseTarget` is the graded width of the size the
+     * pattern was WRITTEN in - the same figure `targetCounts` holds for every other size - and the ratio
+     * between a target and it is what the row is multiplied by. Without it the row's count stands in
+     * for the base width, which is only true of a row that is the full width: a decrease row would
+     * otherwise be restated at the full width of every size, indistinguishable from the straight rows
+     * around it. A size whose target equals the base target IS the written size, and gets the written
+     * count back untouched - never refitted to the repeat, because it was not generated.
      */
-    function ScaleRowCounts({ baseCount = null, targetCounts = [], construction = 'drop',
-                              repeat = null, strategy = 'nearest', parity = 'any' } = {}) {
+    function ScaleRowCounts({ baseCount = null, baseTarget = null, targetCounts = [],
+                              construction = 'drop', repeat = null, strategy = 'nearest',
+                              parity = 'any' } = {}) {
         const kind = CONSTRUCTIONS[construction] || CONSTRUCTIONS.drop;
         // `supported` means the engine can plan the construction at all; scaling every row by one
         // width ratio is a stronger claim, and only a rectangle earns it. A raglan has a planner and
@@ -2067,10 +2217,12 @@ window.CrochetAnalyticsEngine = (() => {
         if (!isNum(baseCount) || baseCount <= 0) {
             return { supported: true, construction, reason: '', counts: [] };
         }
+        const base = isNum(baseTarget) && baseTarget > 0 ? baseTarget : baseCount;
 
         const counts = targetCounts.map(target => {
             if (!isNum(target)) return null;
-            const scaled = baseCount * kind.plan({ baseCount, targetCount: target }).scale;
+            if (target === base) return baseCount;
+            const scaled = baseCount * kind.plan({ baseCount: base, targetCount: target }).scale;
             // Fitted to the repeat the same way every other count in this engine is, so a
             // generated row cannot break a multiple the written one held.
             const fitted = RoundStitchCount({
@@ -2082,12 +2234,436 @@ window.CrochetAnalyticsEngine = (() => {
     }
 
     /**
+     * A piece's rows restated at every size, in order.
+     *
+     * ScaleRowCounts is one row on its own. A piece is not: a row that writes "sc2tog, sc across,
+     * sc2tog" takes two stitches off whatever the row before it had, in every size, and scaling the two
+     * rows separately loses that - each rounds on its own, and the decrease row of a Small can come out
+     * one stitch below its neighbour where the text plainly removes two. Anyone pasting that size back
+     * into the validator would be told the row is miscounted, by the tool that wrote it.
+     *
+     * So the first row of a piece is scaled, and fitted to the repeat, exactly as ScaleRowCounts does
+     * it; every row after it applies the change the WRITTEN row makes to the written row before it -
+     * a straight row stays at the count above it, and a shaping row moves by what its text moves. The
+     * size the pattern is written in comes back verbatim, because verbatim is what the chain of its own
+     * deltas reproduces. This is how a grader works from fixed text: the width is graded and the
+     * shaping is kept. Shaping that should itself change with size - a tapered sleeve's increase
+     * count - is GradePieceRows' job, which calls this for the stretches of a piece that do not shape
+     * and regrades the runs that do.
+     *
+     * `counts` is one entry per row: a number, or `null` for a piece boundary, which starts a fresh
+     * chain (the next row is scaled, not chained). Anything else - a note with no count - yields null
+     * and leaves the chain as it was. A chained count that falls below one stitch is reported as null:
+     * a size the written shaping does not fit is a finding, not a negative number.
+     */
+    function ScaleRowSequence({ counts = [], baseTarget = null, targetCounts = [],
+                                construction = 'drop', repeat = null, strategy = 'nearest',
+                                parity = 'any' } = {}) {
+        const kind = CONSTRUCTIONS[construction] || CONSTRUCTIONS.drop;
+        if (!kind.scalesByWidth) {
+            return { supported: false, construction, reason: kind.reason, rows: [] };
+        }
+        const base = isNum(baseTarget) && baseTarget > 0 ? baseTarget : null;
+        let previous = null;
+        const rows = (counts || []).map(written => {
+            if (written === null) { previous = null; return null; }
+            if (!isNum(written) || written <= 0) return null;
+            if (!previous) {
+                const scaled = ScaleRowCounts({ baseCount: written, baseTarget: base, targetCounts,
+                                                construction, repeat, strategy, parity });
+                previous = { written, generated: scaled.counts };
+                return scaled.counts;
+            }
+            const delta = written - previous.written;
+            const generated = previous.generated.map((n, i) => {
+                if (targetCounts[i] === base) return written;
+                if (!isNum(n)) return null;
+                const next = n + delta;
+                return next >= 1 ? next : null;
+            });
+            previous = { written, generated };
+            return generated;
+        });
+        return { supported: true, construction, reason: '', rows };
+    }
+
+    /**
+     * One shaped run of a piece - a sleeve's taper, a neck's decreases - regraded to every size.
+     *
+     * A run is a rule, not a list of rows: "increase at each end every 4th row 7 times". The rule's
+     * three numbers all move with size - how far the count travels, how many rows it has to do it in,
+     * and therefore how often - and none of them can be read off the written rows for any size but
+     * the one they were written in. So each size gets its own: `to` is the written end scaled by the
+     * size's width over the base's, rounded to a whole number of shaping events around the count the
+     * run is entered at (`from`, which the rows before it already settled); `rows` is the written span
+     * scaled by the size's length over the base's, when the piece has a graded length at all.
+     *
+     * The rule is phrased "work the shaping row once, then every Nth row X MORE times". Written that
+     * way, a base size whose shaping rows were evenly spaced comes back exactly as written: the first
+     * event is pinned to the run's first row, and the remaining events divide the remaining rows by
+     * the interval the designer used. Distributing all the events over all the rows would move the
+     * first one and shift every other.
+     *
+     * `from`, `targetCounts` and `targetRows` are per size, in the chart's order; `baseTarget` and
+     * `baseRows` are the base size's entries in them, so a size whose target IS the base's gets the
+     * written `to` and `rows` untouched. A size that cannot hold the shaping - more events than rows,
+     * or a count that does not move at all - is reported infeasible with the reason, and prints as a
+     * dash in every column of the rule. Nothing is nudged to make it fit.
+     *
+     * `firstRow` is the row number of the shaping row, when the caller knows it, and gives the rule
+     * its per-size row range; without it `text.rowRange` is empty.
+     */
+    function GradeShapedRun({ from = [], writtenFrom = null, writtenTo = null, writtenRows = null,
+                              perEvent = null, baseTarget = null, targetCounts = [],
+                              baseRows = null, targetRows = null, firstRow = null,
+                              labels = [], notation = 'parenthetical' } = {}) {
+        const blankText = { shapingRow: '', rowRange: '', every: '', times: '', straight: '',
+                            ending: '', rows: '' };
+        const step = isNum(perEvent) && perEvent > 0 ? Math.round(perEvent) : null;
+        if (!isNum(writtenFrom) || !isNum(writtenTo) || !isNum(writtenRows) || writtenRows < 1
+            || !step || writtenFrom === writtenTo) {
+            return { sizes: [], direction: 'none', perEvent: step, text: blankText };
+        }
+        const direction = writtenTo > writtenFrom ? 'increase' : 'decrease';
+        const sign = direction === 'increase' ? 1 : -1;
+        const base = isNum(baseTarget) && baseTarget > 0 ? baseTarget : null;
+        const lengthGraded = isNum(baseRows) && baseRows > 0 && Array.isArray(targetRows);
+
+        const sizes = (targetCounts || []).map((target, i) => {
+            const entering = from[i];
+            const blank = { from: isNum(entering) ? entering : null, to: null, rows: null,
+                            events: null, more: null, feasible: false, warning: '' };
+            if (!isNum(entering) || entering < 1) {
+                return { ...blank, warning: 'the rows before this shaping do not fit this size' };
+            }
+            if (!isNum(target) || !base) {
+                return { ...blank, warning: 'this size has no graded width to shape towards' };
+            }
+
+            let to, rows;
+            if (target === base) {
+                to = writtenTo;
+                rows = writtenRows;
+            } else {
+                const ratio = target / base;
+                to = entering + step * Math.round((writtenTo * ratio - entering) / step);
+                rows = lengthGraded && isNum(targetRows[i]) && targetRows[i] > 0
+                    ? Math.max(1, Math.round(writtenRows * targetRows[i] / baseRows))
+                    : writtenRows;
+            }
+            const delta = to - entering;
+            const events = Math.abs(delta) / step;
+            if (events < 1 || Math.sign(delta) !== sign) {
+                return { ...blank, to, rows, events: 0,
+                         warning: 'the count does not change at this size' };
+            }
+            if (events > rows) {
+                return { ...blank, to, rows, events,
+                         warning: `${plural(events, 'shaping row')} do not fit in ${plural(rows, 'row')}` };
+            }
+            // The first event is on the run's first row; the rest divide the rows that remain.
+            const more = events > 1
+                ? DistributeShaping({ from: entering + sign * step, to, rows: rows - 1, perEvent: step })
+                : null;
+            if (more && !more.feasible) {
+                return { ...blank, to, rows, events, more, warning: more.warning };
+            }
+            return { ...blank, to, rows, events, more, feasible: true };
+        });
+
+        const column = values => FormatSizeNumbers({ counts: values, labels, notation });
+        const feasible = sizes.map(s => s.feasible);
+        const only = (pick) => sizes.map((s, i) => (feasible[i] ? pick(s) : null));
+        return {
+            sizes, direction, perEvent: step,
+            text: {
+                shapingRow: column(only(s => s.from + sign * step)),
+                rowRange: column(only(s => (isNum(firstRow) && s.rows > 1
+                    ? `${firstRow + 1}-${firstRow + s.rows - 1}` : null))),
+                every: column(only(s => (s.more ? `${ordinal(s.more.plan.interval)}` : null))),
+                times: column(only(s => (s.more ? s.more.plan.times : 0))),
+                straight: column(only(s => (s.more ? s.more.plan.leftoverRows : s.rows - 1))),
+                ending: column(only(s => s.to)),
+                rows: column(only(s => s.rows))
+            }
+        };
+    }
+
+    /**
+     * A whole piece restated at every size: its straight stretches chained as ScaleRowSequence does
+     * it, and each run of two or more shaping rows regraded as a rule by GradeShapedRun.
+     *
+     * `counts` is the piece's resolved counts, one per row, all numbers. The runs come from
+     * ShapedRuns, kept only when they are a rule - two or more events, each moving the same number of
+     * stitches. A single shaping row, or a run whose rows move by different amounts, is not a rule and
+     * keeps the change it writes.
+     *
+     * `rows` has the same shape as ScaleRowSequence's, with the rows INSIDE a run after its first
+     * shaping row set to null - they are written as the rule, not as rows - and the rows after a run
+     * chained from the size's own graded end. `runs` carries, for each rule, the indices it replaces
+     * (`start` is the last row before it, `firstShaping` the row the rule is worked from, `end` its
+     * last shaping row), whether the base's own spacing was uneven and so redistributed, and the
+     * graded result. `rowNumbers`, when given, is the printed number of each row, for the rule's range.
+     */
+    function GradePieceRows({ counts = [], baseTarget = null, targetCounts = [],
+                              baseRows = null, targetRows = null, construction = 'drop',
+                              repeat = null, strategy = 'nearest', parity = 'any',
+                              labels = [], notation = 'parenthetical', rowNumbers = null } = {}) {
+        const kind = CONSTRUCTIONS[construction] || CONSTRUCTIONS.drop;
+        if (!kind.scalesByWidth) {
+            return { supported: false, construction, reason: kind.reason, rows: [], runs: [] };
+        }
+        const written = (counts || []).map(c => (isNum(c) ? c : null));
+        const scale = (slice) => ScaleRowSequence({
+            counts: slice, baseTarget, targetCounts, construction, repeat, strategy, parity
+        }).rows;
+
+        const runs = ShapedRuns(written.map(count => ({ count })))
+            .filter(run => run.events >= 2
+                && run.steps.every(s => Math.abs(s.delta) === Math.abs(run.steps[0].delta)));
+
+        const rows = written.map(() => null);
+        let position = 0;          // the next row to fill
+        let chainFrom = null;      // { at, counts } once a run has set the piece's count per size
+
+        const fillChained = (upTo) => {
+            for (let j = position; j <= upTo; j++) {
+                rows[j] = chainFrom.counts.map(n => {
+                    if (!isNum(n) || !isNum(written[j])) return null;
+                    const next = n + (written[j] - written[chainFrom.at]);
+                    return next >= 1 ? next : null;
+                });
+            }
+            position = upTo + 1;
+        };
+
+        const graded = runs.map(run => {
+            // The stretch before this run, up to and including the row it is entered from.
+            if (chainFrom) fillChained(run.start);
+            else {
+                scale(written.slice(position, run.start + 1)).forEach((r, k) => { rows[position + k] = r; });
+                position = run.start + 1;
+            }
+            const perEvent = Math.abs(run.steps[0].delta);
+            const gaps = run.steps.slice(1).map((s, k) => s.at - run.steps[k].at);
+            const redistributed = gaps.some(g => g !== gaps[0]);
+            const firstShaping = run.start + 1;
+            const result = GradeShapedRun({
+                from: rows[run.start] || [], writtenFrom: run.from, writtenTo: run.to,
+                writtenRows: run.rows, perEvent, baseTarget, targetCounts, baseRows, targetRows,
+                firstRow: Array.isArray(rowNumbers) && isNum(rowNumbers[firstShaping])
+                    ? rowNumbers[firstShaping] : null,
+                labels, notation
+            });
+            rows[firstShaping] = result.sizes.map(s => (s.feasible ? s.from + (run.direction === 'increase' ? perEvent : -perEvent) : null));
+            for (let j = firstShaping + 1; j <= run.end; j++) rows[j] = null;
+            chainFrom = { at: run.end, counts: result.sizes.map(s => (s.feasible ? s.to : null)) };
+            position = run.end + 1;
+            return { start: run.start, firstShaping, end: run.end, perEvent,
+                     direction: run.direction, redistributed, graded: result };
+        });
+
+        // Whatever follows the last run - or the whole piece, when nothing in it is a rule.
+        if (position < written.length) {
+            if (chainFrom) fillChained(written.length - 1);
+            else scale(written.slice(position)).forEach((r, k) => { rows[position + k] = r; });
+        }
+        return { supported: true, construction, reason: '', rows, runs: graded,
+                 ...pieceTotals(rows, graded, targetCounts.length) };
+    }
+
+    /**
+     * What a graded piece adds up to, per size: how many rows it works, how many stitches, the count
+     * it ends on and the widest it reaches. The tech editor's validation row reads these, and so does
+     * the yardage estimate, which goes as area.
+     *
+     * A rule's rows are not printed, so they are summed in closed form. The shaping row is row 1 of
+     * the run at `f + s`; every later event sits `I` rows on, so levels 1..E-1 each hold `I` rows and
+     * the last level holds the `L + 1` that remain: `I·((E-1)·f + s·E(E-1)/2) + (L+1)·(f + s·E)`. A run
+     * of one event is `R` rows at `f + s`. A size a run does not fit contributes nothing, and the
+     * piece's totals for that size are null rather than a sum of what could be counted.
+     */
+    function pieceTotals(rows, runs, sizeCount) {
+        const inRun = new Set();
+        runs.forEach(run => { for (let j = run.firstShaping; j <= run.end; j++) inRun.add(j); });
+        const totals = { rows: [], stitches: [] };
+        const endCounts = [];
+        const widestCounts = [];
+        for (let i = 0; i < sizeCount; i++) {
+            let stitches = 0;
+            let rowCount = 0;
+            let widest = null;
+            let complete = true;
+            rows.forEach((row, j) => {
+                if (inRun.has(j)) return;
+                const n = row ? row[i] : null;
+                if (!isNum(n)) { complete = false; return; }
+                stitches += n;
+                rowCount += 1;
+                widest = widest === null ? n : Math.max(widest, n);
+            });
+            runs.forEach(run => {
+                const S = run.graded.sizes[i];
+                if (!S || !S.feasible) { complete = false; return; }
+                const s = run.direction === 'increase' ? run.perEvent : -run.perEvent;
+                const f = S.from;
+                const E = S.events;
+                const R = S.rows;
+                const I = S.more ? S.more.plan.interval : 0;
+                const L = S.more ? S.more.plan.leftoverRows : R - 1;
+                stitches += E >= 2
+                    ? I * ((E - 1) * f + s * E * (E - 1) / 2) + (L + 1) * (f + s * E)
+                    : R * (f + s);
+                rowCount += R;
+                widest = widest === null ? S.to : Math.max(widest, S.to, f + s);
+            });
+            totals.stitches.push(complete ? stitches : null);
+            totals.rows.push(complete ? rowCount : null);
+            const last = rows.length - 1;
+            const closing = runs.find(run => run.end === last);
+            endCounts.push(!complete ? null
+                : closing ? closing.graded.sizes[i].to
+                : (rows[last] && isNum(rows[last][i]) ? rows[last][i] : null));
+            widestCounts.push(complete ? widest : null);
+        }
+        return { totals, endCounts, widestCounts };
+    }
+
+    /**
+     * The tech editor's validation row, per piece and per size: does the count the piece reaches equal
+     * the width it was graded to, and does it work the rows its length grades to? A grading
+     * spreadsheet carries a cell for each that must read TRUE before the pattern is written up; this
+     * is that cell, for every size at once, with the difference when it is not.
+     *
+     * `pieces` is one entry per TYPED piece: `{ title, type, graded (a GradePieceRows result),
+     * widthTargets [per size], lengthTargets [per size] | null, writtenRows, baseIndex, repeat,
+     * stitchesPerInch }`. Both sides of the width comparison are whole stitches - a target that arrives
+     * as 45.9999 from a chain of inch arithmetic is 46 - and the tolerance is half the repeat's
+     * multiple when the piece has one (the count can only land on that lattice) and zero when it has
+     * not (every whole count exists, so the count either is the target or is not). The intended row
+     * count is the written row count scaled the way the chart grades the piece's length, which is the
+     * same ratio a shaped run's rows are graded by. Nothing here changes a number.
+     */
+    function CheckGradedPieces({ pieces = [], labels = [] } = {}) {
+        const findings = [];
+        const checked = (pieces || []).map(piece => {
+            const graded = piece.graded || {};
+            const totals = graded.totals || { rows: [], stitches: [] };
+            const asked = normaliseRepeat(piece.repeat);
+            const tolerance = asked ? Math.floor(asked.multiple / 2) : 0;
+            const spi = isNum(piece.stitchesPerInch) && piece.stitchesPerInch > 0 ? piece.stitchesPerInch : null;
+            const lengths = Array.isArray(piece.lengthTargets) ? piece.lengthTargets : null;
+            const baseLength = lengths && isNum(piece.baseIndex) ? lengths[piece.baseIndex] : null;
+
+            const sizes = (labels || []).map((size, i) => {
+                const feasible = !!graded.supported && isNum(totals.stitches[i]);
+                const widest = feasible ? graded.widestCounts[i] : null;
+                const target = Array.isArray(piece.widthTargets) && isNum(piece.widthTargets[i])
+                    ? Math.round(piece.widthTargets[i]) : null;
+                const differenceStitches = isNum(widest) && isNum(target) ? Math.round(widest) - target : null;
+                const widthOk = feasible && isNum(differenceStitches) && Math.abs(differenceStitches) <= tolerance;
+                const rows = feasible ? totals.rows[i] : null;
+                const intendedRows = lengths && isNum(lengths[i]) && isNum(baseLength) && baseLength > 0
+                    && isNum(piece.writtenRows)
+                    ? Math.round(piece.writtenRows * lengths[i] / baseLength) : null;
+                const lengthOk = intendedRows === null ? null : (feasible && rows === intendedRows);
+
+                let warning = '';
+                if (!feasible) warning = 'the piece does not fit this size';
+                else if (!widthOk && isNum(target)) {
+                    warning = `${widest} sts, ${target} needed`
+                        + (spi ? ` (${signOf(round2(differenceStitches / spi))} in)` : '');
+                } else if (lengthOk === false) warning = `${rows} rows, ${intendedRows} intended`;
+
+                const check = !feasible ? `${piece.title} does not fit this size`
+                    : (!widthOk && isNum(target)) ? `${piece.title} misses its target width`
+                    : lengthOk === false ? `${piece.title} works the wrong number of rows` : '';
+                if (check) findings.push({ size, check, detail: `${warning} at ${size}`, state: 'warn' });
+
+                return { size, feasible, endCount: feasible ? graded.endCounts[i] : null, widestCount: widest,
+                         widthTarget: target, differenceStitches,
+                         differenceInches: isNum(differenceStitches) && spi ? round2(differenceStitches / spi) : null,
+                         widthOk, rows, intendedRows, lengthOk, warning };
+            });
+            return { title: piece.title, type: piece.type || '', sizes };
+        });
+        return { pieces: checked, findings };
+    }
+
+    // How a size is spelled varies more than what it means: "M", "Med" and "Medium" are one size, and
+    // "2X", "2XL" and "XXL" another. Each entry is one size; the first spelling is only a key.
+    const SIZE_ALIASES = [
+        ['xs', 'xsmall', 'extrasmall', 'xsm'],
+        ['s', 'sm', 'small'],
+        ['m', 'med', 'medium'],
+        ['l', 'lg', 'large'],
+        ['xl', 'xlarge', 'extralarge', '1x', '1xl', '1xlarge'],
+        ['2x', '2xl', 'xxl', '2xlarge', 'xxlarge'],
+        ['3x', '3xl', 'xxxl', '3xlarge'],
+        ['4x', '4xl', 'xxxxl', '4xlarge'],
+        ['5x', '5xl', 'xxxxxl', '5xlarge']
+    ];
+
+    /** A size name reduced to what it means: lower-cased, stripped of punctuation and spacing, and
+     *  folded onto its alias group. "X-Large", "XL" and "extra large" all come back as "xl". */
+    function canonicalSizeName(name) {
+        const bare = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        if (!bare) return '';
+        const group = SIZE_ALIASES.find(names => names.includes(bare));
+        return group ? group[0] : bare;
+    }
+
+    /**
+     * The chart label a typed size name refers to, or '' when it names none of them.
+     *
+     * Exact spelling wins, then the alias fold, so a chart that happened to list both "XL" and
+     * "X-Large" would still hand back the one typed. Nothing is guessed from a partial match: "X"
+     * is not a size, and returning X-Small for it would be the grader deciding what was meant.
+     */
+    function MatchSizeLabel(typed, labels = []) {
+        const list = Array.isArray(labels) ? labels : [];
+        const bare = String(typed || '').trim().toLowerCase();
+        if (!bare) return '';
+        const exact = list.find(label => String(label).trim().toLowerCase() === bare);
+        if (exact !== undefined) return exact;
+        const wanted = canonicalSizeName(typed);
+        const folded = list.find(label => canonicalSizeName(label) === wanted);
+        return folded === undefined ? '' : folded;
+    }
+
+    /**
+     * Which graded size a written piece is nearest to, by its widest row.
+     *
+     * `cells` is one measurement's graded run - `[{ size, stitches }]` - and `stitches` the count the
+     * pattern actually reaches. The nearest target is offered as the base size when the designer has
+     * not named one, with its distance attached so the caller can say how sure it is: a 67-stitch
+     * piece is plainly the size that grades to 66, and less plainly the size that grades to 74.
+     * Ties go to the smaller size, which is the one a pattern is conventionally written in.
+     */
+    function NearestSizeByCount({ cells = [], stitches = null } = {}) {
+        if (!isNum(stitches) || stitches <= 0) return null;
+        let best = null;
+        (cells || []).forEach(cell => {
+            if (!cell || !isNum(cell.stitches)) return;
+            const difference = Math.abs(cell.stitches - stitches);
+            if (!best || difference < best.difference) {
+                best = { size: cell.size, stitches: cell.stitches, difference };
+            }
+        });
+        return best;
+    }
+
+    /**
      * The size numbers written the way a pattern writes them.
      *
      * `parenthetical` is the near-universal crochet convention - the base size outside,
      * the rest in brackets - and `bracket` is the same with square brackets, which some
      * publishers require. `column` is one size per line for a pattern that prints its
      * sizes separately rather than inline.
+     *
+     * `counts` may hold strings as well as numbers - "4th" of a graded shaping rule, "4-27" of a row
+     * range - because a rule's words go into size columns exactly as its numbers do. Only an absent
+     * value (null, undefined, an empty string, a non-finite number) prints as a dash.
      */
     function FormatSizeNumbers({ counts = [], notation = 'parenthetical', order = null,
                                  labels = [] } = {}) {
@@ -2097,7 +2673,9 @@ window.CrochetAnalyticsEngine = (() => {
                 return at === -1 ? null : counts[at];
             })
             : counts;
-        const shown = picked.map(n => (isNum(n) ? String(n) : '—'));
+        const absent = v => v === null || v === undefined || v === ''
+            || (typeof v === 'number' && !Number.isFinite(v));
+        const shown = picked.map(v => (absent(v) ? '—' : String(v)));
         if (!shown.length) return '';
         if (shown.length === 1) return shown[0];
 
@@ -2237,15 +2815,30 @@ window.CrochetAnalyticsEngine = (() => {
      * compiler actually evaluated for that size, so neither guess is involved.
      */
     function EstimateSizeEffort({ label = '', stitchTotals = {}, yarnWeightCategory = 4,
-                                  safetyBuffer = 0.15, colorTotals = null } = {}) {
-        const yarn = EstimateYarnYardage(stitchTotals, yarnWeightCategory, safetyBuffer);
-
+                                  safetyBuffer = 0.15, colorTotals = null,
+                                  yardsPerStitch = null, skeinYards = null } = {}) {
         let seconds = 0;
         let stitches = 0;
         Object.entries(stitchTotals || {}).forEach(([stitch, count]) => {
             seconds += (SECONDS_PER_STITCH[stitch] || DEFAULT_SECONDS_PER_STITCH) * count;
             stitches += count;
         });
+
+        // Yarn: measured from the designer's own sample when they have said what it used, and from the
+        // yarn-weight table otherwise. A figure measured on this yarn at this gauge beats any table;
+        // the table is what there is before a sample exists. Either way the buffer applies, and the
+        // result says which it came from.
+        const measured = isNum(yardsPerStitch) && yardsPerStitch > 0;
+        const table = EstimateYarnYardage(stitchTotals, yarnWeightCategory, safetyBuffer);
+        const yarn = measured
+            ? (() => {
+                const exactYards = stitches * yardsPerStitch * (1 + safetyBuffer);
+                const totalYards = Math.ceil(exactYards);
+                const perSkein = isNum(skeinYards) && skeinYards > 0 ? skeinYards : table.avgYardsPerSkein;
+                return { totalYards, totalMeters: Math.ceil(totalYards * 0.9144),
+                         estimatedSkeins: Math.ceil(totalYards / perSkein), exactYards };
+            })()
+            : table;
 
         // Per colour, when the pattern tracks them: a two-colour garment needs the right amount of
         // each, not the right amount in total.
@@ -2261,12 +2854,32 @@ window.CrochetAnalyticsEngine = (() => {
             label, stitches,
             yards: yarn.totalYards, meters: yarn.totalMeters, skeins: yarn.estimatedSkeins,
             exactYards: yarn.exactYards,
+            yardsSource: measured ? 'sample' : 'table',
             // Seconds kept unrounded: comparing sizes on a figure already rounded to a hundredth of
             // an hour turns a 25% difference into 25.4%.
             seconds,
             hours: round2(seconds / 3600),
             colors
         };
+    }
+
+    /**
+     * How much yarn one stitch of this fabric takes, measured from the sample rather than looked up:
+     * the yards the sample used over the stitches it worked, or its weight in grams over its stitches
+     * times the skein's yards per gram. Yarn goes as area, and the stitches a size works ARE its area
+     * at one gauge, so this one figure grades the yardage of every size. Null when the sample has not
+     * been described - nothing is assumed about a yarn that has not been measured.
+     */
+    function YardsPerStitchFromSample({ yards = null, grams = null, stitches = null, skein = null } = {}) {
+        if (!isNum(stitches) || stitches <= 0) return null;
+        if (isNum(yards) && yards > 0) {
+            return { yardsPerStitch: yards / stitches, source: 'sample-yards' };
+        }
+        if (isNum(grams) && grams > 0 && skein && isNum(skein.yards) && skein.yards > 0
+            && isNum(skein.grams) && skein.grams > 0) {
+            return { yardsPerStitch: (grams / stitches) * (skein.yards / skein.grams), source: 'sample-weight' };
+        }
+        return null;
     }
 
     /** The size run, each size measured on its own, with how much more it costs than the sample.
@@ -2383,6 +2996,71 @@ window.CrochetAnalyticsEngine = (() => {
      *
      * garment: the output of GradeGarment.
      */
+    /**
+     * What a published pattern says about its sizes, in the words a tech editor checks for: the size
+     * the sample is, how much ease it is worn with and what fit that is, the finished measurement of
+     * every size, the body measurement each was graded from, and how to choose. Every figure is read
+     * off the graded garment - the rounded actual where a piece's repeat has fitted it - so the
+     * statement cannot disagree with the table.
+     *
+     * `sample` is empty when the base size is only the first by default: a pattern with no sample
+     * size known has no sample line, rather than one that names a size nobody chose.
+     */
+    function SizingStatement({ base = null, resolved = null, garment = [], labels = [],
+                               chart = null, notation = 'parenthetical' } = {}) {
+        const chest = (garment || []).find(row => row.point === 'chest');
+        const cells = chest ? (labels || []).map(label => chest.sizes.find(c => c.size === label) || null) : [];
+        const finishedOf = cell => (cell ? (isNum(cell.actualTarget) ? cell.actualTarget : cell.target) : null);
+        const measure = chart && chart.measure ? chart.measure : 'bust';
+        const lines = [];
+
+        let sample = '';
+        if (base && base.label && base.source !== 'first' && resolved && resolved.complete) {
+            const cell = cells[(labels || []).indexOf(base.label)];
+            const finished = finishedOf(cell);
+            // The ease the finished measurement really gives - finished less body - so the sentence
+            // agrees with itself once a repeat has rounded the count. Where that differs from the
+            // ease the designer set, both are said.
+            const actualEase = cell && isNum(cell.body) && isNum(finished) ? round1(finished - cell.body) : null;
+            const actualPct = actualEase !== null && cell.body > 0 ? Math.round(actualEase / cell.body * 1000) / 10 : null;
+            const designed = resolved.easeScales
+                ? `${signOf(resolved.easeApplied.value)}%` : `${signOf(resolved.easeInches)} in`;
+            let worn;
+            if (actualEase === null) {
+                worn = resolved.easeScales
+                    ? `${signOf(resolved.easeApplied.value)}% ease, scaling with size (${resolved.band})`
+                    : `${signOf(resolved.easeInches)} in / ${signOf(resolved.easePercent)}% ease (${resolved.band})`;
+            } else {
+                const designedInches = resolved.easeScales
+                    ? round1(cell.body * resolved.easeApplied.value / 100) : resolved.easeInches;
+                worn = `${signOf(actualEase)} in / ${signOf(actualPct)}% ease (${easeBandFor(actualEase)})`
+                    + (Math.abs(actualEase - designedInches) > 0.05 ? `, designed at ${designed}` : '')
+                    + (resolved.easeScales ? ', scaling with size' : '');
+            }
+            sample = `Sample shown in ${base.label}`
+                + (isNum(finished) ? `, ${finished} in finished ${measure}` : '')
+                + `, worn with ${worn}.`;
+            lines.push(sample);
+        }
+
+        const finished = cells.length
+            ? `Finished ${measure}: ${FormatSizeNumbers({ counts: cells.map(finishedOf), labels, notation })} in.` : '';
+        const body = cells.length
+            ? `Graded from a body ${measure} of ${FormatSizeNumbers({ counts: cells.map(c => (c ? c.body : null)), labels, notation })} in.` : '';
+        if (finished) lines.push(finished);
+        if (body) lines.push(body);
+
+        const hasArm = (garment || []).some(row => row.point === 'upperArm');
+        const source = chart && chart.label && chart.label !== 'Custom'
+            ? `sizes are graded from the Craft Yarn Council ${chart.label} chart`
+            : 'sizes are graded from your own measurements';
+        const choose = cells.length
+            ? `Choose your size by your ${measure}${hasArm ? ' and upper arm' : ''}; ${source}.` : '';
+        if (choose) lines.push(choose);
+
+        return { sample, finished, body, choose, lines };
+    }
+
     function GradingIncrements(garment = []) {
         return garment.map(row => {
             const labels = row.sizes.map(cell => cell.size);
@@ -2450,6 +3128,9 @@ window.CrochetAnalyticsEngine = (() => {
     // chart's own proportions, which sit a little over 1:1 at every size.
     const EASEABLE_CAP = 0.9;
 
+    // Upper-arm ease past this, in inches, is more than a set-in cap can be eased into.
+    const SLEEVE_EASE_LIMIT = 3;
+
     function CheckFitAndProportion({ garment = [], sizes = null, headCircumference = null,
                                      neckOpening = null, sections = [] } = {}) {
         const warnings = [];
@@ -2484,6 +3165,35 @@ window.CrochetAnalyticsEngine = (() => {
                 && upperArm.target < upperArm.body) {
                 add(label, 'Sleeve narrower than the upper arm',
                     `upper arm ${upperArm.body} in, sleeve ${upperArm.target} in.`);
+            }
+
+            // The two ways a sleeve's ease goes wrong against the body's. Too much: the overall ease
+            // reaches the upper arm by default, and a loose-fit bust ease on an arm makes a sleeve
+            // wider than any cap can be set into - about 2 in is plenty. The limit is 3 rather than 2
+            // because the classic-fit band is +2 to +4 at the bust, and at 2 every classic-fit sweater
+            // whose designer never set a sleeve ease would fire on the reference practice. Too little:
+            // +4 in at the bust with 0 or -1 at the arm is the common grading slip, and the sleeve is
+            // then too tight for the armhole cut for that bust. Judged as a share of the measurement,
+            // since 1 in on an 11 in arm is not 1 in on a 40 in bust.
+            const armEase = upperArm && isNum(upperArm.body) && isNum(upperArm.target)
+                ? round1(upperArm.target - upperArm.body) : null;
+            if (armEase !== null && upperArm.eased && armEase > SLEEVE_EASE_LIMIT) {
+                add(label, 'Sleeve ease larger than a sleeve needs',
+                    `upper arm ${upperArm.body} in, sleeve ${upperArm.target} in - ${armEase} in of ease. `
+                    + 'About 2 in is plenty; the rest widens the cap past its armhole. Set the upper-arm '
+                    + 'ease under Ease by measurement.');
+            }
+            const bustEase = chest && isNum(chest.body) && isNum(chest.target) && chest.body > 0
+                ? round1(chest.target - chest.body) : null;
+            if (armEase !== null && bustEase !== null && bustEase >= 2 && upperArm.body > 0
+                && armEase >= 0 && armEase / upperArm.body < (bustEase / chest.body) / 2) {
+                const bustPct = Math.round(bustEase / chest.body * 1000) / 10;
+                const armPct = Math.round(armEase / upperArm.body * 1000) / 10;
+                add(label, 'Sleeve ease disproportionately smaller than body ease',
+                    `bust ${signOf(bustEase)} in (${signOf(bustPct)}%), upper arm ${signOf(armEase)} in `
+                    + `(${signOf(armPct)}%): a sleeve this close to the arm will not fit an armhole cut for `
+                    + `${signOf(bustEase)} in of ease. Consider adding 1-2 in of upper-arm ease under Ease `
+                    + 'by measurement.');
             }
 
             // The armhole opening is the depth taken twice, front and back. A set-in cap is eased in,
@@ -2551,7 +3261,7 @@ window.CrochetAnalyticsEngine = (() => {
     function TraceMeasurement({ label = 'measurement', body = null, ease = null,
                                 allocation = 0.5, axis = 'width', stitchesPerInch = null,
                                 rowsPerInch = null, repeat = null, strategy = 'nearest',
-                                parity = 'any', piece = 'half' } = {}) {
+                                parity = 'any', rowParity = 'any', piece = 'half' } = {}) {
         const steps = [];
         const add = (name, value, note) => steps.push({ name, value, note: note || '' });
         const blank = { steps, finalCount: null, actualInches: null, actualEase: null, axis };
@@ -2587,11 +3297,12 @@ window.CrochetAnalyticsEngine = (() => {
         }
         add('Gauge', `${round2(density)} ${unit}/in`);
 
-        // Lengths come out of MeasurementToRows, which is plain rounding - no repeat to fit and no
-        // strategy to apply, so saying otherwise would be theatre.
+        // Lengths come out of MeasurementToRows - no repeat to fit and no strategy to apply, so saying
+        // otherwise would be theatre. The one choice a length has is whether its rows round to even.
         const rounded = isWidth
             ? RoundStitchCount({ targetInches: target, stitchesPerInch: density, repeat, strategy, parity, piece })
-            : { rawStitches: round2(target * density), stitches: MeasurementToRows(target, density), repeat: null };
+            : { rawStitches: round2(target * density),
+                stitches: MeasurementToRows(target, density, rowParity), repeat: null };
 
         add(`Raw count`, `${rounded.rawStitches} ${unit}`);
         if (rounded.repeat) {
@@ -2599,7 +3310,8 @@ window.CrochetAnalyticsEngine = (() => {
                 rounded.plusSuppressed ? 'the border stitches drop in the round' : '');
         }
         add('Final count', `${rounded.stitches} ${unit}`,
-            rounded.repeat ? `rounded ${strategy}` : '');
+            rounded.repeat ? `rounded ${strategy}`
+                : (!isWidth && rowParity === 'even' ? 'rounded to an even row count' : ''));
 
         // What the whole number actually makes, and what that does to the ease asked for. This is the
         // pair the grader exists to expose: a target is a decimal and a count is not, so the finished
@@ -2830,6 +3542,147 @@ window.CrochetAnalyticsEngine = (() => {
         };
     }
 
+    /** The whole number nearest `raw` that has the same parity as `like` - so a neck cut from an odd
+     *  cross back leaves two whole shoulders, and a centre held out of an odd neck leaves two whole
+     *  sides. The nearer of the two candidates wins; a tie goes up. */
+    function nearestWithParity(raw, like) {
+        const below = Math.floor(raw);
+        const candidates = [below - 1, below, below + 1, below + 2]
+            .filter(n => n >= 0 && (n - like) % 2 === 0);
+        return candidates.reduce((best, n) =>
+            (best === null || Math.abs(n - raw) < Math.abs(best - raw)
+             || (Math.abs(n - raw) === Math.abs(best - raw) && n > best)) ? n : best, null);
+    }
+
+    const everyRow = (interval) => (interval === 1 ? 'every row' : `every ${ordinal(interval)} row`);
+
+    /**
+     * A front neckline, planned the way a grader plans one: the neck is about half the cross back
+     * (`neckShare`), a share of it is left unworked at the centre (`bindOffShare`, 30-50% for a
+     * rounded neck), and what remains is decreased away at each neck edge over the lower two-thirds
+     * of the neck's depth, the top third worked straight to the shoulder. Both counts are rounded so
+     * the two shoulders, and the two sides of the decreases, come out whole.
+     *
+     * `crossBackStitches` is the full flat span (never halved); `depthRows` the front neck drop in
+     * rows. `repeat`, when given, is only REPORTED against the neck count - a neck that breaks the
+     * stitch multiple is a finding for the designer, not a number to move.
+     */
+    function PlanNeckline({ crossBackStitches = null, neckShare = 0.5, bindOffShare = 0.4,
+                            depthRows = null, repeat = null } = {}) {
+        const blank = { neckStitches: null, bindOff: null, perSide: null, shoulderStitches: null,
+                        shapingRows: null, straightRows: null, shaping: null, fit: null,
+                        feasible: false, text: '', warning: '' };
+        const cross = isNum(crossBackStitches) ? Math.round(crossBackStitches) : null;
+        const depth = isNum(depthRows) ? Math.round(depthRows) : null;
+        if (cross === null || cross < 2 || depth === null || depth < 1) {
+            return { ...blank, warning: 'A neckline needs the cross-back count and the neck depth in rows.' };
+        }
+        const share = isNum(neckShare) && neckShare > 0 && neckShare < 1 ? neckShare : 0.5;
+        const held = isNum(bindOffShare) && bindOffShare >= 0 && bindOffShare <= 1 ? bindOffShare : 0.4;
+
+        const neckStitches = nearestWithParity(cross * share, cross);
+        const shoulderStitches = (cross - neckStitches) / 2;
+        const bindOff = nearestWithParity(neckStitches * held, neckStitches);
+        const perSide = (neckStitches - bindOff) / 2;
+        const shapingRows = Math.max(1, Math.round(depth * 2 / 3));
+        const straightRows = depth - shapingRows;
+        const shaping = DistributeShaping({ from: perSide, to: 0, rows: shapingRows, preset: 'single' });
+        const fit = repeat ? FitToMultiple({ count: neckStitches, repeat }) : null;
+
+        if (!shaping.feasible) {
+            return { ...blank, neckStitches, bindOff, perSide, shoulderStitches, shapingRows,
+                     straightRows, shaping, fit,
+                     warning: `${plural(perSide, 'decrease')} at each neck edge do not fit in the `
+                            + `${plural(shapingRows, 'row')} of the shaping zone. Leave more of the `
+                            + `neck unworked at the centre, or make the neck deeper.` };
+        }
+        const decreases = perSide === 0 ? ''
+            : `, then decrease 1 st at each neck edge ${everyRow(shaping.plan.interval)} ${times(perSide)}`;
+        return {
+            ...blank, neckStitches, bindOff, perSide, shoulderStitches, shapingRows, straightRows,
+            shaping, fit, feasible: true,
+            text: `Leave the centre ${plural(bindOff, 'st')} unworked${decreases}; work `
+                + `${plural(straightRows, 'row')} straight to the shoulder `
+                + `(${plural(shoulderStitches, 'st')} each shoulder).`
+        };
+    }
+
+    /**
+     * A sloped shoulder: the shoulder's stitches given up in steps, one step every two rows over the
+     * shoulder drop, the steps as even as whole stitches allow. In crochet each step is a row that
+     * stops short of the armhole edge by the step's stitches.
+     */
+    function PlanShoulderSlope({ shoulderStitches = null, dropRows = null } = {}) {
+        const blank = { steps: null, segments: [], feasible: false, text: '', warning: '' };
+        const total = isNum(shoulderStitches) ? Math.round(shoulderStitches) : null;
+        const drop = isNum(dropRows) ? Math.round(dropRows) : null;
+        if (total === null || total < 1 || drop === null || drop < 1) {
+            return { ...blank, warning: 'A shoulder slope needs the shoulder count and the drop in rows.' };
+        }
+        const steps = Math.max(1, Math.round(drop / 2));
+        const spaced = SpaceEvenly({ total, points: steps });
+        if (!spaced.feasible) {
+            return { ...blank, steps,
+                     warning: `${plural(steps, 'step')} over ${plural(drop, 'row')} is more steps than `
+                            + `the ${plural(total, 'st')} of the shoulder can be split into. Allow fewer rows of drop.` };
+        }
+        const segments = spaced.plan.map(part => ({ stitches: part.gap, times: part.times }));
+        const words = segments.map((seg, i) =>
+            `${plural(seg.stitches, 'st')} ${seg.times === 1 ? 'once' : times(seg.times)}`
+            + (i === 0 ? ' at the armhole edge' : ''));
+        return {
+            ...blank, steps, segments, feasible: true,
+            text: `Slip stitch across ${words.join(', then ')} (${plural(steps, 'step')} over ${plural(drop, 'row')}).`
+        };
+    }
+
+    /**
+     * An armhole on a body worked flat: a few stitches given up at once at the underarm on each side,
+     * then paired decreases up the armhole until the piece is the cross back wide.
+     *
+     * The arithmetic is for ONE flat piece with an underarm at each end:
+     *   pieceStitches - 2 x bindOffStitches - decreases = crossBackStitches.
+     * `piece: 'half'` says `bodyStitches` is already that piece - the Back's 85, not the 170 around -
+     * and is used as it is. `piece: 'round'` says it is the whole round, which the armhole divides
+     * into a front and a back each worked flat from there, so each piece is half of it; an odd round
+     * cannot be halved evenly and is reported rather than rounded. The cross back is the full flat
+     * span either way, never halved. The plan itself is PlanSetInSleeve's armhole.
+     */
+    function PlanArmholeShaping({ bodyStitches = null, crossBackStitches = null, bindOffStitches = 0,
+                                  rows = null, piece = 'half' } = {}) {
+        const blank = { pieceStitches: null, bindOff: null, afterUnderarm: null, shaping: null,
+                        feasible: false, text: '', warning: '' };
+        if (!isNum(bodyStitches) || !isNum(crossBackStitches) || !isNum(rows)) {
+            return { ...blank, warning: 'An armhole needs the body count, the cross-back count and the armhole rows.' };
+        }
+        if (piece === 'round' && Math.round(bodyStitches) % 2 !== 0) {
+            return { ...blank, warning: `A round of ${Math.round(bodyStitches)} sts cannot be divided into `
+                                      + 'an equal front and back at the armhole.' };
+        }
+        const pieceStitches = piece === 'round' ? Math.round(bodyStitches) / 2 : Math.round(bodyStitches);
+        const bindOff = isNum(bindOffStitches) && bindOffStitches > 0 ? Math.round(bindOffStitches) : 0;
+        const plan = PlanSetInSleeve({
+            bodyCount: pieceStitches, shoulderCount: Math.round(crossBackStitches),
+            underarmCount: bindOff, armholeRows: Math.round(rows)
+        });
+        const afterUnderarm = pieceStitches - bindOff * 2;
+        const shaping = plan.armhole;
+        if (!shaping || !shaping.feasible) {
+            return { ...blank, pieceStitches, bindOff, afterUnderarm, shaping,
+                     warning: shaping ? shaping.warning : plan.warning };
+        }
+        const underarm = bindOff > 0
+            ? `Slip stitch across ${plural(bindOff, 'st')} at the start of the next row and leave `
+              + `${bindOff} unworked at the end (${plural(afterUnderarm, 'st')})`
+            : `No underarm stitches are given up at once (${plural(afterUnderarm, 'st')})`;
+        const decreases = shaping.events === 0 ? ''
+            : `, then decrease 1 st at each end ${everyRow(shaping.plan.interval)} ${times(shaping.events)}`;
+        return {
+            ...blank, pieceStitches, bindOff, afterUnderarm, shaping, feasible: true,
+            text: `${underarm}${decreases} (${plural(Math.round(crossBackStitches), 'st')}).`
+        };
+    }
+
     // A whole row that is only "Ch 100." - no comma, nothing worked into it.
     const FOUNDATION_ONLY_RE = /^(?:ch|chain)\s*\d+\s*\.?$/i;
 
@@ -3026,17 +3879,23 @@ window.CrochetAnalyticsEngine = (() => {
         round2,
         DistributeShaping,
         SpaceEvenly,
+        PlanNeckline,
+        PlanShoulderSlope,
+        PlanArmholeShaping,
         SHAPING_PRESETS,
         GradingIncrements,
+        SizingStatement,
         TraceMeasurement,
         PlanMotifLayout,
         EstimateSizeEffort,
+        YardsPerStitchFromSample,
         CompareSizeEffort,
         GradingConfidence,
         CONSTRUCTIONS,
         PlanRaglanYoke,
         PlanSetInSleeve,
         PlanCircularYoke,
+        PlanConstructionAtSize,
         // Reading a written garment back as a shape and holding it to its construction. PieceSpan and
         // ShapedTail are exported alongside the check because they make it testable in isolation.
         PieceSpan,
@@ -3044,7 +3903,14 @@ window.CrochetAnalyticsEngine = (() => {
         CheckGarmentConstruction,
         GARMENT_ROLES,
         ScaleRowCounts,
+        ScaleRowSequence,
+        ShapedRuns,
+        GradeShapedRun,
+        GradePieceRows,
+        CheckGradedPieces,
         FormatSizeNumbers,
+        MatchSizeLabel,
+        NearestSizeByCount,
         SECONDS_PER_STITCH,
         SECTION_TYPES,
         DIMENSION_MODES,

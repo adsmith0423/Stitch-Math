@@ -43,9 +43,9 @@ the test baseline. `PERSISTENCE.md` covers the project file format and the recov
 ## Commands
 
 ```bash
-npm test              # 111 node:test cases, 4,373 assertions. No install needed.
+npm test              # 113 node:test cases, 5,002 assertions. No install needed.
 npm run build         # writes dist/
-npm run test:browser  # the storage suite, against a real browser
+npm run test:browser  # the storage and contrast suites, against a real browser
 ./run-tests.sh        # the same suites under macOS JavaScriptCore
 
 # Once per machine, and only for test:browser:
@@ -60,8 +60,9 @@ one thing a toolchain would do better is minification, which is skipped — stri
 JavaScript, CSS and HTML at build time takes a first visit from 324 KB gzipped to 176 KB, about 70%
 of what it would have saved, and the source keeps every comment.
 
-Playwright is the single exception, for `npm run test:browser` alone, because a real IndexedDB needs
-a real browser. It is not required to build or ship.
+Playwright is the single exception, for `npm run test:browser` alone: the storage suite needs a real
+IndexedDB and the contrast suite needs a layout engine, so both need a real browser. It is not
+required to build or ship.
 
 ## The comments
 

@@ -76,4 +76,30 @@ ok('with its own yardage', twoColour.colors[0].yards > twoColour.colors[1].yards
 ck('and no colours when none are tracked',
    A.EstimateSizeEffort({ stitchTotals: { sc: 100 } }).colors.length, 0);
 
+print('\n6. Yardage measured from the sample beats the table');
+// Yarn goes as area, and the stitches a size works are its area at one gauge: the yards the sample
+// used over the stitches it worked is one figure that grades every size.
+var byYards = A.YardsPerStitchFromSample({ yards: 900, stitches: 6000 });
+ck('yards over stitches', byYards.yardsPerStitch, 0.15);
+ck('and says it was measured in yards', byYards.source, 'sample-yards');
+var byWeight = A.YardsPerStitchFromSample({ grams: 12, stitches: 180, skein: { yards: 220, grams: 100 } });
+ck('or grams over stitches through the skein', Math.round(byWeight.yardsPerStitch * 10000) / 10000, 0.1467);
+ck('saying so', byWeight.source, 'sample-weight');
+ck('nothing measured is nothing', A.YardsPerStitchFromSample({ stitches: 6000 }), 'null');
+ck('a skein with no weight cannot convert grams',
+   A.YardsPerStitchFromSample({ grams: 12, stitches: 180, skein: { yards: 220 } }), 'null');
+var measured = A.EstimateSizeEffort({ label: 'M', stitchTotals: { sc: 6000 }, yardsPerStitch: 0.15 });
+ck('the estimate uses the measured figure, with the buffer', measured.exactYards, 1035);
+ck('and says where it came from', measured.yardsSource, 'sample');
+ck('a skein length gives the skeins', A.EstimateSizeEffort({ stitchTotals: { sc: 6000 }, yardsPerStitch: 0.15, skeinYards: 200 }).skeins, 6);
+ck('the table is the fallback', A.EstimateSizeEffort({ label: 'M', stitchTotals: { sc: 6000 } }).yardsSource, 'table');
+// The comparison between sizes is a ratio of stitches, so it is the same whichever source the yards
+// came from.
+var sampled = A.CompareSizeEffort({ efforts: [
+    A.EstimateSizeEffort({ label: 'S', stitchTotals: { sc: 4000 }, yardsPerStitch: 0.15 }),
+    A.EstimateSizeEffort({ label: 'M', stitchTotals: { sc: 5000 }, yardsPerStitch: 0.15 })
+], baseLabel: 'S' });
+ck('the size run compares the same either way', sampled[1].yardsOverBase, 25);
+ck('hours are unaffected by the yarn source', measured.hours, A.EstimateSizeEffort({ stitchTotals: { sc: 6000 } }).hours);
+
 endSuite();

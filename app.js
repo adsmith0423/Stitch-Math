@@ -149,7 +149,10 @@
             sections: {},
             overrides: {},
             modes: {},
-            customChart: null
+            customChart: null,
+            // Which graded size the pattern is written in, settled by resolveBaseSize on every grade:
+            // { label, source } with source one of named / selected / nearest / first.
+            baseSize: null
         },
         analytics: {
             report: null,
@@ -289,13 +292,18 @@
             // Newly added for strict DOM cache compliance:
             "stat-total-stitches", "stat-sections", "stat-special", "print-running-header",
             "grade-base-name", "grade-body", "grade-finished", "grade-ease",
-            "grade-ease-mode", "grade-chart", "grade-summary",
+            "grade-ease-mode", "grade-chart", "grade-summary", "grade-sizing-statement",
             "grade-tables", "grade-size-picker", "grade-point-ease", "grade-options",
             "grade-sections", "grade-construction-pieces", "grade-construction-result",
-            "grade-rounding", "grade-parity",
+            "grade-rounding", "grade-parity", "grade-row-parity",
             "grade-schematic", "grade-point-detail", "grade-report",
             "grade-motif-panel", "motif-size", "motif-join", "motif-border", "motif-point", "motif-output",
             "grade-output-panel", "gen-notation", "gen-construction", "gen-output", "export-package",
+            "grade-sample-yards", "grade-sample-yards-unit",
+            "grade-neck-panel", "grade-neck-depth", "grade-neck-unit", "grade-shoulder-drop",
+            "grade-neck-share", "grade-neck-bindoff", "grade-armhole-bindoff", "grade-neck-output",
+            "grade-construction-panel", "grade-con-neck", "grade-con-unit", "grade-con-rounds",
+            "grade-con-cap-height", "grade-con-cap-top", "grade-construction-output",
             "grade-measurements", "grade-custom-sizes", "grade-custom-chart",
             "jump-error-btn", "stat-difficulty",
             // Pattern linter (section 8d). Hosts only - every cue, tooltip and sidebar row inside them
@@ -509,12 +517,18 @@
 
         // Rounding belongs to the section panel, the only thing that fits counts to a repeat. The graded
         // table grades the whole garment and does not round.
-        bind(["grade-rounding", "grade-parity"], "change", edits(renderSectionProfiles));
+        // Rounding reaches the graded table now, not only the section panel - a repeat is fitted per
+        // point, and rows can round to even - so the whole grader redraws.
+        bind(["grade-rounding", "grade-parity", "grade-row-parity"], "change", edits(renderGrader));
 
         // The motif and generation panels grade against the same garment as the tables, so any of their
         // inputs re-runs the grader rather than a private redraw.
         bind(["motif-size", "motif-join", "motif-border", "motif-point",
-              "gen-notation", "gen-construction"], ["input", "change"], renderGrader);
+              "gen-notation", "gen-construction", "grade-sample-yards", "grade-sample-yards-unit",
+              "grade-neck-depth", "grade-neck-unit", "grade-shoulder-drop", "grade-neck-share",
+              "grade-neck-bindoff", "grade-armhole-bindoff",
+              "grade-con-neck", "grade-con-unit", "grade-con-rounds", "grade-con-cap-height", "grade-con-cap-top"],
+             ["input", "change"], renderGrader);
 
         // Each is a named function rather than an inline one because the Settings view mirrors the same
         // controls and runs the SAME function - a mirror that reimplemented the effect would be a second
@@ -1875,6 +1889,9 @@
                 "gauge-washed-stitches", "gauge-washed-rows",
                 "gauge-hook-size", "gauge-notes", "swatch-weight",
                 "grade-base-name", "grade-body", "grade-finished", "grade-ease", "grade-custom-sizes",
+                "grade-sample-yards", "grade-neck-depth", "grade-shoulder-drop", "grade-neck-share",
+                "grade-neck-bindoff", "grade-armhole-bindoff",
+                "grade-con-neck", "grade-con-rounds", "grade-con-cap-height", "grade-con-cap-top",
                 "calc-skein-weight", "calc-skein-length",
                 "custom-st-name", "custom-st-def", "custom-st-cost", "custom-st-yield",
                 "initial-chain-input", "tokens-input", "multiplier-input", "expected-yield-input"
@@ -1889,6 +1906,8 @@
                 "calc-skein-length-unit": "yd",
                 "sizing-category": "", "sizing-piece": "round",
                 "grade-ease-mode": "in", "grade-chart": "", "grade-rounding": "nearest", "grade-parity": "any",
+                "grade-row-parity": "any", "grade-sample-yards-unit": "yd", "grade-neck-unit": "in",
+                "grade-con-unit": "in",
                 "meta-terminology": "us"
             };
             Object.entries(SELECT_DEFAULTS).forEach(([id, value]) => {
@@ -3854,7 +3873,10 @@
             // What the counts actually depend on, read straight from the engine.
             window.CrochetMathEngine.getRepeatConvention(),
             inferredSkip(),
-            JSON.stringify(window.CrochetMathEngine.CUSTOM_STITCHES || {})
+            JSON.stringify(window.CrochetMathEngine.CUSTOM_STITCHES || {}),
+            // The efforts on the cached result depend on these too.
+            yarnWeightNumber(),
+            JSON.stringify(sampleYarn())
         ].join('\u0000');
     }
 
@@ -3873,6 +3895,7 @@
         const sizes = [];
         const reports = [];
         const efforts = [];
+        const sample = sampleYarn();
         for (let i = 0; i < state.sizeCount; i++) {
             const pass = evaluateAtSize(rawText, i);
             const widest = window.CrochetAnalyticsEngine.WidestFabricRow(pass.validation.rows);
@@ -3890,7 +3913,9 @@
             efforts.push(window.CrochetAnalyticsEngine.EstimateSizeEffort({
                 label: names[i],
                 stitchTotals: window.CrochetAnalyticsEngine.AggregateStitchCounts(pass.validation.steps || [], pass.validation.rows),
-                yarnWeightCategory: yarnWeightNumber()
+                yarnWeightCategory: yarnWeightNumber(),
+                yardsPerStitch: sample ? sample.yardsPerStitch : null,
+                skeinYards: sample ? sample.skeinYards : null
             }));
         }
         sizes.reports = reports;
@@ -3964,6 +3989,20 @@
     }
 
     /** Finished measurements, and the CYC sizes they could be. Omitted without a gauge. */
+    /**
+     * The graded sizes, as the pattern will publish them: the sample size and its ease, the finished
+     * measurement of every size, and how to choose. Present only once a chart has been graded - the
+     * grader's own panels are empty until then, and so is this.
+     */
+    function buildGraderSection() {
+        const garment = state.grading.lastGarment;
+        if (!UI['grade-chart']?.value || !garment || !garment.length) return '';
+        const labels = garment[0].sizes.map(cell => cell.size);
+        const lines = sizingStatement(garment, labels, state.grading.baseSize).lines;
+        if (!lines.length) return '';
+        return `FINISHED SIZES:\n${lines.map(line => `- ${line}`).join('\n')}\n${EXPORT_RULE}`;
+    }
+
     function buildSizingSection(pass) {
         if (!window.CrochetAnalyticsEngine) return '';
         const sizing = window.CrochetAnalyticsEngine.CalculateFinishedSize({
@@ -4107,6 +4146,7 @@
 
         fileContent += buildGaugeSection();
         fileContent += buildSizingSection(pass);
+        fileContent += buildGraderSection();
         fileContent += buildValidationSection(pass);
         fileContent += buildHealthSection(pass);
         fileContent += buildComplexitySection();
@@ -6184,7 +6224,10 @@
                 // The count the validator worked out, never the one the pattern states. A row whose
                 // written count is wrong must not be able to smuggle a construction fault past the
                 // check by asserting itself.
-                profile.worked.push({ label: row.label, count: row.evaluation.calculatedYield });
+                // `index` is the row's place in the pass, so a shaped run found among the worked rows
+                // can be mapped back onto the rows the generator prints.
+                profile.worked.push({ label: row.label, count: row.evaluation.calculatedYield,
+                                      index: row.index });
             }
             // The first statement wins. A multiple is stated once, at the top of a piece; a later row
             // that happens to mention one is describing something else.
@@ -6245,6 +6288,37 @@
         }
         if (profile.detected) return { ...profile.detected, source: 'pattern' };
         return null;
+    }
+
+    /**
+     * Which repeat each measurement point lands on, read through the pieces the designer has TYPED.
+     *
+     * The graded table is one chart for the whole garment, and a repeat belongs to one piece of a
+     * pattern - so a repeat reaches a measurement only by way of a section whose type says it is
+     * worked to that measurement: a Back typed `back` carries its 6 + 1 to the bust, waist and hip; a
+     * Sleeve typed `sleeve` carries its repeat (or whole stitches, when it has none) to the upper arm.
+     * An untyped section carries nothing to the table, however plainly its heading says "Sleeve" -
+     * the same asked-not-guessed gate the construction check uses. A point two typed pieces both claim
+     * goes to the first, in pattern order.
+     *
+     * Returns `byPoint`, in the shape GradeSizes' `rounding.byPoint` takes, and `sources`, the
+     * section title behind each point, for the note under the table.
+     */
+    function repeatByPoint() {
+        const A = window.CrochetAnalyticsEngine;
+        const byPoint = {};
+        const sources = {};
+        sectionProfiles().forEach(profile => {
+            if (!profile.type) return;
+            const repeat = sectionRepeat(profile);
+            profile.points.forEach(point => {
+                if (A.MEASUREMENT_AXIS[point] !== 'width') return;
+                if (Object.prototype.hasOwnProperty.call(byPoint, point)) return;
+                byPoint[point] = repeat ? { multiple: repeat.multiple, plus: repeat.plus } : null;
+                sources[point] = profile.title;
+            });
+        });
+        return { byPoint, sources };
     }
 
     /** Body, finished and ease reconciled from the three grader fields. Both the summary line and the
@@ -6313,7 +6387,8 @@
         return `
             <div class="grade-line"><span>Body ${escapeHtml(name.toLowerCase())}:</span><strong>${bothUnits(resolved.body)}</strong></div>
             <div class="grade-line"><span>Finished ${escapeHtml(name.toLowerCase())}:</span><strong>${bothUnits(resolved.finished)}</strong></div>
-            <div class="grade-line"><span>Ease:</span><strong>${signedBoth(resolved.easeInches)} / ${signedNumber(resolved.easePercent)}%</strong>${derived}</div>
+            <div class="grade-line"><span>Ease:</span><strong>${signedBoth(resolved.easeInches)} / ${signedNumber(resolved.easePercent)}%</strong>${derived}
+                <em class="grade-axis">${resolved.easeScales ? 'scales with size' : 'fixed across sizes'}</em></div>
             <div class="grade-line"><span>Gauge:</span><strong>${gaugeOver4()}</strong></div>
             ${constructionLine()}
             <div class="grade-band">${escapeHtml(resolved.band)}</div>
@@ -6491,7 +6566,12 @@
      *  project came back with the previous one's ease still in the boxes. */
     const GRADER_FIELDS = ['grade-base-name', 'grade-body', 'grade-finished', 'grade-ease',
                            'grade-ease-mode', 'grade-chart', 'grade-rounding', 'grade-parity',
-                           'grade-custom-sizes'];
+                           'grade-row-parity', 'grade-custom-sizes',
+                           'grade-sample-yards', 'grade-sample-yards-unit',
+                           'grade-neck-depth', 'grade-neck-unit', 'grade-shoulder-drop',
+                           'grade-neck-share', 'grade-neck-bindoff', 'grade-armhole-bindoff',
+                           'grade-con-neck', 'grade-con-unit', 'grade-con-rounds',
+                           'grade-con-cap-height', 'grade-con-cap-top'];
 
     /** Snapshots everything the grader holds, including the measurement grid. */
     function readGraderInputs() {
@@ -6630,6 +6710,10 @@
             const source = (A.MEASUREMENT_DEPENDS_ON[point] || [])
                 .map(dep => A.MEASUREMENT_LABELS[dep] || dep);
             if (source.length) modeCell.appendChild(elem('em', 'grade-axis', `from ${source.join(' + ')}`));
+            // The downstream half of the same graph: what a change to this measurement reaches, said
+            // where the change is made rather than on the Construction tab.
+            const reaches = A.DependentsOf(point).map(dep => A.MEASUREMENT_LABELS[dep] || dep);
+            if (reaches.length) modeCell.appendChild(elem('em', 'grade-axis', `reaches ${reaches.join(', ')}`));
             tr.appendChild(modeCell);
 
             labels.forEach(label => {
@@ -6690,7 +6774,7 @@
      * Nothing here changes a number. Every one is a finding the designer decides about, which is why
      * they sit apart from the tables that do the grading.
      */
-    function renderGradeReport(garment, labels) {
+    function renderGradeReport(garment, labels, run) {
         const A = window.CrochetAnalyticsEngine;
         const host = UI['grade-report'];
         if (!host) return;
@@ -6712,8 +6796,49 @@
 
         if (reports) host.appendChild(perSizeTable(reports));
 
-        const findings = warnings.concat(cross);
+        // The tech editor's TRUE row: each typed piece, each size, does it reach the width it was graded
+        // to and work the rows its length grades to.
+        const check = run && run.pieces.length ? pieceCheck(run) : { pieces: [], findings: [] };
+        if (check.pieces.length) host.appendChild(pieceCheckTable(check, run.targets.labels));
+
+        const findings = warnings.concat(cross, check.findings);
         host.appendChild(findingList(findings));
+    }
+
+    /** Two rows per piece - width and rows - with a tick where the size comes out as graded and the
+     *  shortfall where it does not. Every figure and every sentence is the engine's. */
+    function pieceCheckTable(check, labels) {
+        const wrap = elem('div');
+        wrap.appendChild(elem('strong', null, 'Per size, per piece'));
+        wrap.appendChild(elem('p', 'helper-text',
+            'Whether each typed piece reaches the width it was graded to, and works the rows its length '
+            + 'grades to. A piece with no type is not checked.'));
+        const table = responsiveTable(['Piece'].concat(labels));
+        check.pieces.forEach(piece => {
+            const width = elem('tr');
+            width.appendChild(rowHeader(`${piece.title} width`));
+            const rows = elem('tr');
+            rows.appendChild(rowHeader(`${piece.title} rows`));
+            piece.sizes.forEach(size => {
+                const w = plainCell(!size.feasible ? '—'
+                    : size.widthOk ? `${size.widestCount} sts ✓`
+                    : isNum(size.widthTarget) ? `${size.widestCount} sts, ${size.widthTarget} needed`
+                        + (isNum(size.differenceInches) ? ` (${size.differenceInches > 0 ? '+' : ''}${size.differenceInches} in)` : '')
+                    : `${size.widestCount} sts`);
+                w.className = !size.feasible || (isNum(size.widthTarget) && !size.widthOk) ? 'grade-misfit' : 'grade-fits';
+                width.appendChild(w);
+                const r = plainCell(!size.feasible ? '—'
+                    : size.lengthOk === null ? `${size.rows}`
+                    : size.lengthOk ? `${size.rows} ✓`
+                    : `${size.rows}, ${size.intendedRows} intended`);
+                r.className = !size.feasible || size.lengthOk === false ? 'grade-misfit' : 'grade-fits';
+                rows.appendChild(r);
+            });
+            table.body.appendChild(width);
+            table.body.appendChild(rows);
+        });
+        wrap.appendChild(table.wrap);
+        return wrap;
     }
 
     /** The repeat to hold every size to: the first one any section names. */
@@ -6867,9 +6992,283 @@
             garment.map(row => row.point).join(','));
     }
 
+    /**
+     * The neck, shoulder and armhole inputs as the engine takes them: inches, with a blank field
+     * meaning the figure its placeholder shows. Read in one place so the panel and the calculation
+     * report plan from the same numbers.
+     */
+    function neckInputs() {
+        const unit = UI['grade-neck-unit']?.value || 'in';
+        const inches = (id, fallback) => {
+            const v = parseFloat(UI[id]?.value);
+            const raw = Number.isFinite(v) && v >= 0 ? v : fallback;
+            return unit === 'cm' ? raw / CM_PER_INCH : raw;
+        };
+        const share = (id, fallback) => {
+            const v = parseFloat(UI[id]?.value);
+            return Number.isFinite(v) && v >= 0 ? v / 100 : fallback;
+        };
+        return {
+            depthInches: inches('grade-neck-depth', 3),
+            dropInches: inches('grade-shoulder-drop', 1),
+            bindOffInches: inches('grade-armhole-bindoff', 0.75),
+            neckShare: share('grade-neck-share', 0.5),
+            bindOffShare: share('grade-neck-bindoff', 0.4)
+        };
+    }
+
+    /**
+     * The three plans for one size, from that size's graded cells: the neckline from the cross back,
+     * the shoulder from what the neckline leaves, the armhole from the bust down to the cross back.
+     * Null where the chart carries no cross back - the head, hand and foot charts - or nothing has
+     * been graded yet.
+     */
+    function neckPlansFor(garment, size) {
+        const A = window.CrochetAnalyticsEngine;
+        const cellOf = point => {
+            const row = (garment || []).find(r => r.point === point);
+            return row ? row.sizes.find(c => c.size === size) || null : null;
+        };
+        const crossBack = cellOf('crossBack');
+        const chest = cellOf('chest');
+        const armhole = cellOf('armholeDepth');
+        if (!crossBack || !isNum(crossBack.stitches)) return null;
+        const gauge = A.EffectiveGauge(graderGauge());
+        const inputs = neckInputs();
+        const rowParity = roundingChoice().rowParity;
+        const depthRows = A.MeasurementToRows(inputs.depthInches, gauge.rowsPerInch, rowParity);
+        const dropRows = A.MeasurementToRows(inputs.dropInches, gauge.rowsPerInch, rowParity);
+        const neck = A.PlanNeckline({
+            crossBackStitches: crossBack.stitches, neckShare: inputs.neckShare,
+            bindOffShare: inputs.bindOffShare, depthRows, repeat: repeatByPoint().byPoint.crossBack || null
+        });
+        const shoulder = isNum(neck.shoulderStitches)
+            ? A.PlanShoulderSlope({ shoulderStitches: neck.shoulderStitches, dropRows }) : null;
+        const armholePlan = chest && isNum(chest.stitches) && armhole && isNum(armhole.rows)
+            ? A.PlanArmholeShaping({
+                bodyStitches: chest.stitches, crossBackStitches: crossBack.stitches,
+                bindOffStitches: A.MeasurementToStitches(inputs.bindOffInches, gauge.stitchesPerInch),
+                rows: armhole.rows, piece: chest.piece
+            })
+            : null;
+        return { neck, shoulder, armhole: armholePlan, depthRows, dropRows };
+    }
+
+    /** Sizes across, the plans' figures down, and every plan's sentence and warning beneath. */
+    function renderNeckAndShoulders(garment, labels) {
+        const host = UI['grade-neck-output'];
+        if (!host) return;
+        host.replaceChildren();
+        const plans = labels.map(size => neckPlansFor(garment, size));
+        if (!plans.some(Boolean)) {
+            host.appendChild(elem('p', 'placeholder-text',
+                'Planned once a chart with a cross back is graded.'));
+            return;
+        }
+
+        const { wrap, body } = responsiveTable([''].concat(labels));
+        const line = (label, pick, misfit) => {
+            const tr = elem('tr');
+            tr.appendChild(rowHeader(label));
+            plans.forEach(plan => {
+                const value = plan ? pick(plan) : null;
+                const td = plainCell(value === null || value === undefined ? '—' : value);
+                if (plan && misfit && misfit(plan)) td.className = 'grade-misfit';
+                tr.appendChild(td);
+            });
+            body.appendChild(tr);
+        };
+        const neckBad = p => p.neck && !p.neck.feasible;
+        line('Neck depth (rows)', p => p.depthRows);
+        line('Neck stitches', p => p.neck.neckStitches, neckBad);
+        line('Left unworked at the centre', p => p.neck.bindOff, neckBad);
+        line('Decreased at each neck edge', p => p.neck.perSide, neckBad);
+        line('Rows straight to the shoulder', p => (p.neck.feasible ? p.neck.straightRows : null), neckBad);
+        line('Shoulder stitches', p => p.neck.shoulderStitches);
+        line('Shoulder steps', p => (p.shoulder && p.shoulder.feasible
+            ? p.shoulder.segments.map(seg => `${seg.stitches}×${seg.times}`).join(', ') : null),
+            p => p.shoulder && !p.shoulder.feasible);
+        line('Underarm given up, each side', p => (p.armhole ? p.armhole.bindOff : null));
+        line('Armhole decrease rows', p => (p.armhole && p.armhole.feasible ? p.armhole.shaping.events : null),
+            p => p.armhole && !p.armhole.feasible);
+        host.appendChild(wrap);
+
+        // Each plan in words, per size, with anything that could not be planned said as such.
+        const words = elem('div', 'grade-findings');
+        labels.forEach((size, i) => {
+            const plan = plans[i];
+            if (!plan) return;
+            [plan.neck, plan.shoulder, plan.armhole].forEach(part => {
+                if (!part) return;
+                const p = elem('div', part.feasible ? null : 'grade-warning');
+                p.textContent = `${size}: ${part.feasible ? part.text : part.warning}`;
+                words.appendChild(p);
+            });
+        });
+        host.appendChild(words);
+    }
+
+    /** The construction inputs no chart carries, as the engine takes them: the neck circumference and
+     *  cap figures in inches (blank cap fields mean the placeholder; a blank neck means none), and the
+     *  circular yoke's increase rounds. */
+    function constructionInputs() {
+        const unit = UI['grade-con-unit']?.value || 'in';
+        const inches = (id, fallback) => {
+            const v = parseFloat(UI[id]?.value);
+            const raw = Number.isFinite(v) && v > 0 ? v : fallback;
+            return raw === null ? null : (unit === 'cm' ? raw / CM_PER_INCH : raw);
+        };
+        const rounds = parseInt(UI['grade-con-rounds']?.value, 10);
+        return {
+            neckInches: inches('grade-con-neck', null),
+            capHeightInches: inches('grade-con-cap-height', 5),
+            capTopInches: inches('grade-con-cap-top', 3),
+            increaseRounds: Number.isFinite(rounds) && rounds > 0 ? rounds : null
+        };
+    }
+
+    /** One size's construction plan from its graded cells, for the construction under Generated
+     *  instructions. Null before a chart is graded. */
+    function constructionPlanFor(garment, size) {
+        const A = window.CrochetAnalyticsEngine;
+        if (!garment || !garment.length) return null;
+        const cellOf = point => {
+            const row = garment.find(r => r.point === point);
+            return row ? row.sizes.find(c => c.size === size) || null : null;
+        };
+        const chest = cellOf('chest');
+        const upperArm = cellOf('upperArm');
+        const crossBack = cellOf('crossBack');
+        const armhole = cellOf('armholeDepth');
+        const gauge = A.EffectiveGauge(graderGauge());
+        const inputs = constructionInputs();
+        const rowParity = roundingChoice().rowParity;
+        return A.PlanConstructionAtSize({
+            construction: UI['gen-construction']?.value || 'drop',
+            chest: chest ? chest.stitches : null,
+            chestShare: chest && isNum(chest.share) ? chest.share : 0.5,
+            upperArm: upperArm ? upperArm.stitches : null,
+            crossBack: crossBack ? crossBack.stitches : null,
+            armholeRows: armhole ? armhole.rows : null,
+            neckCount: A.MeasurementToStitches(inputs.neckInches, gauge.stitchesPerInch),
+            underarmCount: A.MeasurementToStitches(neckInputs().bindOffInches, gauge.stitchesPerInch),
+            capRows: A.MeasurementToRows(inputs.capHeightInches, gauge.rowsPerInch, rowParity),
+            capTopCount: A.MeasurementToStitches(inputs.capTopInches, gauge.stitchesPerInch),
+            increaseRounds: inputs.increaseRounds,
+            stitchesPerInch: gauge.stitchesPerInch, rowsPerInch: gauge.rowsPerInch
+        });
+    }
+
+    /** The sentences a size's plan comes to, in the engine's words, or the reason it could not be
+     *  planned. One list for the panel and the calculation report. */
+    function constructionPlanLines(result) {
+        if (!result || !result.planner) return [];
+        if (!result.plan) return [result.warning];
+        const plan = result.plan;
+        const lines = [];
+        // Each part of the plan on its own line - its sentence when it can be worked, its reason when
+        // it cannot - so a size with two problems is told both, not the first the planner met.
+        const said = new Set();
+        const part = (name, shaping, from, to) => {
+            if (!shaping) return;
+            if (shaping.feasible && shaping.text) {
+                lines.push(`${name}: ${shaping.text.toLowerCase()}`
+                    + (isNum(from) && isNum(to) ? `, ${from} to ${to} sts` : '') + '.');
+            } else if (shaping.warning) {
+                lines.push(`${name}: ${shaping.warning}`);
+                said.add(shaping.warning);
+            }
+        };
+        if (result.planner === 'raglan') {
+            part(`Yoke, ${result.inputs.neckCount} to ${plan.separationCount} sts`
+                + (isNum(plan.depthInches) ? ` over ${plan.depthInches} in` : ''), plan.shaping);
+        } else if (result.planner === 'setIn') {
+            part('Armhole', plan.armhole, result.inputs.bodyCount - result.inputs.underarmCount * 2, result.inputs.shoulderCount);
+            part('Cap', plan.cap, result.inputs.sleeveCount, result.inputs.capTopCount);
+            if (isNum(plan.capEdgeInches) && isNum(plan.armholeEdgeInches)) {
+                lines.push(`Cap edge ${plan.capEdgeInches} in against an armhole edge of ${plan.armholeEdgeInches} in.`);
+            }
+        } else {
+            plan.rounds.forEach(r => lines.push(`Round ${r.round}: ${r.from} → ${r.to} sts, +${r.increases}`
+                + (r.spacing ? ` (${(r.spacing.text || r.spacing.warning).toLowerCase()})` : '') + '.'));
+        }
+        if (result.warning && !said.has(result.warning)) lines.push(result.warning);
+        return lines;
+    }
+
+    /** Sizes across, the plan's figures down, for whichever construction is chosen; every figure and
+     *  sentence is the engine's. A drop shoulder has nothing here and says so. */
+    function renderConstructionPerSize(garment, labels) {
+        const A = window.CrochetAnalyticsEngine;
+        const host = UI['grade-construction-output'];
+        if (!host) return;
+        host.replaceChildren();
+        const results = labels.map(size => constructionPlanFor(garment, size));
+        const first = results.find(Boolean);
+        if (!first) {
+            host.appendChild(elem('p', 'placeholder-text', 'Planned once a chart is graded.'));
+            return;
+        }
+        const kind = A.CONSTRUCTIONS[first.construction] || A.CONSTRUCTIONS.drop;
+        host.appendChild(elem('p', 'helper-text', `${kind.label}: ${kind.reason || 'every row is the width, so there is no yoke or cap to plan; the armhole and shoulders are under Neck, shoulders and armholes'}.`));
+        if (!first.planner) return;
+
+        const { wrap, body } = responsiveTable([''].concat(labels));
+        const line = (label, pick, misfit) => {
+            const tr = elem('tr');
+            tr.appendChild(rowHeader(label));
+            results.forEach(result => {
+                const value = result ? pick(result) : null;
+                const td = plainCell(value === null || value === undefined ? '—' : value);
+                if (result && misfit && misfit(result)) td.className = 'grade-misfit';
+                tr.appendChild(td);
+            });
+            body.appendChild(tr);
+        };
+        const bad = r => !r.feasible;
+        const plan = r => r.plan;
+        if (first.planner === 'raglan') {
+            line('Neck stitches', r => r.inputs.neckCount);
+            line('Separation stitches', r => (plan(r) ? plan(r).separationCount : null), bad);
+            line('Yoke rows', r => r.inputs.yokeRows);
+            line('Increase rounds', r => (plan(r) && isNum(plan(r).increaseRounds) ? plan(r).increaseRounds : null), bad);
+        } else if (first.planner === 'setIn') {
+            line('Body, one piece', r => r.inputs.bodyCount);
+            line('Underarm each side', r => r.inputs.underarmCount);
+            line('Shoulder stitches', r => r.inputs.shoulderCount);
+            line('Armhole rows', r => r.inputs.armholeRows);
+            line('Armhole decrease rows', r => (plan(r) && plan(r).armhole && plan(r).armhole.feasible ? plan(r).armhole.events : null), r => plan(r) && plan(r).armhole && !plan(r).armhole.feasible);
+            line('Bicep stitches', r => r.inputs.sleeveCount);
+            line('Cap rows', r => r.inputs.capRows);
+            line('Cap top stitches', r => r.inputs.capTopCount);
+            line('Cap decrease rows', r => (plan(r) && plan(r).cap && plan(r).cap.feasible ? plan(r).cap.events : null), r => plan(r) && plan(r).cap && !plan(r).cap.feasible);
+            line('Cap edge vs armhole edge', r => (plan(r) && isNum(plan(r).capEdgeInches) && isNum(plan(r).armholeEdgeInches)
+                ? `${plan(r).capEdgeInches} / ${plan(r).armholeEdgeInches} in` : null), bad);
+        } else {
+            line('Neck stitches', r => r.inputs.neckCount);
+            line('Separation stitches', r => r.inputs.separationCount);
+            line('Yoke rows', r => r.inputs.yokeRows);
+            line('Increase rounds', r => r.inputs.increaseRounds);
+            line('Stitches added', r => (plan(r) ? plan(r).rounds.map(x => `+${x.increases}`).join(', ') : null), bad);
+        }
+        host.appendChild(wrap);
+
+        const words = elem('div', 'grade-findings');
+        labels.forEach((size, i) => {
+            const result = results[i];
+            if (!result) return;
+            constructionPlanLines(result).forEach(text => {
+                const p = elem('div', result.feasible ? null : 'grade-warning');
+                p.textContent = `${size}: ${text}`;
+                words.appendChild(p);
+            });
+        });
+        host.appendChild(words);
+    }
+
     /** Confidence per size, and the generated instructions. Both depend on everything else the grader
      *  has worked out, so they are rendered last. */
-    function renderConfidence(garment, labels) {
+    function renderConfidence(garment, labels, run) {
         const A = window.CrochetAnalyticsEngine;
         const host = UI['gen-output'];
         if (!host) return;
@@ -6881,11 +7280,26 @@
         const chartSizes = chart ? chart.sizes.map(s => s[0])
             : (A.CYC_BODY_MEASUREMENTS[category] || { sizes: [] }).sizes.map(s => s[0]);
 
-        const warnings = A.CheckFitAndProportion({ garment, sections: sectionProfiles() });
+        // A piece that misses its graded width is a warning against that size, and costs it confidence
+        // the same way a fit warning does.
+        const check = run && run.pieces.length ? pieceCheck(run) : { findings: [] };
+        const warnings = A.CheckFitAndProportion({ garment, sections: sectionProfiles() })
+            .concat(check.findings);
         // Sizes the pattern writes are measured from their own rows. Sizes it does not write are
         // measured from the counts generated for them, which is still the graded instructions rather
         // than a bust ratio applied to the sample's yardage.
-        const efforts = sizeReports() ? computeSizeGrading().efforts : generatedEfforts(labels);
+        const efforts = sizeReports() ? computeSizeGrading().efforts : generatedEfforts(labels, run);
+
+        // Where the yarn figures come from, said before the figures: a sample's own measurement, or
+        // the yarn-weight table standing in for one.
+        const sample = sampleYarn();
+        const source = elem('p', 'helper-text');
+        source.textContent = sample
+            ? `Yarn: from your sample, ${A.round2(sample.yardsPerStitch)} yd per stitch`
+              + (sample.source === 'sample-weight' ? ' (by swatch weight)' : '') + '.'
+            : 'Yarn: from the yarn-weight table. Enter the yarn your sample used, above, for a figure '
+              + 'measured from it.';
+        host.appendChild(source);
 
         const { wrap, body } = responsiveTable(
             ['Size', 'Confidence', 'Yarn', 'Skeins', 'Hours', 'vs base', 'Main issue']);
@@ -6912,7 +7326,7 @@
             body.appendChild(tr);
         });
         host.appendChild(wrap);
-        host.appendChild(generatedInstructions(labels));
+        host.appendChild(generatedInstructions(labels, run));
     }
 
     /**
@@ -6923,31 +7337,78 @@
      * not the bust measurement: yarn goes as area, and a bust ratio applied to a yardage figure gets the
      * direction right and the amount wrong. Only offered where that scaling is actually true.
      */
-    function generatedEfforts(labels) {
+    /**
+     * The yarn one stitch takes, measured from what the designer has said about their own sample:
+     * the yards the sample used, over the stitches the pattern on the page works; else the swatch's
+     * weight over its stitches, through the skein's yards per gram. Null when neither has been given,
+     * and the estimate falls back to the yarn-weight table - which the panel says.
+     */
+    function sampleYarn() {
         const A = window.CrochetAnalyticsEngine;
-        const construction = UI['gen-construction']?.value || 'drop';
-        if (!state.patternSteps.length || !A.CONSTRUCTIONS[construction]?.scalesByWidth) return null;
+        const typed = parseFloat(UI['grade-sample-yards']?.value);
+        const unit = UI['grade-sample-yards-unit']?.value || 'yd';
+        const skeinLength = parseFloat(UI['calc-skein-length']?.value);
+        const skeinYards = Number.isFinite(skeinLength) && skeinLength > 0
+            ? (UI['calc-skein-length-unit']?.value === 'm' ? skeinLength * 1.09361 : skeinLength) : null;
 
-        const targets = generationTargets(labels);
-        if (!targets.counts.length) return null;
+        if (Number.isFinite(typed) && typed > 0) {
+            const totals = A.AggregateStitchCounts(state.patternSteps, state.analytics.lastPass?.validation.rows);
+            const stitches = Object.values(totals).reduce((a, b) => a + b, 0);
+            const measured = A.YardsPerStitchFromSample({
+                yards: unit === 'm' ? typed * 1.09361 : typed, stitches
+            });
+            return measured ? { ...measured, skeinYards } : null;
+        }
+
+        const g = state.gauge;
+        const skeinWeight = parseFloat(UI['calc-skein-weight']?.value);
+        const skeinGrams = Number.isFinite(skeinWeight) && skeinWeight > 0
+            ? (UI['calc-skein-weight-unit']?.value === 'oz' ? skeinWeight * 28.3495 : skeinWeight) : null;
+        if (!(g.swatchWeight > 0) || !skeinGrams || !skeinYards) return null;
+        const measured = A.YardsPerStitchFromSample({
+            grams: g.swatchWeightUnit === 'oz' ? g.swatchWeight * 28.3495 : g.swatchWeight,
+            stitches: g.stitches * g.rows,
+            skein: { yards: skeinYards, grams: skeinGrams }
+        });
+        return measured ? { ...measured, skeinYards } : null;
+    }
+
+    function generatedEfforts(labels, run) {
+        const A = window.CrochetAnalyticsEngine;
+        if (!state.patternSteps.length || !run || !run.pieces.length) return null;
+        const { targets } = run;
+        const sample = sampleYarn();
 
         // The live steps: the base size is whatever is on the page, and evaluateAtSize's swapped-in
-        // steps only exist for sizes the pattern text writes.
+        // steps only exist for sizes the pattern text writes. So the stitch mix on the page is the
+        // base size's, and every other size works the same mix scaled by the stitches it actually
+        // works - every piece's graded rows and rules summed - which is the area of the garment. Yarn
+        // goes as area; a bust ratio gets the direction right and the amount wrong, because a larger
+        // size is longer as well as wider.
         const baseTotals = A.AggregateStitchCounts(state.patternSteps, state.analytics.lastPass?.validation.rows);
-        const baseCount = targets.counts[0];
-        if (!baseCount) return null;
+        const baseIndex = targets.labels.indexOf(targets.base.label);
+        const stitchesAt = (i) => run.pieces.reduce((sum, piece) => {
+            const n = piece.graded.totals ? piece.graded.totals.stitches[i] : null;
+            return sum === null || !isNum(n) ? null : sum + n;
+        }, 0);
+        const baseStitches = stitchesAt(baseIndex);
+        if (!baseStitches) return null;
 
         const efforts = targets.labels.map((label, i) => {
-            const ratio = targets.counts[i] / baseCount;
+            const stitches = stitchesAt(i);
+            if (!isNum(stitches)) return null;
+            const ratio = stitches / baseStitches;
             const scaled = {};
             Object.keys(baseTotals).forEach(stitch => {
                 scaled[stitch] = Math.round(baseTotals[stitch] * ratio);
             });
             return A.EstimateSizeEffort({
-                label, stitchTotals: scaled, yarnWeightCategory: yarnWeightNumber()
+                label, stitchTotals: scaled, yarnWeightCategory: yarnWeightNumber(),
+                yardsPerStitch: sample ? sample.yardsPerStitch : null,
+                skeinYards: sample ? sample.skeinYards : null
             });
-        });
-        return A.CompareSizeEffort({ efforts, baseLabel: targets.labels[0] });
+        }).filter(Boolean);
+        return A.CompareSizeEffort({ efforts, baseLabel: targets.base.label });
     }
 
     function fillConstructionPicker() {
@@ -6959,63 +7420,239 @@
 
     /** The pattern's rows restated across every size. A row's own resolved count is what gets scaled -
      *  never its text - so a turning chain stays a turning chain. */
-    function generatedInstructions(labels) {
+    /**
+     * Every piece of the pattern graded to every size: the one pass that the generated run, the
+     * validation row, the yardage comparison and the export package all read, so they cannot disagree
+     * about a count.
+     *
+     * Each piece scales by the measurement its type names - a sleeve by the upper arm and arm length,
+     * a body by the bust - falling back to the bust when it has no type, or the chart has no figure
+     * for its point. The engine chains the straight stretches (the written size verbatim, every other
+     * size by ratio, a shaping row keeping the change it writes) and regrades each run of shaping rows
+     * as a rule, so nothing here decides a number. `pieces` is empty whenever nothing can be generated,
+     * and `reason` says why.
+     */
+    function gradedPieces(labels) {
         const A = window.CrochetAnalyticsEngine;
-        const wrap = elem('div');
-        wrap.appendChild(elem('strong', null, 'Generated instructions'));
-
         const pass = state.analytics.lastPass;
-        if (!pass || !pass.validation.rows.length) {
-            wrap.appendChild(elem('p', 'placeholder-text', 'Parse a pattern to generate its size run.'));
-            return wrap;
-        }
-
         const construction = UI['gen-construction']?.value || 'drop';
         const notation = UI['gen-notation']?.value || 'parenthetical';
         const kind = A.CONSTRUCTIONS[construction] || A.CONSTRUCTIONS.drop;
         const targets = generationTargets(labels);
+        const profiles = pass && pass.validation.rows.length ? sectionProfiles() : [];
+        const run = { targets, kind, construction, notation, profiles, pieces: [], reason: '' };
+
+        if (!profiles.length) { run.reason = 'no pattern'; return run; }
+        if (!kind.scalesByWidth) { run.reason = 'construction'; return run; }
+        if (!targets.counts.length) { run.reason = 'no targets'; return run; }
+        if (!isNum(targets.baseCount)) { run.reason = 'base not graded'; return run; }
+
+        const choice = roundingChoice();
+        run.pieces = profiles.map(profile => {
+            const widthPoint = profile.points.find(p => A.MEASUREMENT_AXIS[p] === 'width');
+            const lengthPoint = profile.points.find(p => A.MEASUREMENT_AXIS[p] === 'length');
+            const width = (widthPoint && pieceTargets(targets.labels, widthPoint, 'stitches'))
+                || { counts: targets.counts, baseCount: targets.baseCount };
+            const length = lengthPoint ? pieceTargets(targets.labels, lengthPoint, 'rows') : null;
+            const repeat = sectionRepeat(profile);
+            const graded = A.GradePieceRows({
+                counts: profile.worked.map(w => w.count),
+                baseTarget: width.baseCount, targetCounts: width.counts,
+                baseRows: length ? length.baseCount : null, targetRows: length ? length.counts : null,
+                construction, repeat: repeat ? { multiple: repeat.multiple, plus: repeat.plus } : null,
+                strategy: choice.strategy, parity: choice.parity,
+                labels: targets.labels, notation,
+                rowNumbers: profile.worked.map(w => rowLabelNumber(w.label))
+            });
+            return { profile, graded, widthPoint, lengthPoint, width, length, repeat };
+        });
+        return run;
+    }
+
+    /**
+     * The tech editor's validation row, for every typed piece: the engine's TRUE/FALSE on whether the
+     * piece reaches its graded width and works its graded rows, per size. Untyped pieces are not
+     * checked - with no type there is no measurement to hold them to, and "not checked" must not read
+     * as "checked and fine".
+     */
+    function pieceCheck(run) {
+        const A = window.CrochetAnalyticsEngine;
+        const labels = run.targets.labels;
+        const baseIndex = labels.indexOf(run.targets.base.label);
+        const pieces = run.pieces
+            .filter(piece => piece.profile.type)
+            .map(piece => ({
+                title: piece.profile.title, type: piece.profile.type, graded: piece.graded,
+                widthTargets: piece.width.counts,
+                lengthTargets: piece.length ? piece.length.counts : null,
+                writtenRows: piece.profile.rowCount, baseIndex,
+                repeat: piece.repeat ? { multiple: piece.repeat.multiple, plus: piece.repeat.plus } : null,
+                stitchesPerInch: piece.profile.stitchesPerInch
+            }));
+        return A.CheckGradedPieces({ pieces, labels });
+    }
+
+    /** The pattern's rows restated across every size. A row's own resolved count is what gets scaled -
+     *  never its text - so a turning chain stays a turning chain. */
+    function generatedInstructions(labels, run) {
+        const A = window.CrochetAnalyticsEngine;
+        const wrap = elem('div');
+        wrap.appendChild(elem('strong', null, 'Generated instructions'));
+        // Cleared before any of the early returns below, so the export package never offers a run
+        // generated under a construction or base size that has since changed.
+        state.grading.generated = '';
+
+        const pass = state.analytics.lastPass;
+        if (!pass || !pass.validation.rows.length) {
+            wrap.appendChild(elem('p', 'placeholder-text', 'Validate a pattern in Studio to generate its size run.'));
+            return wrap;
+        }
+
+        const { targets, kind, notation, profiles } = run;
+        const untyped = profiles.some(profile => !profile.type);
 
         const note = elem('p', 'helper-text');
         note.textContent = kind.scalesByWidth
-            ? `Graded as ${kind.label.toLowerCase()}: every row's count scales with the finished width.`
+            ? `Graded as ${kind.label.toLowerCase()}: each piece's width scales with its own measurement `
+              + '(upper arm for a sleeve, bust otherwise); a run of two or more shaping rows is regraded by '
+              + 'count and row length per size, and written as a rule; a single shaping row keeps the '
+              + "change it writes. Row numbers after a graded run are the base size's. "
+              + (untyped ? "Set a piece's type under Sections to grade a sleeve by upper arm and arm length. " : '')
+              + baseSizeNote(targets.base)
             : `Not generated: ${kind.reason}.`;
         wrap.appendChild(note);
         if (!kind.scalesByWidth || !targets.counts.length) return wrap;
+        if (!isNum(targets.baseCount)) {
+            wrap.appendChild(elem('p', 'placeholder-text',
+                `Not generated: ${targets.base.label || 'the base size'} is not among the sizes being `
+                + 'graded, so there is nothing to scale the other sizes against. Tick it under '
+                + '"Sizes to grade".'));
+            return wrap;
+        }
+
+        // Bookkeeping only: which pass row prints which counts, which opens a rule, which are inside one.
+        const rows = pass.validation.rows;
+        const byIndex = {};     // pass row index -> counts per size
+        const ruleAt = {};      // pass row index of a run's shaping row -> the run
+        const hidden = new Set();
+        run.pieces.forEach(({ profile, graded }) => {
+            profile.worked.forEach((w, j) => { byIndex[w.index] = graded.rows[j]; });
+            graded.runs.forEach(rule => {
+                ruleAt[profile.worked[rule.firstShaping].index] = { run: rule, profile };
+                for (let k = rule.firstShaping + 1; k <= rule.end; k++) hidden.add(profile.worked[k].index);
+            });
+        });
 
         const text = elem('pre', 'grade-generated');
-        text.textContent = pass.validation.rows.map(row => {
+        text.textContent = rows.map((row, i) => {
             if (row.status === 'section') return `\n${row.label}`;
             if (row.status === 'note') return row.step.noteText || '';
-            const base = row.evaluation && row.evaluation.calculatedYield;
-            const scaled = A.ScaleRowCounts({
-                baseCount: base, targetCounts: targets.counts,
-                construction, repeat: firstSectionRepeat(),
-                strategy: roundingChoice().strategy, parity: roundingChoice().parity
-            });
+            if (hidden.has(i)) return null;
             const counts = A.FormatSizeNumbers({
-                counts: scaled.counts, labels: targets.labels, notation
+                counts: byIndex[i] || [], labels: targets.labels, notation
             });
-            return `${row.label}: ${exportRowText(row.step)} (${counts})`;
-        }).join('\n').trim();
+            const line = `${row.label}: ${exportRowText(row.step)} (${counts})`;
+            return ruleAt[i] ? `${line}\n${shapingRuleLine(ruleAt[i], row, rows, targets)}` : line;
+        }).filter(line => line !== null).join('\n').trim();
         wrap.appendChild(text);
         state.grading.generated = text.textContent;
         return wrap;
     }
 
-    /** The stitch count each size has to reach, taken from the graded bust. This is the one number the
-     *  whole size run scales against for a rectangular construction. */
+    /**
+     * The stitch count each size has to reach, taken from the graded bust, and the count the base size
+     * reaches - the size the pattern is written in. Every generated count is the written count times
+     * the ratio of its size's target to the base's, so the base is the one number the whole run scales
+     * against. `baseCount` is null when the base size is not among the graded sizes, and nothing can be
+     * generated: a ratio against a size that was not graded is a ratio against nothing.
+     */
     function generationTargets(labels) {
         const garment = state.grading.lastGarment || [];
         const chest = garment.find(row => row.point === 'chest');
-        if (!chest) return { labels: [], counts: [] };
+        const base = state.grading.baseSize || { label: '', source: 'first' };
+        if (!chest) return { labels: [], counts: [], base, baseCount: null };
         const usable = labels.filter(label => {
             const cell = chest.sizes.find(c => c.size === label);
             return cell && isNum(cell.stitches);
         });
+        const baseCell = chest.sizes.find(c => c.size === base.label);
         return {
             labels: usable,
-            counts: usable.map(label => chest.sizes.find(c => c.size === label).stitches)
+            counts: usable.map(label => chest.sizes.find(c => c.size === label).stitches),
+            base,
+            baseCount: baseCell && isNum(baseCell.stitches) ? baseCell.stitches : null
         };
+    }
+
+    /**
+     * One measurement's graded figure per size, for a piece that scales by something other than the
+     * bust: a sleeve's upper arm (`stitches`) and arm length (`rows`). Null where the chart has no row
+     * for the point at all - a custom chart with nothing typed for it - so the caller can fall back.
+     */
+    function pieceTargets(labels, point, field) {
+        const garment = state.grading.lastGarment || [];
+        const row = garment.find(r => r.point === point);
+        if (!row) return null;
+        const base = state.grading.baseSize || { label: '' };
+        const cellOf = label => row.sizes.find(c => c.size === label);
+        const baseCell = cellOf(base.label);
+        const baseCount = baseCell && isNum(baseCell[field]) ? baseCell[field] : null;
+        if (!isNum(baseCount) || baseCount <= 0) return null;
+        return {
+            counts: labels.map(label => {
+                const cell = cellOf(label);
+                return cell && isNum(cell[field]) ? cell[field] : null;
+            }),
+            baseCount
+        };
+    }
+
+    /** The number a row label ends in - "Row 3" is 3 - or null for a label that has none. */
+    function rowLabelNumber(label) {
+        const match = String(label || '').match(/(\d+)\s*$/);
+        return match ? parseInt(match[1], 10) : null;
+    }
+
+    /**
+     * A regraded shaping run written as the rule a multi-size pattern prints under its shaping row:
+     * the rows it spans, the row worked between shapings, how often the shaping row recurs and how
+     * many more times, what is worked straight after, and the count it ends on - every figure in size
+     * columns, from the engine. Sizes the shaping does not fit are dashes in every column, with the
+     * reason on a line of its own; nothing is nudged to make a size fit.
+     */
+    function shapingRuleLine({ run, profile }, shapingRow, rows, targets) {
+        const t = run.graded.text;
+        const word = String(shapingRow.label).replace(/\s*\d+\s*$/, '') || 'Row';
+        const span = t.rowRange && t.rowRange !== '—' ? `${word}s ${t.rowRange}` : `Next ${t.rows} rows`;
+        const anyFeasible = run.graded.sizes.some(s => s.feasible);
+
+        // The row worked between shapings is the first straight row inside the run, quoted as written.
+        let between = '';
+        for (let k = run.firstShaping + 1; k <= run.end; k++) {
+            if (profile.worked[k].count === profile.worked[k - 1].count) {
+                const flat = rows[profile.worked[k].index];
+                between = flat && flat.step ? exportRowText(flat.step) : '';
+                break;
+            }
+        }
+
+        let line = `${span}: `;
+        if (!anyFeasible) {
+            line += `not graded — the shaping does not fit any size.`;
+        } else {
+            line += between ? `${between}, working ${shapingRow.label} again ` : `work ${shapingRow.label} again `;
+            line += `every ${t.every} row ${t.times} more times`;
+            if (t.straight !== '0') line += `, then ${t.straight} rows straight`;
+            line += ` (${t.ending})`;
+            if (run.redistributed) {
+                line += ` — the written ${run.direction}s were not evenly spaced; every size, including `
+                      + `${targets.base.label}, is an even redistribution over the same rows to the same count`;
+            }
+        }
+        const reasons = run.graded.sizes
+            .map((s, i) => (s.feasible || !s.warning ? '' : `  ${targets.labels[i]}: ${s.warning}`))
+            .filter(Boolean);
+        return reasons.length ? `${line}\n${reasons.join('\n')}` : line;
     }
 
     /**
@@ -7023,14 +7660,14 @@
      * files rather than one archive because a zip would be a few hundred lines of bit-twiddling that is
      * not grading, and because a technical editor wants the editing report, not a bundle to unpack.
      */
-    function renderExportPackage(garment, labels) {
+    function renderExportPackage(garment, labels, run) {
         const host = UI['export-package'];
         if (!host) return;
         host.replaceChildren();
 
         host.appendChild(elem('strong', null, 'Export package'));
 
-        const artefacts = exportArtefacts(garment, labels);
+        const artefacts = exportArtefacts(garment, labels, run);
         const list = elem('div', 'grade-export-list');
         artefacts.forEach(artefact => {
             const row = elem('div', 'grade-export-row');
@@ -7050,11 +7687,16 @@
     }
 
     /** One place that knows what the package contains, so nothing is exported twice. */
-    function exportArtefacts(garment, labels) {
+    function exportArtefacts(garment, labels, run) {
         const A = window.CrochetAnalyticsEngine;
         const slug = projectSlug('pattern');
+        const check = run && run.pieces.length ? pieceCheck(run) : { pieces: [], findings: [] };
         const finished = measurementCsv(garment, labels, 'target');
         const bodyRows = measurementCsv(garment, labels, 'body');
+        // What the rounded counts really measure. Empty until a typed piece's repeat has fitted
+        // something, or rows round to even - a table of blanks would read as "checked, no change".
+        const actual = garment.some(row => row.sizes.some(cell => isNum(cell.actualTarget)))
+            ? measurementCsv(garment, labels, 'actualTarget') : '';
         const reports = sizeReports();
         const warnings = A.CheckFitAndProportion({ garment, sections: sectionProfiles() });
 
@@ -7063,6 +7705,8 @@
               file: `${slug}-finished.csv`, type: 'text/csv', body: finished, empty: !finished },
             { key: 'body', label: 'Body-measurement table (CSV)',
               file: `${slug}-body.csv`, type: 'text/csv', body: bodyRows, empty: !bodyRows },
+            { key: 'actual', label: 'Actual finished measurements after rounding (CSV)',
+              file: `${slug}-actual.csv`, type: 'text/csv', body: actual, empty: !actual },
             { key: 'schematic', label: 'Schematic labels',
               file: `${slug}-schematic.txt`, type: 'text/plain',
               body: schematicLabels(garment, labels), empty: !garment.length },
@@ -7074,7 +7718,9 @@
               body: calculationReport(garment, labels), empty: !garment.length },
             { key: 'editing', label: 'Technical-editing report',
               file: `${slug}-editing.txt`, type: 'text/plain',
-              body: editingReport(warnings, reports), empty: !garment.length },
+              body: editingReport(warnings, reports, {
+                  check, statement: sizingStatement(garment, labels, state.grading.baseSize)
+              }), empty: !garment.length },
             { key: 'json', label: 'JSON for Stitch Math',
               file: `${slug}-grading.json`, type: 'application/json',
               body: JSON.stringify({ version: 1, grading: state.grading, gauge: state.gauge,
@@ -7103,7 +7749,9 @@
         garment.forEach(row => {
             const values = labels.map(size => {
                 const at = row.sizes.find(c => c.size === size);
-                return at && isNum(at.target) ? `${at.target}` : '—';
+                // The measurement the garment will really have, where rounding has been applied.
+                const value = at && isNum(at.actualTarget) ? at.actualTarget : (at ? at.target : null);
+                return isNum(value) ? `${value}` : '—';
             });
             lines.push(`${row.label}: ${values.join(' (')}${values.length > 1 ? ')' : ''} in`);
         });
@@ -7125,17 +7773,69 @@
             });
             lines.push('');
         });
+        // The shaping plans, per size, in the engine's own words.
+        const plans = labels.map(size => ({ size, plan: neckPlansFor(garment, size) }))
+            .filter(entry => entry.plan);
+        if (plans.length) {
+            lines.push('--- Neck, shoulders and armholes ---');
+            plans.forEach(({ size, plan }) => {
+                lines.push(`  ${size}:`);
+                [['Neckline', plan.neck], ['Shoulder', plan.shoulder], ['Armhole', plan.armhole]].forEach(([name, part]) => {
+                    if (part) lines.push(`    ${name}: ${part.feasible ? part.text : part.warning}`);
+                });
+            });
+            lines.push('');
+        }
+        // The construction planned per size, for a yoke or a set-in sleeve.
+        const constructions = labels.map(size => ({ size, result: constructionPlanFor(garment, size) }))
+            .filter(entry => entry.result && entry.result.planner);
+        if (constructions.length) {
+            const A = window.CrochetAnalyticsEngine;
+            const kind = A.CONSTRUCTIONS[constructions[0].result.construction];
+            lines.push(`--- Construction per size: ${kind ? kind.label : constructions[0].result.construction} ---`);
+            constructions.forEach(({ size, result }) => {
+                lines.push(`  ${size}:`);
+                constructionPlanLines(result).forEach(text => lines.push(`    ${text}`));
+            });
+            lines.push('');
+        }
         return lines.join('\n');
     }
 
     /** What a technical editor needs: everything unresolved, in one list. */
-    function editingReport(warnings, reports) {
+    function editingReport(warnings, reports, extras = {}) {
         const A = window.CrochetAnalyticsEngine;
         const lines = ['TECHNICAL-EDITING REPORT', ''];
+
+        // What the pattern will say about its sizes, first: it is the first thing an editor checks.
+        if (extras.statement && extras.statement.lines.length) {
+            lines.push('Sizing statement:');
+            extras.statement.lines.forEach(line => lines.push(`  ${line}`));
+            lines.push('');
+        }
 
         lines.push('Fit and proportion:');
         if (!warnings.length) lines.push('  Nothing outstanding.');
         warnings.forEach(w => lines.push(`  [${w.state}] ${w.size}: ${w.check} — ${w.detail}`));
+
+        // The validation row a grading spreadsheet keeps: per piece, per size, TRUE or the shortfall.
+        const check = extras.check;
+        if (check && check.pieces.length) {
+            lines.push('', 'Per size, per piece:');
+            check.pieces.forEach(piece => {
+                piece.sizes.forEach(size => {
+                    const width = !size.feasible ? 'does not fit'
+                        : size.widthOk ? `${size.widestCount} sts as graded`
+                        : isNum(size.widthTarget) ? `${size.widestCount} sts, ${size.widthTarget} needed`
+                        : `${size.widestCount} sts`;
+                    const rows = !size.feasible ? ''
+                        : size.lengthOk === null ? `, ${size.rows} rows`
+                        : size.lengthOk ? `, ${size.rows} rows as graded`
+                        : `, ${size.rows} rows, ${size.intendedRows} intended`;
+                    lines.push(`  ${piece.title} at ${size.size}: ${width}${rows}`);
+                });
+            });
+        }
 
         if (reports) {
             lines.push('', 'Per size, from the compiler:');
@@ -7153,17 +7853,19 @@
         return lines.join('\n');
     }
 
-    /** How counts should round, and whether the repeat count is constrained. */
+    /** How counts should round, whether the repeat count is constrained, and whether row counts round
+     *  to even - a grader's habit, so every new action starts on the right side of the fabric. */
     function roundingChoice() {
         return {
             strategy: UI['grade-rounding']?.value || 'nearest',
-            parity: UI['grade-parity']?.value || 'any'
+            parity: UI['grade-parity']?.value || 'any',
+            rowParity: UI['grade-row-parity']?.value || 'any'
         };
     }
 
     /** Section-by-section: what the pattern repeats over, what it works at, and whether the count it
-     *  actually reaches fits. The one place pattern-derived data lives - the graded table above is one
-     *  chart for the whole garment and stays that way. */
+     *  actually reaches fits. Where pattern-derived data lives; it reaches the graded table above only
+     *  through a piece the designer has typed - see repeatByPoint. */
     function renderSectionProfiles() {
         const A = window.CrochetAnalyticsEngine;
         const host = UI['grade-sections'];
@@ -7174,7 +7876,7 @@
         host.appendChild(elem('strong', null, 'Sections and stitch multiples'));
 
         if (!profiles.length) {
-            host.appendChild(elem('p', 'placeholder-text', 'Parse a pattern to see its sections, their counts and the repeat each one works over.'));
+            host.appendChild(elem('p', 'placeholder-text', 'Validate a pattern in Studio to see its sections, their counts and the repeat each one works over.'));
             return;
         }
 
@@ -7496,9 +8198,10 @@
         };
     }
 
-    /** Reads the section boxes back into state and redraws only this panel. The graded table is
-     *  deliberately not refreshed: it grades the whole garment against one chart, and nothing here
-     *  belongs to it. */
+    /** Reads the section boxes back into state and redraws the cells that report, then the graded
+     *  table - a typed piece's repeat is what its measurement is fitted to, and its type is what the
+     *  generated run and the validation row grade it by. The section table itself is not rebuilt, so
+     *  the control being typed into keeps its caret. */
     function readSectionInputs() {
         const profiles = sectionProfiles();
         profiles.forEach(profile => {
@@ -7532,6 +8235,10 @@
         // A section's type is exactly what the construction check reads pieces by, so it has to follow
         // this handler rather than wait for the next full renderGrader pass.
         renderConstructionCheck();
+        // The type names the measurement a piece is graded by, and its repeat is what that
+        // measurement's count is fitted to - so the graded table, and everything drawn from it, follows
+        // this handler. The section table itself is not rebuilt, so the caret survives.
+        if (UI['grade-chart']?.value) renderGradeTables();
     }
 
     /** One chart, not one per piece. Every section (Body, Sleeve, ...) grades against the same size
@@ -7546,6 +8253,7 @@
         // and the dashboard's schematic preview reads this same field, so it would otherwise keep showing
         // a chart the designer just cleared.
         state.grading.lastGarment = null;
+        if (UI['grade-sizing-statement']) UI['grade-sizing-statement'].replaceChildren();
 
         const category = UI['grade-chart']?.value || '';
         const chart = graderChart(category);
@@ -7557,8 +8265,9 @@
         }
 
         const resolved = resolvedEase();
-        // A derived ease grades exactly as a stated one would.
-        const ease = resolved.complete ? { value: resolved.easeInches, mode: 'in' } : graderEase();
+        // A derived ease grades exactly as a stated one would; an ease typed as a percentage stays one,
+        // and so scales with every size. ResolveEase decides which, and says which.
+        const ease = resolved.complete ? resolved.easeApplied : graderEase();
 
         // A custom chart grades every size it names; a published one grades the ticked ones.
         const sizes = chart ? null : selectedSizes(category);
@@ -7570,33 +8279,143 @@
         // Fixed at 'half': a garment worked flat is two pieces, front and back, each half the finished
         // circumference. That is the shape of the patterns this grades, so it is no longer a per-piece
         // choice the designer has to make.
+        //
+        // Each width is fitted to the repeat of the typed piece worked to it, and every cell then
+        // carries the measurement its rounded count really gives - the "rounding effects" column of a
+        // grading spreadsheet. Nothing typed, nothing fitted: the count is the plain conversion.
+        const repeats = repeatByPoint();
         const graded = A.GradeGarment({ category, chart, sizes, ease, pointEase, gauge,
-                                        overrides, piece: 'half' });
+                                        overrides, piece: 'half',
+                                        rounding: { ...roundingChoice(), byPoint: repeats.byPoint } });
+        // Which size the pattern on the page is written in. Everything below that says "base" - the
+        // locked measurements, the generated size run, the yarn comparison - reads this one answer.
+        const base = resolveBaseSize({
+            labels, graded,
+            everyLabel: (chart || A.CYC_BODY_MEASUREMENTS[category] || { sizes: [] }).sizes.map(s => s[0])
+        });
+        state.grading.baseSize = base;
         // A locked measurement holds the base size's value in every size, and the stitch count that
         // follows from it moves with it.
         const garment = A.ApplyDimensionModes({
             garment: graded,
             modes: graderModes(A.ChartPoints(category, chart)),
-            baseSize: baseSizeLabel(labels),
-            gauge
+            baseSize: base.label
         });
         // Kept for the panels below, which all grade against the same garment.
         state.grading.lastGarment = garment;
-        host.appendChild(buildGradeTable(garment, labels));
+        renderSizingStatement(garment, labels, base, resolved);
+        host.appendChild(buildGradeTable(garment, labels, base, repeats.sources));
+        // Every piece graded to every size, once: the report's validation row, the generated run, the
+        // yardage comparison and the export package all read this one result.
+        const run = gradedPieces(labels);
         renderSchematic(garment, labels);
-        renderGradeReport(garment, labels);
+        renderGradeReport(garment, labels, run);
         renderMotifLayout(garment, labels);
-        renderConfidence(garment, labels);
-        renderExportPackage(garment, labels);
+        renderNeckAndShoulders(garment, labels);
+        renderConstructionPerSize(garment, labels);
+        renderConfidence(garment, labels, run);
+        renderExportPackage(garment, labels, run);
     }
 
-    /** Which size is the base: the name the designer typed if it matches a size on the chart, otherwise
-     *  the first one graded - a locked measurement has to lock to something, and silently locking to a
-     *  size they did not name would be worse. */
-    function baseSizeLabel(labels) {
-        const typed = (UI['grade-base-name']?.value || '').trim().toLowerCase();
-        const matched = labels.find(label => label.toLowerCase() === typed);
-        return matched || labels[0] || '';
+    /** The engine's sizing statement for the garment on the page, built the same way wherever it is
+     *  shown, so the panel, the editing report and the pattern export cannot say different things. */
+    function sizingStatement(garment, labels, base, resolved) {
+        const A = window.CrochetAnalyticsEngine;
+        const category = UI['grade-chart']?.value || '';
+        const chart = graderChart(category) || A.CYC_BODY_MEASUREMENTS[category] || null;
+        return A.SizingStatement({
+            base, resolved: resolved || resolvedEase(), garment, labels, chart,
+            notation: UI['gen-notation']?.value || 'parenthetical'
+        });
+    }
+
+    function renderSizingStatement(garment, labels, base, resolved) {
+        const host = UI['grade-sizing-statement'];
+        if (!host) return;
+        host.replaceChildren();
+        sizingStatement(garment, labels, base, resolved).lines.forEach(line => {
+            host.appendChild(elem('p', null, line));
+        });
+    }
+
+    /**
+     * Which of the graded sizes the pattern on the page is written in.
+     *
+     * A pattern is written in ONE size, and every other size is a ratio against it - so the answer
+     * decides every generated count, and a wrong one restates a Large as a Small with nothing to show
+     * for it. It is settled in this order, and the source is returned with the label so the panels can
+     * say which applied rather than leave a Medium pattern looking as though it grew out of X-Small:
+     *
+     *   named     - the name the designer typed, in any spelling the chart's sizes go by ("M", "Med",
+     *               "Medium"; "2X", "2XL", "XXL"). The one answer that is not a reading.
+     *   selected  - a pattern that already writes several sizes is validated at one of them, and the
+     *               counts on the page are that size's, so the run is generated from it.
+     *   nearest   - the size whose graded width is closest to the widest row the pattern reaches. A
+     *               reading, and reported as one: the note under the generated run says the count it
+     *               was read from, and naming the size overrides it.
+     *   first     - the first size graded, when there is no pattern to read from. A locked measurement
+     *               has to lock to something.
+     *
+     * A typed name that matches none of the sizes falls through and is reported as `unmatched`, so a
+     * typo does not silently become the first size. A name that IS a size on the chart but is not
+     * ticked under "Sizes to grade" is matched against `everyLabel` and returned with `excluded: true`
+     * rather than falling through: the pattern is still written in that size, and the answer to "it is
+     * not being graded" is to say so, not to read the pattern as some other size.
+     */
+    function resolveBaseSize({ labels = [], everyLabel = labels, graded = [] } = {}) {
+        const A = window.CrochetAnalyticsEngine;
+        const typed = (UI['grade-base-name']?.value || '').trim();
+        if (typed) {
+            const named = A.MatchSizeLabel(typed, everyLabel);
+            if (named) {
+                return { label: named, source: 'named', typed, unmatched: '',
+                         excluded: !labels.includes(named) };
+            }
+        }
+
+        // The size the pattern is being validated at, stripped of the "(M)" shown beside it.
+        if (state.sizeCount > 1) {
+            const current = String(sizeVariantNames(state.sizeCount)[state.sizeIndex] || '')
+                .replace(/\s*\(.*\)\s*$/, '');
+            const selected = A.MatchSizeLabel(current, everyLabel);
+            if (selected) {
+                return { label: selected, source: 'selected', typed, unmatched: typed,
+                         excluded: !labels.includes(selected) };
+            }
+        }
+
+        const widest = widestPatternRow();
+        const chest = (graded || []).find(row => row.point === 'chest');
+        if (widest && chest) {
+            const nearest = A.NearestSizeByCount({ cells: chest.sizes, stitches: widest.stitches });
+            if (nearest) {
+                return { label: nearest.size, source: 'nearest', typed, unmatched: typed,
+                         stitches: widest.stitches, difference: nearest.difference };
+            }
+        }
+
+        return { label: labels[0] || '', source: 'first', typed, unmatched: typed };
+    }
+
+    /** The widest row of the pattern on the page, at the size it is being validated at. */
+    function widestPatternRow() {
+        const pass = state.analytics.lastPass;
+        if (!pass || !pass.validation.rows.length) return null;
+        return window.CrochetAnalyticsEngine.WidestFabricRow(pass.validation.rows);
+    }
+
+    /** One sentence on which size the run is generated from and why, for the panels that show it. */
+    function baseSizeNote(base) {
+        if (!base || !base.label) return '';
+        const typo = base.unmatched
+            ? `"${base.unmatched}" is not a size on this chart. ` : '';
+        switch (base.source) {
+            case 'named': return `Written in ${base.label}, as named.`;
+            case 'selected': return `${typo}Written in ${base.label}, the size being validated.`;
+            case 'nearest': return `${typo}Read as ${base.label}: its widest row is ${base.stitches} sts, `
+                + `nearest that size's graded width. Type the base size name to change it.`;
+            default: return `${typo}Written in ${base.label}, the first size graded. Type the base size name to change it.`;
+        }
     }
 
     // Where each measurement sits on the schematic: the label anchor, and the line drawn to show what is
@@ -7731,13 +8550,17 @@
             label: (A.MEASUREMENT_LABELS[row.point] || row.point).toLowerCase(),
             body: cell.body,
             ease: applied,
-            allocation: cell.piece === 'half' ? 0.5 : 1,
+            // The share the graded cell carried, so a cross back or an upper arm traces as the whole
+            // measurement it is, and only a body circumference as half.
+            allocation: isNum(cell.share) ? cell.share : (cell.piece === 'half' ? 0.5 : 1),
             axis: row.axis,
             stitchesPerInch: gauge.stitchesPerInch,
             rowsPerInch: gauge.rowsPerInch,
-            repeat: firstSectionRepeat(),
+            // The same repeat the table fitted this point to, so the working and the cell agree.
+            repeat: repeatByPoint().byPoint[row.point] ?? null,
             strategy: choice.strategy,
             parity: choice.parity,
+            rowParity: choice.rowParity,
             piece: cell.piece
         });
     }
@@ -7745,12 +8568,16 @@
     const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
 
-    function buildGradeTable(garment, sizeLabels) {
+    function buildGradeTable(garment, sizeLabels, base = null, sources = {}) {
         const wrap = elem('div');
-        const baseName = (UI['grade-base-name']?.value || '').trim().toLowerCase();
+        // The size the pattern is written in, however it was settled - typed as "M", or read off the
+        // pattern's widest row. Marked so the column the run is generated from can be told from the
+        // rest. Not when it is only the first size by default: with no pattern to read, no column is
+        // the base in any sense worth drawing attention to.
+        const baseName = base && base.source !== 'first' ? base.label : '';
 
         const head = `<thead><tr><th>Measurement</th>${sizeLabels
-            .map(l => `<th${l.toLowerCase() === baseName ? ' class="grade-base-col"' : ''}>${escapeHtml(l)}</th>`)
+            .map(l => `<th${l === baseName ? ' class="grade-base-col"' : ''}>${escapeHtml(l)}</th>`)
             .join('')}</tr></thead>`;
 
         const rows = garment.map(row => {
@@ -7762,7 +8589,14 @@
                 const target = cell.target === null ? '&mdash;' : bothUnits(cell.target);
                 const across = cell.across !== null && cell.across !== cell.target
                     ? `<span class="grade-across">(${bothUnits(cell.across)} per piece)</span>` : '';
-                return `<td><span class="grade-target">${target}</span>${across}<span class="grade-count">${count}</span></td>`;
+                // What the rounded count really measures, when that is not the target - the "rounding
+                // effects" column of a grading spreadsheet. A width's difference is per piece, which is
+                // where the rounding happened; a length's is the whole length.
+                const actual = isNum(cell.actualTarget) && cell.actualTarget !== cell.target
+                    ? `<span class="grade-actual">→ ${bothUnits(cell.actualTarget)} `
+                      + `(${signedBoth(cell.differenceInches)}${row.axis === 'width' ? ' per piece' : ''})</span>`
+                    : '';
+                return `<td><span class="grade-target">${target}</span>${across}${actual}<span class="grade-count">${count}</span></td>`;
             }).join('');
             // A locked or manual measurement looks exactly like a graded one in the table, so the row
             // says which it is rather than leaving them to be told apart by whether the numbers happen
@@ -7773,8 +8607,26 @@
                  + `<em class="grade-axis">${row.axis === 'width' ? 'width' : 'length'}</em>${mode}</th>${cells}</tr>`;
         }).join('');
 
-        wrap.innerHTML = `<div class="table-responsive"><table class="matrix-table grade-table">${head}<tbody>${rows}</tbody></table></div>`;
+        wrap.innerHTML = `<div class="table-responsive"><table class="matrix-table grade-table">${head}<tbody>${rows}</tbody></table></div>`
+            + roundingNoteHtml(garment, sources);
         return wrap;
+    }
+
+    /** Which piece's repeat each fitted measurement landed on: "Chest / Bust rounded to BACK's 6 + 1;
+     *  Upper Arm to whole stitches (SLEEVE)". Nothing when nothing was fitted. */
+    function roundingNoteHtml(garment, sources) {
+        const A = window.CrochetAnalyticsEngine;
+        const parts = garment
+            .filter(row => sources && sources[row.point])
+            .map(row => {
+                const fitted = row.sizes.find(cell => cell.repeat !== undefined);
+                const repeat = fitted && fitted.repeat ? fitted.repeat.label : '';
+                const label = A.MEASUREMENT_LABELS[row.point] || row.point;
+                return repeat
+                    ? `${escapeHtml(label)} rounded to ${escapeHtml(sources[row.point])}'s ${escapeHtml(repeat)}`
+                    : `${escapeHtml(label)} to whole stitches (${escapeHtml(sources[row.point])})`;
+            });
+        return parts.length ? `<p class="helper-text">${parts.join('; ')}.</p>` : '';
     }
 
     const round1 = window.CrochetAnalyticsEngine.round1;
@@ -7845,8 +8697,11 @@
      * CheckGarmentConstruction, PieceSpan and ShapedTail have since moved out: the Grader's
      * "Construction check" (renderConstructionCheck, section 8) reads the same three, held to
      * whatever the Generator's Construction dropdown says the pattern is, so that check no
-     * longer needed a door of its own. What is left here is the two planners still without one
-     * anywhere else - the yoke/sleeve planners and the measurement-impact graph.
+     * longer needed a door of its own. The planners have a second door too: the Grader's
+     * "Construction per size" (renderConstructionPerSize) runs them for every size from the graded
+     * cells, through PlanConstructionAtSize, and the override grid prints each measurement's reach
+     * from the same graph the impact panel walks. This tab remains the by-hand door - one size,
+     * counts typed, for a design with no chart - and the place the graph is explored on its own.
      *
      * Three rules hold for everything on this tab, and they are the same three the rest
      * of the app keeps:
@@ -8598,9 +9453,11 @@
           note: 'Whether the widest row is the full circumference or one panel of a pair.', apply: applySizingPieceOverride },
 
         { id: 'grade-rounding', kind: 'select', group: 'Grading', label: 'When a count does not fit',
-          note: 'How a graded stitch count resolves when the target falls between two valid counts.', apply: renderSectionProfiles },
+          note: 'How a graded stitch count resolves when the target falls between two valid counts.', apply: renderGrader },
         { id: 'grade-parity', kind: 'select', group: 'Grading', label: 'Number of repeats',
-          note: 'Whether a graded section must work a whole odd or even number of its repeat.', apply: renderSectionProfiles },
+          note: 'Whether a graded section must work a whole odd or even number of its repeat.', apply: renderGrader },
+        { id: 'grade-row-parity', kind: 'select', group: 'Grading', label: 'Row counts',
+          note: 'Whether graded lengths round to an even number of rows, so shaping starts on the right side.', apply: renderGrader },
         { id: 'gen-notation', kind: 'select', group: 'Grading', label: 'Generated notation',
           note: 'How multi-size instructions write their numbers: 82 (90, 98), brackets, or one size per line.', apply: renderGrader }
     ];

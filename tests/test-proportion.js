@@ -148,6 +148,28 @@ ok('and says what depth it would need', /of depth is needed/.test(
 ok('quoting the opening the armhole actually gives', /in opening/.test(
    shallow.filter(function (w) { return w.check.indexOf('Armhole') !== -1; })[0].detail));
 
+// The two ways a sleeve's ease goes wrong against the body's. Too much: +4 on an 11 in arm is more
+// than a cap can be eased into (2 in is plenty; the limit sits at 3 so a classic +2..+4 bust ease that
+// reaches the arm by default does not fire on the reference practice). Too little: +4 at the bust with
+// nothing at the arm is the common grading slip, and the sleeve is then too tight for its armhole.
+var wideSleeve = checks({ sizes: ['Medium'], pointEase: { upperArm: { value: 4, mode: 'in' } } });
+ok('too much sleeve ease is flagged', found(wideSleeve, 'Sleeve ease larger'));
+ok('quoting the ease', /upper arm 11 in, sleeve 15 in - 4 in of ease/.test(
+   wideSleeve.filter(function (w) { return w.check.indexOf('Sleeve ease larger') !== -1; })[0].detail));
+ck('three inches is within bounds', found(checks({ sizes: ['Medium'], pointEase: { upperArm: { value: 3, mode: 'in' } } }), 'Sleeve ease larger'), false);
+ok('the overall ease reaching the arm untouched is the case it is for',
+   found(A.CheckFitAndProportion({ garment: graded({ sizes: ['Medium'] }), sizes: ['Medium'] }), 'Sleeve ease larger'));
+var noArmEase = checks({ sizes: ['Medium'], pointEase: { upperArm: { value: 0, mode: 'in' } } });
+ok('too little sleeve ease against the bust is flagged', found(noArmEase, 'Sleeve ease disproportionately smaller'));
+ok('quoting both as shares of their measurement', /bust \+4 in \(\+10\.8%\), upper arm 0 in \(0%\)/.test(
+   noArmEase.filter(function (w) { return w.check.indexOf('disproportionately') !== -1; })[0].detail));
+ok('and what to consider', /Consider adding 1-2 in of upper-arm ease/.test(
+   noArmEase.filter(function (w) { return w.check.indexOf('disproportionately') !== -1; })[0].detail));
+ck('the sound garment\'s +2 on the arm is in proportion', found(checks({}), 'disproportionately'), false);
+ck('a bust with no ease has nothing to be out of proportion with',
+   found(checks({ sizes: ['Medium'], ease: { value: 0, mode: 'in' }, pointEase: { upperArm: { value: 0, mode: 'in' } } }), 'disproportionately'), false);
+ck('the first finding is still the bust check', negative[0].check, 'Finished bust smaller than the body');
+
 var SOUND_GARMENT = graded({ sizes: ['Medium'], pointEase: SOUND.pointEase });
 var neck = A.CheckFitAndProportion({
     garment: SOUND_GARMENT, sizes: ['Medium'],

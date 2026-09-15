@@ -7,15 +7,15 @@ ck('sits inside <header>', html.indexOf('usage-note') < html.indexOf('</header>'
 // One heading, and it says what the card is for rather than what the app is called - the sidebar
 // brand is two inches away and already carries the name.
 ck('the heading is what the card does',
-   /<h1>.*>Mathematical Crochet Pattern Validator<\/h1>/.test(html), true);
+   /<h1>.*>Validate Your Pattern<\/h1>/.test(html), true);
 // The one heading outside a .panel, so it carries the same icon disc the panel headings do.
 ck('and it wears a heading icon like the panels',
    /<h1><svg class="ic h-ic tint-[a-z]+"[^>]*><use href="#ic-math">/.test(html), true);
 ck('which names a symbol that exists', /<symbol id="ic-math"/.test(html), true);
 ck('and it does not say the name the sidebar already says', /<h1>[^<]*Stitch Math/.test(html), false);
 ck('no separate subtitle paragraph left behind',
-   /<p>Mathematical Crochet Pattern Validator<\/p>/.test(html), false);
-ck('after the heading', html.indexOf('Mathematical Crochet Pattern Validator') < html.indexOf('usage-note'), true);
+   /<p>Validate Your Pattern<\/p>/.test(html), false);
+ck('after the heading', html.indexOf('Validate Your Pattern</h1>') < html.indexOf('usage-note'), true);
 // The card is the measure: a cap left a third of the box empty beside every line.
 ck('the note is not capped short of the card',
    /\.usage-note \{[^}]*max-width/.test(css), false);
@@ -236,6 +236,8 @@ ck('through the pair\'s ink, not a raw hex', /color: var\(--field-ink\)/.test(ru
 ck('no raw hex in the rule', /#[0-9a-f]{3,6}/i.test(rule), false);
 // Firefox fades placeholders by default, which would undo the contrast measured below.
 ck('opacity is pinned', /opacity: 1/.test(rule), true);
+// Upright, in the same ink, a placeholder passed for an entry. The slant is what says "example".
+ck('and it is italic, so an empty field reads as empty', /font-style: italic/.test(rule), true);
 
 // The reason the colours are usable at all: every ink clears AA on its own fill, at rest and - since
 // focus lightens the field to paper, which can only raise the ratio - when focused.

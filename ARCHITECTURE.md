@@ -329,6 +329,156 @@ set individually. `piece: 'half'` halves widths only, for a body worked flat in 
 resolves nothing. Three that disagree report the disagreement and overwrite neither — deciding
 which of the designer's own numbers to discard is the inference the rule forbids.
 
+### The base size, and generating the other sizes from it
+
+A pattern is written in **one** size, and every other size the grader writes is a ratio against it.
+Which size that is decides every generated count, so `resolveBaseSize()` (`app.js` section 8) settles
+it once per grade, stores it on `state.grading.baseSize` as `{ label, source }`, and every panel that
+says "base" — the locked measurements in `ApplyDimensionModes`, the generated run, the yarn
+comparison, the marked column of the graded table — reads that one answer. The sources, in order:
+
+| Source | What it is |
+|---|---|
+| `named` | The name typed in **Base Size Name**, matched by `MatchSizeLabel()` in any spelling the chart's sizes go by — `M`, `Med`, `Medium`; `XL`, `Extra Large`; `2X`, `2XL`, `XXL`. Matched against the *whole* chart: a size that is named but unticked under "Sizes to grade" is returned with `excluded: true` and the run is not generated, with the reason said, rather than the pattern being read as some other size. |
+| `selected` | A pattern that already writes several sizes is validated at one of them (`meta-size`), and the counts on the page are that size's. |
+| `nearest` | `NearestSizeByCount()`: the graded size whose chest count is closest to the pattern's widest row. A reading, and reported as one — the note under the run names the count it was read from and how to override it. |
+| `first` | The first size graded, when there is no pattern to read from. Nothing is marked as the base in the table for this one. |
+
+A typed name that matches nothing falls through and is reported (`"Medum" is not a size on this
+chart`) alongside whatever was used instead, so a typo does not silently become a size.
+
+**Generation is the written count times a ratio, never the target restated.** `ScaleRowCounts()`
+takes the row's own count *and* `baseTarget`, the graded width of the base size; each size is
+`written × target / baseTarget`, and the size whose target *is* the base target gets the written
+count back untouched — not refitted to the repeat, because it was not generated. Before `baseTarget`
+existed the row's own count stood in for the base width, which is only true of a row that is the full
+width: every row came out as the chart's chest target, a Medium written at 80 sts was printed at the
+chart's 82, and a decrease row was indistinguishable from the straight rows around it.
+
+**A piece is a sequence, and a single shaping row keeps what it writes.** `ScaleRowSequence()` scales
+the first row of each piece as above and then applies, to every later row, the change the *written*
+row makes to the written row before it: a straight row stays at the row above, `sc2tog … sc2tog` takes
+two off in every size. Rows scaled one at a time each round on their own, and a Small's decrease row
+could come out one below its neighbour where the text plainly removes two — a size that the validator
+would then fail, written by the tool that validates.
+
+**A run of shaping rows is a rule, and the rule is regraded.** A tapered sleeve — `32 → 46 sts,
+increase every 4th row 7 times` — is three numbers that all move with size: how far the count travels,
+how many rows it has to do it in, and therefore how often. None of them can be read off the written
+rows for any size but the one they were written in, and rows are concrete steps (a `Rows 3-30` range
+is expanded to 28 of them), so which rows shape cannot be rewritten row by row. The generator writes
+what a technical editor writes instead: **one rule in size columns** —
+
+```
+Row 3: ch 1, turn, 2 sc in first st, sc in each st across to last st, 2 sc in last st (32 (33, 34, 36))
+Rows 4-27 (4-27, 4-27, 4-28): ch 1, turn, sc in each st across, working Row 3 again every 4th (4th, 4th, 3rd) row 5 (6, 6, 7) more times, then 4 (0, 0, 4) rows straight (42 (45, 46, 50))
+```
+
+`GradePieceRows()` is the entry point, one call per piece from `generatedInstructions()`. It finds the
+piece's runs with `ShapedRuns()` (`ShapedTail` applied to shrinking prefixes, so a taper and a cap are
+two runs), keeps the ones that are a rule — two or more events, each moving the same number of
+stitches — chains everything else through `ScaleRowSequence`, and hands each run to
+`GradeShapedRun()`. Per size that computes `to` (the written end scaled by the size's width over the
+base's, rounded to whole shaping events around the count the run is entered at), `rows` (the written
+span scaled by the size's length over the base's, when the piece has a graded length), and the
+spacing, via `DistributeShaping`. The rule is phrased *"once, then every Nth row X **more** times"*
+because that is what reproduces a uniformly written base exactly: `ShapedTail`'s `rows − 1` is the
+sum of the written intervals, so the remaining events divide it by the interval the designer used;
+distributing all the events over all the rows would move the first one and shift every other. An
+unevenly written base is redistributed evenly over the same rows to the same count, and the rule says
+so. A size the shaping does not fit — more events than rows, a count that does not move — prints a
+dash in every column and its reason on a line below; nothing is nudged to make it fit.
+
+**Each piece scales by its own measurement.** The piece's type (`grade-sy-*`, the designer's to set)
+names it through `SECTION_TYPES`: a sleeve by `upperArm` and `armLength`, a body by the bust. An
+untyped piece falls back to the bust and no graded length, and the note under the run says what to
+set. `readSectionInputs` re-renders the run for the same reason it re-renders the construction check.
+Row numbers after a rule are the base size's, which the note also says.
+
+`tests/test-generate.js` §3b–3g cover the engine; `tests/test-grader.js` §33–33b cover it through
+the page; `tests/test-construction.js` §2 covers `ShapedRuns` beside `ShapedTail`.
+
+### The tech editor's layer
+
+Built from what grading teachers and tech-editing checklists agree on (Sister Mountain's spreadsheet
+method, the CYC fit chart, Woods & Wool's yards-per-square-inch, KnitGrader). Each rule below is one
+the grader did not hold before 2026-09-15, and each keeps the house rules: nothing inferred silently,
+reported never corrected, the engine owns every number and sentence.
+
+**Only body circumferences halve.** `HALVED_POINTS` (chest, waist, hip) is what `piece: 'half'` shares
+between a front and a back. The cross back is a flat span, and a sleeve is one piece around the arm
+whether seamed or in the round — both were being halved, invisibly, because every consumer used ratios.
+`cell.share` says what a cell carried, and `TraceMeasurement` reads it.
+
+**The table shows the actual measurement the rounded count gives.** `GradeGarment` takes `rounding`
+as `{ byPoint, strategy, parity, rowParity }`: a width is fitted only when its point is a key, and the
+cell then carries `actualTarget` (the circumference the rounded count really measures) beside
+`target`, which `buildGradeTable` prints as `→ 42.5 in (+0.8 in per piece)` and a note names the piece
+whose repeat decided it. `repeatByPoint()` builds the map from `sectionProfiles()`: a repeat reaches a
+point **only through a section the designer has typed** as the piece worked to it — `tests/test-grader.js`
+§18e ("nothing read from the pattern reaches the table") still holds for an untyped section; §18f is
+the typed case. `rowParity: 'even'` (`#grade-row-parity`) rounds every length to an even row count so
+each new action starts on the right side, and reports the actual just the same. Locked cells carry the
+base's fit fields rather than recomputing (`ApplyDimensionModes`), and the actual reaches the CSV
+export and the schematic labels.
+
+**Ease follows the unit it was typed in.** `ResolveEase` returns `easeApplied` and `easeScales`: a
+percentage stays a percentage and scales with every size (10 % is 2.9 in on an X-Small and 4.9 in on
+a 2X); inches, centimetres, or an ease derived from body and finished stay one figure. The summary says
+"scales with size" or "fixed across sizes". Two sleeve checks in `CheckFitAndProportion`: upper-arm
+ease over `SLEEVE_EASE_LIMIT` (3 in — the classic band is +2…+4 and reaches the arm by default, so 2
+would fire on the reference practice) is "larger than a sleeve needs"; upper-arm ease under half the
+bust's *percentage* when the bust carries +2 in or more is "disproportionately smaller" — the +4 bust,
+0 arm slip that makes a sleeve too tight for its armhole.
+
+**The pattern states its sizes.** `SizingStatement()` — sample size, the ease its finished measurement
+really gives (and the designed ease when rounding moved it), finished and body measurements per size,
+"choose your size by your bust and upper arm" — rendered under the summary, opening the editing
+report, and in the pattern's own text and PDF export as `FINISHED SIZES:` (`buildGraderSection`).
+
+**The validation row that must read TRUE.** `GradePieceRows` now returns `totals` (rows and stitches
+per size, a rule's rows summed in closed form), `endCounts` and `widestCounts`; `CheckGradedPieces`
+holds each *typed* piece to its graded width (whole stitches both sides; tolerance half the repeat's
+multiple when the piece has one, else exact) and its graded rows (the written count scaled the way the
+chart grades the length). Rendered as "Per size, per piece" in the grading report, in the editing
+report, and as warnings that cost the size confidence. `gradedPieces()` in `app.js` is the one pass the
+report, the generated run, the yardage comparison and the export all read.
+
+**Yardage goes as area, measured from the sample.** `generatedEfforts` scales the base's stitch mix by
+each size's stitch *total* from `GradePieceRows` — width and rows — not by bust width. "Yarn used for
+the sample" (`#grade-sample-yards`) gives `YardsPerStitchFromSample`, which `EstimateSizeEffort` uses
+in place of the yarn-weight table (`yardsSource: 'sample' | 'table'`, said above the confidence table);
+a weighed swatch with a skein weight and length is the other route to the same figure.
+
+**Neck, shoulders and armholes** (Sister Mountain part 2, in crochet's words): `PlanNeckline` (neck ≈
+half the cross back, a share left unworked at the centre, the rest decreased at each edge over the
+lower two-thirds of the depth, both counts rounded to the cross back's parity so shoulders and sides
+are whole), `PlanShoulderSlope` (one step every two rows over the drop, via `SpaceEvenly`), and
+`PlanArmholeShaping` (a wrapper over `PlanSetInSleeve`'s armhole with an explicit piece contract:
+`pieceStitches − 2 × bindOff − decreases = crossBack` for one flat piece; a round is halved into a
+front and a back, an odd round reported). The panel asks only for what the chart lacks — neck depth,
+shoulder drop, the shares, the underarm — and plans every size from its graded cross back, bust and
+armhole depth; the calculation report carries the sentences. A plan a size cannot hold says which
+lever to move.
+
+**Construction per size.** The Construction tab's three planners take one size's counts by hand.
+`PlanConstructionAtSize` runs the same planners for every size from the graded cells — a raglan's
+front-and-back is the whole bust and its sleeves the upper arm; a set-in armhole's shoulder is the
+cross back and its cap begins at the upper arm; a circular yoke's separation is the bust and both
+sleeves; the yoke or armhole rows are the graded armhole depth — and asks only for what no chart
+carries: the neck circumference (yokes), cap height and top (set-in), increase rounds (circular). A
+size missing one of those says which and plans nothing. The panel (`#grade-construction-panel`,
+`renderConstructionPerSize`) follows the Generator's construction dropdown, reports every part of a
+plan that cannot be worked rather than the first the planner met, and the calculation report carries
+the sentences. The override grid now prints each measurement's downstream reach (`DependentsOf`)
+where the change is made. The Construction tab stays as the by-hand door.
+
+Tests: `tests/test-grader.js` §14c (halving), §16b/§18f (per-point rounding, even rows), §7–8/§14d/§14g
+(ease, statement, exports), §23 (persistence), §27 (reach), §31b (sample yardage), §33b (validation
+row), §36 (neck panel), §37 (construction per size); `tests/test-generate.js` §3h, §7b;
+`tests/test-proportion.js` §7; `tests/test-effort.js` §6; `tests/test-confidence.js` §6;
+`tests/test-neckline.js`.
+
 ---
 
 ## Construction

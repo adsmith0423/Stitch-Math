@@ -32,7 +32,7 @@ const KEEP_COMMENTS = process.argv.includes('--keep-comments');
 /* Load order, and it matters: app.js reads the globals the three before it define. tests.js is absent
    on purpose - it is a development harness, and loadDevOnlyScripts() adds it on a dev origin only. */
 const SCRIPTS = ['validator.js', 'analytics.js', 'persistence.js', 'pdf.js', 'app.js'];
-const STATIC = ['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
+const STATIC = ['manifest.webmanifest', 'icons/icon-StitchMath.png', 'icons/icon-512.png',
                 'icons/icon-maskable-512.png',
                 // The two type families, self-hosted so an installed copy reads in its own faces offline.
                 'fonts/Fredoka-latin.woff2', 'fonts/Nunito-latin.woff2', 'fonts/Nunito-latin-italic.woff2',

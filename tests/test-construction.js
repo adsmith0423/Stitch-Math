@@ -88,6 +88,21 @@ ck('nor has a piece of one row', A.ShapedTail(piece('B', 'body', [40]).worked).d
 ck('a piece that only grows has an increasing tail',
    A.ShapedTail(piece('S', 'sleeve', [40, 42, 44]).worked).direction, 'increase');
 
+// Every run, not only the last: the same sleeve read back as its taper and then its cap, in the
+// order they are worked, each with the rows it replaces.
+var runs = A.ShapedRuns(piece('S', 'sleeve', [60, 64, 68, 72, 72, 70, 68, 66]).worked);
+ck('a taper and a cap are two runs', runs.length, 2);
+ck('the taper first', runs[0].direction, 'increase');
+ck('from the piece\'s first row', runs[0].start, 0);
+ck('to its last increase', runs[0].end, 3);
+ck('then the cap', runs[1].direction, 'decrease');
+ck('entered from the last flat row before it', runs[1].start, 4);
+ck('and ending on the last decrease', runs[1].end, 7);
+ck('a run that follows another with no flat row between is found too',
+   A.ShapedRuns(piece('S', 'sleeve', [32, 34, 36, 34, 32]).worked).map(function (r) { return r.start + '-' + r.end; }).join(','),
+   '0-2,2-4');
+ck('a piece that never moves has no runs', A.ShapedRuns(piece('B', 'body', [40, 40, 40]).worked).length, 0);
+
 print('\n3. A raglan that works');
 var good = check('raglan', [piece('Yoke', 'yoke', soundRaglan()),
                             piece('Body', 'body', [180, 180]),

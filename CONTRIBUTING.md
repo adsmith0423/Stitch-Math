@@ -92,15 +92,17 @@ runners, and they run the same suites and must agree.
 ```
 npm test                    # everything, under Node — this is what CI runs
 npm run build               # dist/, the shipped copy
-npm run test:browser        # the storage suite, against a real browser (needs Playwright)
+npm run test:browser        # the storage and contrast suites, against a real browser (needs Playwright)
+npm run test:contrast       # the contrast suite alone
 ./run-tests.sh              # everything, under macOS JavaScriptCore
 ./run-tests.sh sizing       # only suites whose filename contains "sizing"
 ```
 
 `npm run test:browser` is separate on purpose. `npm test` runs anywhere with no install step, and
-that property is worth keeping; the storage suite needs a real IndexedDB and therefore a real
-browser. It is still a release blocker when it is red — it covers the one code path that can lose a
-designer's work, and with cloud sync descoped there is no second copy anywhere.
+that property is worth keeping; the storage suite needs a real IndexedDB and the contrast suite a
+layout engine, so both need a real browser. A red run is still a release blocker: storage covers
+the one code path that can lose a designer's work, and contrast is what the Readable theme's
+AAA claim rests on.
 
 **The browser suite needs Playwright, installed once per machine:**
 
@@ -121,7 +123,7 @@ source files did not have to change to run under Node.
 `./run-tests.sh` is kept as the macOS fallback and takes a filter argument, which the Node
 runner does not. Both exit non-zero on any failure, so either can gate a commit.
 
-The baseline is **4373 assertions, 0 failed** across 111 node:test cases, and the two runners report identical per-suite
+The baseline is **5002 assertions, 0 failed** across 113 node:test cases, and the two runners report identical per-suite
 counts. If a previously passing count drops, that is a regression; if one rises, check that
 an assertion was not simply loosened.
 

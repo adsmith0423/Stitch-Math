@@ -830,8 +830,13 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 #app-main { min-width: 0; padding: var(--shell-pad); position: relative; isolation: isolate; }
 
 /* ---- Brand ----
-   A ball of yarn with a pencil through it. Colours come from the stylesheet, not fill/stroke
-   attributes: a var() in a presentation attribute is not reliably resolved and falls back to black. */
+   The app icon - icons/icon-SMath.svg - inlined in index.html, so it stays crisp at 44px. The colours
+   are the file's own, as literals and NOT theme tokens, on purpose: the mark is the same picture as
+   the installed icon and has to look the same in every theme. Drawn from the pastel pairs it did
+   not - the dark theme's pastels are translucent tints, so on the dark rail every fill all but
+   vanished and the mark read as a wireframe. Stroke widths are in the icon's own units - an 85-unit
+   viewBox at 44px is about half a pixel a unit - and sit a little heavier than the file's 1.67, so
+   the lines hold at sidebar size. */
 .sidebar-brand {
     display: flex; align-items: center; gap: 10px;
     padding: 4px 6px 14px 6px; border-bottom: 1.5px solid rgba(var(--shade), 0.10);
@@ -840,16 +845,20 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
 /* The ball is a fill and a rim in two elements, not one stroked circle: the wraps are clipped to the
    ball, and a clip that keeps the wraps inside would eat the inner half of a stroke on the same
    circle. So the fill goes under the clipped group and the rim over it. */
-.mark-ball { fill: var(--mint); stroke: none; }
-.mark-rim { fill: none; stroke: var(--mint-ink); stroke-width: 1.4; }
-/* The band that went round last, filled in the ball's own colour so it OCCLUDES the wraps behind it
-   rather than crossing them. Its edges are stroked separately, as strands. */
-.mark-wrap { fill: var(--mint); stroke: none; }
-.mark-strand { fill: none; stroke: var(--lavender-ink); stroke-width: 1.5; stroke-linecap: round; opacity: 0.85; }
-.mark-pencil { fill: var(--butter); stroke: var(--butter-ink); stroke-width: 1.3; stroke-linejoin: round; }
-.mark-pencil-band { fill: var(--coral); stroke: var(--coral-ink); stroke-width: 1.3; }
-.mark-pencil-tip { fill: var(--peach); stroke: var(--peach-ink); stroke-width: 1.3; stroke-linejoin: round; }
-.mark-pencil-lead { fill: var(--ink); }
+/* The ball is a translucent tint of the icon's mint rather than the solid: the rail shows through
+   it, in every theme, and the wraps and rim carry its shape. The alpha is the dark theme's
+   pastel alpha - see --mint there - so on the night rail the ball sits at the same depth as
+   every other pastel surface. */
+.mark-ball { fill: rgba(192, 225, 214, 0.18); stroke: none; }
+.mark-rim { fill: none; stroke: #206C5C; stroke-width: 2.6; }
+.mark-strand { fill: none; stroke: #6154A2; stroke-width: 2.2; stroke-linecap: round; }
+/* The loose end running off the ball to the pencil's point: heavier than the wraps, as in the icon. */
+.mark-tail { stroke-width: 2.6; }
+.mark-pencil { fill: #FBF0C1; stroke: #775914; stroke-width: 2.2; stroke-linejoin: round; }
+.mark-pencil-band { fill: #FFC9BF; stroke: #A34330; stroke-width: 2.2; stroke-linejoin: round; }
+.mark-pencil-ferrule { fill: #737373; stroke: #4E4E4E; stroke-width: 2.2; stroke-linejoin: round; }
+.mark-pencil-tip { fill: #FFDAC9; stroke: #A34330; stroke-width: 2.2; stroke-linejoin: round; }
+.mark-pencil-lead { fill: #206C5C; }
 .brand-words strong {
     display: block; font-size: 1.2rem; font-weight: 600;
     color: var(--sidebar-ink); line-height: 1.2;
@@ -1366,13 +1375,17 @@ input[type="text"]   { --field: var(--sky);      --field-ink: var(--sky-ink); }
 input[type="number"] { --field: var(--butter);   --field-ink: var(--butter-ink); }
 select               { --field: var(--lavender); --field-ink: var(--lavender-ink); }
 textarea { font-family: var(--font-mono); resize: vertical; }
-/* In the field's own ink a placeholder reads as an invitation rather than as content, so the boxes
-   still waiting on the user stand out. Each ink carries at least 4.5:1 on its pastel by day and by
-   night. opacity is pinned because Firefox fades placeholders by default. select has none to style. */
+/* A placeholder is an example, not an answer, and it has to look like one: upright and in the
+   field's full ink it read as a figure already entered, and a form of placeholders passed for a
+   form filled in. Italic is the cue. Not a fade: the field is the pastel washed to near paper, and
+   the ink faded even a third of the way drops under 4.5:1 by day - test-layout section 13 holds
+   the placeholder to AA, as it should. Each ink clears that on its pastel by day and by night.
+   opacity is pinned because Firefox fades placeholders by default. select has none to style. */
 textarea::placeholder,
 input[type="text"]::placeholder,
 input[type="number"]::placeholder {
     color: var(--field-ink);
+    font-style: italic;
     opacity: 1;
 }
 /* On focus the well fills and rises: the inset pillow relaxes, a halo in the field's own colour
@@ -1758,6 +1771,7 @@ button:focus-visible {
 .grade-target { display: block; font-weight: 600; }
 .grade-count { display: block; font-size: var(--fs-xs); color: var(--text-muted); }
 .grade-across { display: block; font-size: var(--fs-xs); color: var(--text-muted); font-style: italic; }
+.grade-actual { display: block; font-size: var(--fs-xs); color: var(--text-muted); }
 /* Whether a measurement runs across the fabric or up it, and so whether it became stitches or rows. */
 .grade-axis {
     display: block; font-size: var(--fs-xs); font-weight: 400; font-style: normal;

@@ -71,6 +71,20 @@ ok('and the run\'s as the run\'s',
 ck('a warning about another size is ignored',
    score({ warnings: [{ size: 'Large', check: 'a', detail: '' }] }).score, medium.score);
 
+print('\n6. A count that rounds far from its target costs confidence');
+// Reachable only once the garment was graded WITH rounding - a plain conversion carries no
+// differenceInches, so there is nothing to deduct for. Medium bust 20.5 in a piece at 4 sts/in is 82;
+// fitted to 6 + 1 it becomes 85, three-quarters of an inch over.
+var fitted = A.GradeGarment({
+    category: 'woman', piece: 'half', gauge: GAUGE,
+    ease: { value: 4, mode: 'in' }, pointEase: { upperArm: { value: 2, mode: 'in' } },
+    rounding: { byPoint: { chest: { multiple: 6, plus: 1 } }, strategy: 'nearest', parity: 'any' }
+});
+var drifted = score({ garment: fitted, chartSizes: CHART });
+ok('a fitted count that drifts costs something', drifted.score < medium.score);
+ok('and says how far', drifted.reasons.some(function (r) { return /rounds 0\.75 in away/.test(r.reason); }));
+ck('a plain conversion is not penalised for rounding', medium.reasons.some(function (r) { return /rounds/.test(r.reason); }), false);
+
 print('\n7. The score is bounded and always explained');
 var awful = score({
     size: '5X', chartSizes: CHART,

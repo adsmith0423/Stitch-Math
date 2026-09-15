@@ -30,8 +30,8 @@
     <!-- Installable, and genuinely offline once served from a URL. See sw.js for the two caching
          strategies and why the page itself is the one thing fetched network-first. -->
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" href="icons/icon-StitchMath.png" sizes="192x192" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-StitchMath.png">
 </head>
 <body>
 <!-- ========================================================= -->
@@ -136,64 +136,31 @@
     <!-- === SIDEBAR ====================================== -->
     <aside id="app-sidebar">
         <div class="sidebar-brand">
-            <!-- A ball of yarn. Colors come from the stylesheet, not fill/stroke attributes: a var()
-                 in a presentation attribute is not reliably resolved and falls back to black. -->
-            <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-                <!-- A BALL OF WOUND YARN, not a wireframe globe.
-                     The difference is the construction, not the number of lines. A lattice of lines
-                     crossing at right angles is a net; yarn on a ball is many near-parallel wraps
-                     with the last few wraps crossing OVER them at an angle. So:
-                       - eight wraps running STEEPLY down and a little to the right, near-vertical
-                         rather than diagonal. They are ONE curve offset perpendicular to itself eight
-                         times at an even 3.4 apart, so every band between them is the same width.
-                         Struck from shared poles instead - the obvious way, and how this was first
-                         drawn - the bow has to differ per strand to fan them out, and equal steps of
-                         bow do not give equal gaps: the middle bands came out fat, the outer thin;
-                       - one broad band crossing them top to bottom and bulging right, filled in the
-                         BALL's colour so it hides the wraps behind it, with its two edges stroked as
-                         strands. That occlusion is the whole trick - drawn as two more lines over the
-                         top it reads as a lattice again, and it is what says "this went round last".
-                         Its DIRECTION carries as much as its existence: laid flat across the wraps
-                         the ball reads as a beach ball, and struck corner to corner as a globe. Down
-                         the middle with a rightward bulge is the one that reads as a wound skein.
-                     Everything is clipped to the ball, so wraps and band can be struck past the rim
-                     and simply disappear over the horizon. The rim is redrawn after the clipped
-                     group, or the clip would eat the inner half of its own outline.
-                     Colours come from the stylesheet, not fill/stroke attributes: a var() in a
-                     presentation attribute is not reliably resolved and falls back to black. -->
-                <defs><clipPath id="brand-ball"><circle cx="22" cy="24" r="13"></circle></clipPath></defs>
-                <circle class="mark-ball" cx="22" cy="24" r="13.5"></circle>
+            <!-- The app icon, inlined. The paths are icons/icon-SMath.svg's, with its 119-unit
+                 coordinates kept as they are and the viewBox cropped to the artwork, so the mark and
+                 the installed icon are the same drawing: change one and bring the other along - the
+                 PNGs in icons/ are rendered from that file. The colours are the file's too, set in
+                 the stylesheet as literals rather than theme tokens: the mark is the installed icon
+                 and looks the same in every theme - see the Brand block in style.css for why it is
+                 not drawn from the pastel pairs.
+                 Drawing order matters twice. The loose end is first, so the ball and the pencil's
+                 point both sit over it and it reads as yarn running out from under them; the ball's
+                 wraps are clipped to the ball and its rim is drawn after them, or the clip would eat
+                 the inner half of the rim's own stroke. -->
+            <svg class="brand-mark" viewBox="22.5 18 85 85" aria-hidden="true" focusable="false">
+                <defs><clipPath id="brand-ball"><circle cx="58.555" cy="52" r="26"></circle></clipPath></defs>
+                <path class="mark-strand mark-tail" d="M52.29,89.491C42.086,95.512 30.763,95.251 27.021,88.909C23.431,82.825 28.114,73.34 37.51,67.263"></path>
+                <circle class="mark-ball" cx="58.555" cy="52" r="26"></circle>
                 <g clip-path="url(#brand-ball)">
-                    <path class="mark-strand" d="M27.0 1.3C27.8 13.7 32.2 29.3 38.0 40.3M23.7 2.2C24.5 14.6 28.9 30.2 34.7 41.2M20.4 3.1C21.2 15.5 25.6 31.1 31.4 42.1M17.1 4.0C17.9 16.4 22.3 32.0 28.1 43.0M13.9 5.0C14.7 17.4 19.1 33.0 24.9 44.0M10.6 5.9C11.4 18.3 15.8 33.9 21.6 44.9M7.3 6.8C8.1 19.2 12.5 34.8 18.3 45.8M4.0 7.7C4.8 20.1 9.2 35.7 15.0 46.7"></path>
-                    <path class="mark-wrap" d="M27.6 10.7C18.5 17.2 15.3 28.4 19.6 38.7L14.4 37.3C10.1 26.9 13.3 15.7 22.4 9.3Z"></path>
-                    <path class="mark-strand" d="M27.6 10.7C18.5 17.2 15.3 28.4 19.6 38.7M22.4 9.3C13.3 15.7 10.1 26.9 14.4 37.3"></path>
+                    <path class="mark-strand" d="M62.078,34.554C68.353,40.317 72.241,49.416 71.879,59.504C71.646,65.975 69.698,71.914 66.571,76.739M58.022,38.373C62.704,44.076 65.462,51.93 65.154,60.497C64.917,67.077 62.907,73.107 59.686,77.976M54.304,43.795C57.121,48.857 58.664,54.966 58.429,61.49C58.246,66.577 57.004,71.335 54.961,75.482M49.06,76.209C45.685,70.975 43.677,64.422 43.677,57.313C43.677,45.923 48.832,35.959 56.508,30.563C59.018,28.798 61.797,27.523 64.754,26.845M41.744,72.984C39.7,68.703 38.401,63.804 38.088,58.554C37.381,46.672 41.909,35.972 49.235,29.887C51.74,27.807 54.571,26.267 57.633,25.403M71.725,30.064C68.603,30.731 65.677,32.032 63.055,33.844C55.562,39.023 50.555,48.381 50.555,59.055C50.555,66.23 52.817,72.81 56.576,77.926M67.045,32.083C74.341,37.689 78.999,47.512 78.603,58.511C78.432,63.272 77.333,67.745 75.518,71.699"></path>
                 </g>
-                <circle class="mark-rim" cx="22" cy="24" r="13.5"></circle>
-                <!-- A long butter pencil from bottom-left to top-right, pink eraser at the top, peach
-                     point at the foot. Drawn after the ball, so it lies in FRONT of it; the translate
-                     is applied after the rotation, so it slides the pencil down its own diagonal and
-                     across the ball's lower-right rather than straight through the middle. The
-                     leading translate is in user space and comes last of the three, so it simply
-                     nudges the finished pencil two to the right - clear of the ball's centre, and
-                     room on the left for the tail to swing through. -->
-                <g transform="translate(2 0) rotate(-45 24 24) translate(0 8)">
-                    <rect class="mark-pencil" x="9" y="20.7" width="26" height="6.6" rx="1.1"></rect>
-                    <rect class="mark-pencil-band" x="35" y="20.7" width="3.2" height="6.6"></rect>
-                    <rect class="mark-pencil-band" x="38.2" y="21.1" width="4.6" height="5.8" rx="2"></rect>
-                    <path class="mark-pencil-tip" d="M9 20.7 2.4 24 9 27.3z"></path>
-                    <path class="mark-pencil-lead" d="M4.9 22.7 2.4 24l2.5 1.3z"></path>
-                </g>
-                <!-- The loose end, and the only strand drawn after the pencil. It leaves the ball at
-                     the lower left, sweeps clear of the barrel and lands on the point at 14.3 44.8 -
-                     the same place the lead triangle comes to. Behind the pencil it vanished under
-                     the barrel a third of the way down and read as a strand that had been cut off;
-                     in front, the pencil is drawing the yarn. It leaves the ball at the lower left
-                     and swings wide before it lands, because a short one read as a snipped end
-                     rather than as yarn still running off the ball.
-                     Move the pencil and this must follow: 16.4 44.9 is where the lead comes to a
-                     point in user space AFTER all three of its transforms, not a coordinate of its
-                     own - it is 2 to the right of where it was because the pencil now is. -->
-                <path class="mark-strand" d="M11.5 32.5C5.5 36 3 41 5.5 44.3C8.2 47.6 13.2 47.2 16.4 44.9"></path>
+                <circle class="mark-rim" cx="58.555" cy="52" r="24.8"></circle>
+                <!-- The pencil, eraser end first so each piece overlaps the one behind it. -->
+                <path class="mark-pencil-band" d="M94.074,36.052C94.619,35.507 95.359,35.201 96.13,35.201C96.902,35.201 97.641,35.507 98.187,36.052C99.81,37.676 102.064,39.93 103.688,41.553C104.233,42.099 104.539,42.838 104.539,43.61C104.539,44.381 104.233,45.121 103.688,45.666C102.224,47.13 100.515,48.838 100.515,48.838L90.902,39.225C90.902,39.225 92.61,37.516 94.074,36.052Z"></path>
+                <path class="mark-pencil-ferrule" d="M90.359,39.225L100.515,49.381L95.515,54.381L85.359,44.225L90.359,39.225Z"></path>
+                <path class="mark-pencil" d="M84.555,45.029L94.711,55.185L63.001,86.895L52.845,76.739L84.555,45.029Z"></path>
+                <path class="mark-pencil-tip" d="M48.349,91.587L53.041,76.739L63.198,86.895L48.349,91.587Z"></path>
+                <path class="mark-pencil-lead" d="M49.349,90.587L50.16,85.857L54.079,89.776L49.349,90.587Z"></path>
             </svg>
             <div class="brand-words">
                 <strong>Stitch Math</strong>
@@ -554,14 +521,14 @@
         <!-- What the card is for, not what the app is called. The sidebar brand says "Stitch Math"
              two inches away, so a heading that said it again - over a subtitle explaining itself -
              was the name twice and two lines doing one line's work. -->
-        <h1><svg class="ic h-ic tint-lavender" aria-hidden="true" focusable="false"><use href="#ic-math"></use></svg>Mathematical Crochet Pattern Validator</h1>
+        <h1><svg class="ic h-ic tint-lavender" aria-hidden="true" focusable="false"><use href="#ic-math"></use></svg>Validate Your Pattern</h1>
         <p class="usage-note">
-            Paste your pattern into the box on the right. Put one row on each line.
+            Paste your pattern into the box below. Put one row on each line.
             Write it the normal way, like <code>[sc, inc] x 6</code>.
             Stitch Math counts the stitches in every row for you.
-            If a row does not add up, it marks that row and tells you what probably went wrong.
-            Fill in your gauge swatch on the left to find out how much yarn you need.
-            When you are done, click <strong>Save as Text</strong> to save your pattern with the counts fixed.
+            If a row does not add up, it marks that row and says what probably went wrong.
+            Gauge and yardage are on <strong>Gauge Profile</strong>; other sizes are on <strong>Size Grader</strong>.
+            When you are done, <strong>Save as Text</strong> writes the pattern out with every count corrected.
         </p>
     </header>
 
@@ -613,7 +580,7 @@
             <div id="gauge-profile-panel" class="panel-card">
                 <div class="panel-header">
                     <h3><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-tape"></use></svg>Yarn & Gauge Profile</h3>
-                    <p>Record your working swatch. Stitch Math automatically computes stitch density, row density, yarn estimates, and stores each swatch in your project history.</p>
+                    <p>Record your swatch. Stitch density, row density and the yarn estimate are worked out from it, and every swatch is kept in the project&rsquo;s history.</p>
                 </div>
 
                 <div class="gauge-grid">
@@ -1080,9 +1047,9 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <details class="help-topic">
                         <summary>6. Terms Stitch Math does not know</summary>
                         <div class="help-body">
-                            <p>If your pattern uses a stitch it cannot count, add it in <strong>Library</strong>: how many stitches it <em>uses</em> and how many it <em>makes</em>.</p>
+                            <p>If your pattern uses a stitch it cannot count, add it in <strong>Stitch Library</strong>: how many stitches it <em>uses</em> and how many it <em>makes</em>.</p>
                             <p>Colorwork like <code>With A, ch 146</code> works without any setup. Adding the colors just puts names to the letters.</p>
-                            <p>Custom stitches last as long as the page does &mdash; a term defined for one pattern is not carried into the next.</p>
+                            <p>Custom stitches are saved with the project and come back when it is loaded. <strong>New File</strong> starts with an empty dictionary, so a term defined for one pattern is not carried into the next.</p>
                         </div>
                     </details>
 
@@ -1090,11 +1057,15 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                         <summary>7. Save, print and export</summary>
                         <div class="help-body">
                             <ul class="help-points">
-                                <li><strong>Patterns</strong> &mdash; name a project and Save File. It stays in this browser.</li>
-                                <li><strong>Save as Text</strong> &mdash; your pattern with the counts corrected.</li>
-                                <li><strong>Save as PDF</strong> &mdash; the pattern as a PDF file, with the metadata and stitch table.</li>
-                                <li><strong>Export</strong> &mdash; generated multi-size instructions once a pattern is graded.</li>
+                                <li><strong>Save File</strong>, on Patterns &mdash; name the project and save it. It stays in this browser, and autosave keeps recovery points between saves.</li>
+                                <li><strong>Export Project</strong> &mdash; the project as a file on your device. This is the copy you own; <strong>Import Project</strong> brings it back.</li>
+                                <li><strong>Save as Text</strong> &mdash; the pattern with every stitch count corrected.</li>
+                                <li><strong>Save as PDF</strong> &mdash; the pattern as a PDF, with its metadata and stitch table.</li>
+                                <li><strong>Export annotated draft</strong> &mdash; the pattern with the linter&rsquo;s marks still on it, for review.</li>
+                                <li><strong>Export gauge history</strong> &mdash; every swatch you have logged, as a file.</li>
+                                <li><strong>Multi-size package</strong> &mdash; generated instructions for every graded size.</li>
                             </ul>
+                            <p>All of these are on <strong>Export</strong>; Save as Text and Save as PDF are under the pattern in Studio as well.</p>
                             <p class="help-warning">Everything is stored in this browser only. Clearing your browser data removes your saved projects, so export anything you want to keep.</p>
                         </div>
                     </details>
@@ -1133,8 +1104,8 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <h3 class="settings-group">Appearance</h3>
                     <div class="setting-row">
                         <div class="setting-text">
-                            <label for="theme-mode">Appearance</label>
-                            <p class="setting-note">Match system follows whatever your device is set to, and changes with it. Readable is a high-contrast page &mdash; near-black on cream, larger and plainer type, no decoration &mdash; for when getting through the pattern matters more than how it looks.</p>
+                            <label for="theme-mode">Theme</label>
+                            <p class="setting-note">Match system follows your device and changes with it. Readable is a high-contrast page &mdash; near-black on cream, larger and plainer type, no decoration &mdash; for when getting through the pattern matters more than how it looks.</p>
                         </div>
                         <div class="setting-control">
                             <select id="theme-mode">
@@ -1360,12 +1331,13 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                  panel runs the other way, measuring what you wrote. -->
             <section class="panel" id="grader-section">
                 <h2><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-needles"></use></svg>Garment Grader</h2>
-                <p class="helper-text">Enter the size this pattern was written for, then grade it to the others. Ease is never assumed &mdash; give any two of body, finished and ease and the third is worked out and labeled. One ease figure applies throughout, and every measurement is graded as one piece of a pair worked flat &mdash; half the finished circumference.</p>
+                <p class="helper-text">Enter the size this pattern was written for, then grade it to the others. Ease is never assumed: give any two of body, finished and ease and the third is worked out and labeled. One ease figure applies throughout, and every measurement is graded as one piece of a pair worked flat &mdash; half the finished circumference.</p>
 
                 <div class="form-container">
                     <div class="form-group">
                         <label for="grade-base-name">Base Size Name</label>
-                        <input type="text" id="grade-base-name" autocomplete="off" placeholder="e.g. Medium">
+                        <input type="text" id="grade-base-name" autocomplete="off" placeholder="e.g. Medium, M, XL, 2X">
+                        <p class="helper-text">The size the pattern is written in. Left blank, it is read from the pattern's widest row against the chart, and the generated run says which size it read.</p>
                     </div>
                     <div class="form-pair">
                         <div class="form-group">
@@ -1399,6 +1371,10 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                 </div>
 
                 <div id="grade-summary" class="grade-summary"><em>Enter a base size to begin.</em></div>
+                <!-- What a published pattern says about its sizes - sample size, its ease and fit, the
+                     finished measurement of every size, how to choose - filled once a chart is graded.
+                     The same lines go into the editing report and the pattern's own export. -->
+                <div id="grade-sizing-statement" class="grade-summary"></div>
 
                 <details id="grade-options">
                     <summary>Sizes, ease and rounding</summary>
@@ -1425,6 +1401,15 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                                 <option value="odd">Odd &mdash; centers a repeat</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <!-- A grader's habit: round every length to an even number of rows, so each
+                                 new action - a shaping row, a neckline - starts on the right side. -->
+                            <label for="grade-row-parity">Row counts</label>
+                            <select id="grade-row-parity">
+                                <option value="any">Nearest row</option>
+                                <option value="even">Even &mdash; shaping starts on the right side</option>
+                            </select>
+                        </div>
                     </div>
                 </details>
 
@@ -1449,9 +1434,10 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
 
                 <div id="grade-tables"></div>
 
-                <!-- The pattern's own sections, and the stitch multiple each repeats over. Kept out of
-                     the graded table above: that table is one chart for the whole garment, and a repeat
-                     belongs to one piece of it. -->
+                <!-- The pattern's own sections, and the stitch multiple each repeats over. The graded
+                     table above is one chart for the whole garment, and a repeat belongs to one piece
+                     of it - so a repeat reaches a measurement in that table only through a section the
+                     designer has TYPED as the piece worked to it, never on the strength of a heading. -->
                 <div id="grade-sections"></div>
 
                 <!-- CheckGarmentConstruction, read against the same Construction field the generated
@@ -1496,6 +1482,82 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <div id="motif-output"></div>
                 </details>
 
+                <!-- The three shaping plans a grader works out from the cross back, per size: a front
+                     neckline (about half the cross back, a share of it left unworked at the centre, the
+                     rest decreased over the lower two-thirds of the depth), a sloped shoulder, and an
+                     armhole down to the cross back. The chart carries no neck depth or shoulder drop,
+                     so those two are asked for; blank means the placeholder. -->
+                <details id="grade-neck-panel">
+                    <summary>Neck, shoulders and armholes</summary>
+                    <p class="helper-text">Planned from each size's graded cross back and armhole depth. A blank field uses the figure shown in it.</p>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-neck-depth">Front neck depth</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="grade-neck-depth" step="0.25" min="0" placeholder="3">
+                                <select id="grade-neck-unit" class="unit-input">
+                                    <option value="in">in</option><option value="cm">cm</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="grade-shoulder-drop">Shoulder drop</label>
+                            <input type="number" id="grade-shoulder-drop" step="0.25" min="0" placeholder="1">
+                        </div>
+                    </div>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-neck-share">Neck width, % of cross back</label>
+                            <input type="number" id="grade-neck-share" step="5" min="10" max="90" placeholder="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="grade-neck-bindoff">Left unworked at the centre, % of neck</label>
+                            <input type="number" id="grade-neck-bindoff" step="5" min="0" max="100" placeholder="40">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="grade-armhole-bindoff">Underarm stitches given up at once, each side</label>
+                        <input type="number" id="grade-armhole-bindoff" step="0.25" min="0" placeholder="0.75">
+                        <p class="helper-text">In the neck-depth unit. Graders give up 1.5&ndash;2.5 cm (0.6&ndash;1 in) each side before decreasing.</p>
+                    </div>
+                    <div id="grade-neck-output"></div>
+                </details>
+
+                <!-- The yoke and sleeve planners of the Construction tab, run for every size from the
+                     graded bust, upper arm, cross back and armhole depth, for the construction chosen
+                     under Generated instructions. The tab's forms take one size's counts by hand; here
+                     only what no chart carries is asked for. -->
+                <details id="grade-construction-panel">
+                    <summary>Construction per size</summary>
+                    <p class="helper-text">Planned for the construction chosen under Generated instructions, from each size's graded bust, upper arm, cross back and armhole depth. A blank field uses the figure shown in it; the neck circumference has no chart figure and must be given.</p>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-con-neck">Neck circumference (yokes)</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="grade-con-neck" step="0.25" min="0" placeholder="e.g. 22">
+                                <select id="grade-con-unit" class="unit-input">
+                                    <option value="in">in</option><option value="cm">cm</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="grade-con-rounds">Increase rounds (circular yoke)</label>
+                            <input type="number" id="grade-con-rounds" step="1" min="1" placeholder="3">
+                        </div>
+                    </div>
+                    <div class="form-pair">
+                        <div class="form-group">
+                            <label for="grade-con-cap-height">Cap height (set-in sleeve)</label>
+                            <input type="number" id="grade-con-cap-height" step="0.25" min="0" placeholder="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="grade-con-cap-top">Cap top width (set-in sleeve)</label>
+                            <input type="number" id="grade-con-cap-top" step="0.25" min="0" placeholder="3">
+                        </div>
+                    </div>
+                    <div id="grade-construction-output"></div>
+                </details>
+
                 <!-- Generated multi-size instructions, and the package they export in. -->
                 <details id="grade-output-panel">
                     <summary>Generated instructions and export</summary>
@@ -1512,6 +1574,19 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                             <label for="gen-construction">Construction</label>
                             <select id="gen-construction"></select>
                         </div>
+                    </div>
+                    <!-- Yarn goes as area, and the surest figure for this yarn at this gauge is the
+                         sample itself. Given what it used, every size's yardage is measured from it
+                         rather than looked up in the yarn-weight table. -->
+                    <div class="form-group">
+                        <label for="grade-sample-yards">Yarn used for the sample</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="grade-sample-yards" step="1" min="0" placeholder="e.g. 900">
+                            <select id="grade-sample-yards-unit" class="unit-input">
+                                <option value="yd">yd</option><option value="m">m</option>
+                            </select>
+                        </div>
+                        <p class="helper-text">Optional. Left blank, yardage comes from the yarn-weight table, or from the swatch weight and skein length on Gauge Profile when both are given.</p>
                     </div>
                     <div id="gen-output"></div>
                     <div id="export-package"></div>
@@ -1583,19 +1658,19 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <form id="row-form">
                         <div class="form-container">
                             <div class="form-group full-width">
-                                <label for="initial-chain-input"># of Initial Chains (Step 1 only):</label>
+                                <label for="initial-chain-input">Starting Chains (first row only)</label>
                                 <input type="number" id="initial-chain-input" value="0" min="0" required>
                             </div>
                             <div class="form-group full-width">
-                                <label for="tokens-input">Row Instructions:</label>
+                                <label for="tokens-input">Row Instructions</label>
                                 <input type="text" id="tokens-input" placeholder="[sc, inc] x 3, dc">
                             </div>
                             <div class="form-group">
-                                <label for="multiplier-input">Sequence Multiplier (Repeats):</label>
+                                <label for="multiplier-input">Times to Work This Row</label>
                                 <input type="number" id="multiplier-input" value="1" min="1" required>
                             </div>
                             <div class="form-group">
-                                <label for="expected-yield-input">Expected Stitch Count:</label>
+                                <label for="expected-yield-input">Expected Stitch Count</label>
                                 <input type="number" id="expected-yield-input" value="0" min="0">
                             </div>
                         </div>

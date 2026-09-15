@@ -45,7 +45,7 @@ const PRECACHE = [
     `./pdf.js?v=${VERSION}`,
     `./app.js?v=${VERSION}`,
     './manifest.webmanifest',
-    './icons/icon-192.png',
+    './icons/icon-StitchMath.png',
     './icons/icon-512.png',
     './icons/icon-maskable-512.png',
     './fonts/Fredoka-latin.woff2',
