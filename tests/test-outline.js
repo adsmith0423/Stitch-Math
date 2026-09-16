@@ -42,6 +42,8 @@ var COMPLETE = [
 print('\n1. Nothing written yet');
 load(['']);
 ck('the badge says so', badgeState(), 'empty');
+// Nothing was checked, so there is nothing to say a tick proves.
+no('and no scope line before anything is checked', /not check gauge/.test(badgeText()));
 
 print('\n2. A pattern that adds up but states nothing about itself');
 load(['Rnd 1: 6 sc in magic ring (6)', 'Rnd 2: inc in each st around (12)']);
@@ -49,6 +51,7 @@ ck('math sound, not finished', badgeState(), 'incomplete');
 ok('and it names what is missing', badgeText().indexOf('Hook Size') >= 0);
 ok('including the gauge', badgeText().indexOf('Gauge') >= 0);
 ok('and the abbreviations key', badgeText().indexOf('Abbreviations Key') >= 0);
+ok('and says what a tick proves', badgeText().indexOf('not check gauge') >= 0);
 
 print('\n3. A complete pattern');
 load(COMPLETE);
@@ -57,6 +60,9 @@ ok('and it says every round adds up', badgeText().indexOf('add up') >= 0);
 // The checklist is shown whatever the verdict, so a valid pattern says WHY it is valid.
 ok('the four elements are still listed', badgeText().indexOf('Yarn Weight') >= 0);
 ok('each saying where it was read from', badgeText().indexOf('from the pattern') >= 0);
+// A valid pattern is exactly where "Valid" would be read as "will fit" - the scope line sits under
+// the tick, not on the Settings view, for that reason.
+ok('and what the tick does and does not prove', badgeText().indexOf('not check gauge') >= 0);
 
 print('\n3b. Filling the metadata form updates the badge without re-validating');
 // Two of the four elements can be satisfied from the form and the gauge calculator, neither of which
@@ -79,6 +85,7 @@ broken[broken.length - 1] = 'Rnd 3: [sc, inc] x 9 (18)';
 load(broken);
 ck('not valid', badgeState(), 'invalid');
 ok('and it counts the failing rounds', badgeText().indexOf('do not add up') >= 0 || badgeText().indexOf('does not add up') >= 0);
+ok('the scope line is there whatever the verdict', badgeText().indexOf('not check gauge') >= 0);
 
 print('\n5. An unrecognised stitch is not "valid" either');
 // A green tick over totals computed without one of the stitches would be the worst thing this badge

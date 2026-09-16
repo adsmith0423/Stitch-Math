@@ -120,6 +120,9 @@
         <p id="modal-text" class="modal-text"></p>
         <div class="modal-actions">
             <button type="button" id="modal-cancel" class="btn-secondary">Cancel</button>
+            <!-- A third answer some questions offer (the template picker's "Append"). Hidden until
+                 askConfirm is given a label for it, so the two-button questions stay two buttons. -->
+            <button type="button" id="modal-alt" class="btn-secondary hidden"></button>
             <button type="button" id="modal-confirm" class="btn-dark">Continue</button>
         </div>
     </div>
@@ -1018,7 +1021,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                         <div class="help-body">
                             <p>The <strong>Pattern Validation Matrix</strong> gives every row a line. <strong>Calc Total</strong> is what Stitch Math counted; <strong>User Total</strong> is what you wrote.</p>
                             <ul class="help-points">
-                                <li><span class="help-swatch swatch-pass"></span> <strong>Green</strong> &mdash; the row adds up.</li>
+                                <li><span class="help-swatch swatch-pass"></span> <strong>Green</strong> &mdash; the row adds up. That is arithmetic only; it says nothing about gauge or fit.</li>
                                 <li><span class="help-swatch swatch-fail"></span> <strong>Red</strong> &mdash; the row cannot be worked as written. The reason is in the last column.</li>
                                 <li><span class="help-swatch swatch-blocked"></span> <strong>Gray</strong> &mdash; not checked, because an earlier row has to be fixed first.</li>
                             </ul>

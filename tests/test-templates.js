@@ -121,3 +121,41 @@ ck('and it validates', failingRows().join(',') || 'none', 'none');
 window.confirm = undefined;
 
 endSuite();
+
+print('\n7. Answering "Append" keeps the pattern and adds the rows under it');
+// The third answer the modal offers. Headless there is no third button, so the confirm() stub says
+// the alt label itself - see askConfirm's fallback - which is how the append path is reached here.
+window.confirm = function () { return 'Append'; };
+$('bulk-input').value = 'Hook: 5.5mm\nYarn: Worsted\nGauge: 12 dc x 7 rows = 4 in.\n\nAbbreviations\ndc = double crochet\n\nBody\nRow 1: ch 10\nRow 2: dc in 3rd ch from hook, dc in each ch across (8)';
+var kept = $('bulk-input').value;
+insertButton(2).fire('click');                       // the stacked sphere
+var after = $('bulk-input').value;
+ok('the existing pattern is still at the top', after.indexOf(kept) === 0);
+ok('the sphere rows are under it', after.indexOf('Rnd 1: 6 sc in MR (6)') > kept.length);
+ok('joined by one blank line', after.indexOf(kept + '\n\nSPHERE\n') === 0);
+ck('with no second hook line', (after.match(/^Hook:/gm) || []).length, 1);
+ck('nor a second key', (after.match(/^Abbreviations$/gm) || []).length, 1);
+ck('and the whole thing validates', failingRows().join(',') || 'none', 'none');
+
+print('\n8. Appending to an empty editor is the same as inserting');
+$('bulk-input').value = '';
+insertButton(2).fire('click');
+ok('front matter and all', $('bulk-input').value.indexOf('Hook:') === 0);
+
+print('\n9. Every skeleton appends clean under every other');
+// Kitbashing is the point of the bracket shorthand, so the pairs are checked rather than assumed. The
+// granny square sets the discount convention when it goes in, and that has to hold for what it lands
+// under too - which is why it is appended last in its pairs rather than first.
+var dirty = [];
+for (var a = 0; a < count; a++) {
+    for (var b = 0; b < count; b++) {
+        if (a === b) continue;
+        $('bulk-input').value = '';
+        insertButton(a).fire('click');
+        insertButton(b).fire('click');
+        var bad = failingRows();
+        if (bad.length) dirty.push(templateName(a) + ' + ' + templateName(b) + ' rows ' + bad.join(','));
+    }
+}
+ck('no pair has a failing row', dirty.join(' | ') || 'none', 'none');
+window.confirm = function () { return true; };

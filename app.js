@@ -3299,10 +3299,10 @@
      * A rounded piece can distribute its increases two ways, and the choice is visible in the finished
      * object rather than in any number:
      *
-     *   stacked   (2 sc, inc) * 6                    every increase in the same position each round,
+     *   stacked   [2 sc, inc] x 6                    every increase in the same position each round,
      *                                                so six columns run radially and the circle
      *                                                creases along them - it comes out a hexagon.
-     *   seamless  1 sc, inc, (2 sc, inc) * 5, 1 sc   one base run split across the round boundary,
+     *   seamless  sc, inc, [2 sc, inc] x 5, sc       one base run split across the round boundary,
      *                                                which rotates the column and spreads the tension.
      *
      * The two are ARITHMETICALLY IDENTICAL - same six increases, same 6k plain stitches, same cost and
@@ -3310,110 +3310,136 @@
      * they are offered as pairs: the difference is a design decision, and the only honest way to teach
      * it is to let someone insert both and look at the two.
      *
-     * Within a pair the notation matches (the sphere and circle pairs in "(...) * N", the beanie pair
-     * in "[...] x N") so that the strategy is the ONLY thing that differs between them. Across pairs it
-     * varies on purpose - both spellings are valid and a designer meets each.
+     * BRACKET SHORTHAND, NOT PROSE.
+     *
+     * Every row is written the way the editor's own help text writes it - "[sc, inc] x 6 (18)" - and
+     * never as "single crochet in the next stitch, then two single crochet in the next stitch, repeat
+     * around". The skeletons are a base for kitbashing: a designer copies one in, changes a repeat
+     * count, swaps a stitch, splices the crown of one onto the sides of another. Prose would have to
+     * be re-read and re-typed to do any of that; a bracket line is edited in place. And a beginner
+     * who is given the repeat rather than its expansion still has to work out what the repeat does,
+     * which is the exercise. The notation is uniform across all eight ("[...] x N", "MR", "around",
+     * "join with sl st") so that any row from any skeleton can be dropped into any other.
+     *
+     * Titles are CAPS ("SPHERE", "CROWN") because that is what the editor reads as the start of a new
+     * piece - a title-case line is just a note, and the rows under it would be measured against the
+     * piece before. Alone, a skeleton never notices; under another one, the scarf's foundation chain
+     * was failing for leaving the beanie's 48 stitches unworked.
+     *
+     * Each is kept as `front` (hook, yarn, gauge, key) and `body` (title and rows) because the picker
+     * offers two ways in: REPLACE the editor, which takes the whole thing, and APPEND to what is
+     * there, which takes only the body - a second "Hook:" line under a pattern that already has one
+     * would be exactly the noise kitbashing is meant to avoid. `text` is the two joined, and is what
+     * the tests and the replace path read.
      */
     const PATTERN_TEMPLATES = [
         {
             id: 'circle-stacked',
             name: 'Flat Circle (stacked)',
             blurb: 'Increases pile up in six columns, so the disc reads as a hexagon. Choose it when you want visible structure — or to see what staggering fixes.',
-            text: AMIGURUMI_FRONT_MATTER.concat([
-                'Flat Circle',
-                'Rnd 1: 6 sc in magic ring (6)',
-                'Rnd 2: inc in each st around (12)',
-                'Rnd 3: (1 sc, inc) * 6 (18)',
-                'Rnd 4: (2 sc, inc) * 6 (24)',
-                'Rnd 5: (3 sc, inc) * 6 (30)',
-                'Rnd 6: (4 sc, inc) * 6 (36)'
-            ]).join('\n')
+            front: AMIGURUMI_FRONT_MATTER,
+            body: [
+                'FLAT CIRCLE',
+                'Rnd 1: 6 sc in MR (6)',
+                'Rnd 2: inc x 6 (12)',
+                'Rnd 3: [sc, inc] x 6 (18)',
+                'Rnd 4: [2 sc, inc] x 6 (24)',
+                'Rnd 5: [3 sc, inc] x 6 (30)',
+                'Rnd 6: [4 sc, inc] x 6 (36)'
+            ]
         },
         {
             id: 'circle-seamless',
             name: 'Flat Circle (seamless)',
             blurb: 'The same stitch counts, round for round — but each even round splits its first run across the join, rotating the increases so the disc lies flat and smooth.',
-            text: AMIGURUMI_FRONT_MATTER.concat([
-                'Flat Circle',
-                'Rnd 1: 6 sc in magic ring (6)',
-                'Rnd 2: inc in each st around (12)',
-                'Rnd 3: (1 sc, inc) * 6 (18)',
-                'Rnd 4: 1 sc, inc, (2 sc, inc) * 5, 1 sc (24)',
-                'Rnd 5: (3 sc, inc) * 6 (30)',
-                'Rnd 6: 2 sc, inc, (4 sc, inc) * 5, 2 sc (36)'
-            ]).join('\n')
+            front: AMIGURUMI_FRONT_MATTER,
+            body: [
+                'FLAT CIRCLE',
+                'Rnd 1: 6 sc in MR (6)',
+                'Rnd 2: inc x 6 (12)',
+                'Rnd 3: [sc, inc] x 6 (18)',
+                'Rnd 4: sc, inc, [2 sc, inc] x 5, sc (24)',
+                'Rnd 5: [3 sc, inc] x 6 (30)',
+                'Rnd 6: 2 sc, inc, [4 sc, inc] x 5, 2 sc (36)'
+            ]
         },
         {
             id: 'sphere-stacked',
             name: 'Amigurumi Sphere (stacked)',
             blurb: 'Continuous rounds from a magic ring: increase to the middle, straight sides, decrease away. Increases and decreases both stack, so the shape has six soft facets.',
-            text: AMIGURUMI_FRONT_MATTER.concat([
-                'Sphere',
-                'Rnd 1: 6 sc in magic ring (6)',
-                'Rnd 2: inc in each st around (12)',
-                'Rnd 3: (1 sc, inc) * 6 (18)',
-                'Rnd 4: (2 sc, inc) * 6 (24)',
-                'Rnd 5-8: sc in each st around (24)',
-                'Rnd 9: (2 sc, dec) * 6 (18)',
-                'Rnd 10: (1 sc, dec) * 6 (12)',
-                'Rnd 11: dec * 6 (6)'
-            ]).join('\n')
+            front: AMIGURUMI_FRONT_MATTER,
+            body: [
+                'SPHERE',
+                'Rnd 1: 6 sc in MR (6)',
+                'Rnd 2: inc x 6 (12)',
+                'Rnd 3: [sc, inc] x 6 (18)',
+                'Rnd 4: [2 sc, inc] x 6 (24)',
+                'Rnd 5-8: sc around (24)',
+                'Rnd 9: [2 sc, dec] x 6 (18)',
+                'Rnd 10: [sc, dec] x 6 (12)',
+                'Rnd 11: dec x 6 (6)'
+            ]
         },
         {
             id: 'sphere-seamless',
             name: 'Amigurumi Sphere (seamless)',
             blurb: 'Identical counts to the stacked sphere, with the shaping rotated on the even rounds — the version to use when the seam would show through stuffing.',
-            text: AMIGURUMI_FRONT_MATTER.concat([
-                'Sphere',
-                'Rnd 1: 6 sc in magic ring (6)',
-                'Rnd 2: inc in each st around (12)',
-                'Rnd 3: (1 sc, inc) * 6 (18)',
-                'Rnd 4: 1 sc, inc, (2 sc, inc) * 5, 1 sc (24)',
-                'Rnd 5-8: sc in each st around (24)',
-                'Rnd 9: (2 sc, dec) * 6 (18)',
+            front: AMIGURUMI_FRONT_MATTER,
+            body: [
+                'SPHERE',
+                'Rnd 1: 6 sc in MR (6)',
+                'Rnd 2: inc x 6 (12)',
+                'Rnd 3: [sc, inc] x 6 (18)',
+                'Rnd 4: sc, inc, [2 sc, inc] x 5, sc (24)',
+                'Rnd 5-8: sc around (24)',
+                'Rnd 9: [2 sc, dec] x 6 (18)',
                 // k=1, so the prefix has no plain stitches before its decrease and the whole base run
                 // moves to the suffix. Still exactly six decreases over 18 stitches.
-                'Rnd 10: dec, (1 sc, dec) * 5, 1 sc (12)',
-                'Rnd 11: dec * 6 (6)'
-            ]).join('\n')
+                'Rnd 10: dec, [sc, dec] x 5, sc (12)',
+                'Rnd 11: dec x 6 (6)'
+            ]
         },
         {
             id: 'beanie-stacked',
             name: 'Top-Down Beanie (stacked crown)',
             blurb: 'A flat circle crown increased to size, then worked straight down the sides. Joined rounds, with the crown increases stacked.',
-            // The "does not count as a stitch" convention rather than a ch-3 that stands in for the
-            // first dc: both are correct and published, but only one of them leaves a beginner's
-            // arithmetic doing what it looks like it does.
-            text: BEANIE_FRONT_MATTER.concat([
-                'Crown',
-                'Rnd 1: ch 2 (does not count as a stitch), 12 dc in magic ring, sl st to first dc (12)',
-                'Rnd 2: ch 2 (does not count as a stitch), dc-inc in each st around, sl st to first dc (24)',
-                'Rnd 3: ch 2 (does not count as a stitch), [dc, dc-inc] x 12, sl st to first dc (36)',
-                'Rnd 4: ch 2 (does not count as a stitch), [2 dc, dc-inc] x 12, sl st to first dc (48)',
-                'Rnd 5-12: ch 2 (does not count as a stitch), dc in each st around, sl st to first dc (48)'
-            ]).join('\n')
+            // The "does not count as st" convention rather than a ch-3 that stands in for the first dc:
+            // both are correct and published, but only one of them leaves a beginner's arithmetic doing
+            // what it looks like it does. The parenthetical is the shortest form the engine reads as
+            // "this chain makes nothing" - a bare "ch 2" is counted, and the count is then two over on
+            // every round.
+            front: BEANIE_FRONT_MATTER,
+            body: [
+                'CROWN',
+                'Rnd 1: ch 2 (does not count as st), 12 dc in MR, join with sl st (12)',
+                'Rnd 2: ch 2 (does not count as st), dc-inc x 12, join with sl st (24)',
+                'Rnd 3: ch 2 (does not count as st), [dc, dc-inc] x 12, join with sl st (36)',
+                'Rnd 4: ch 2 (does not count as st), [2 dc, dc-inc] x 12, join with sl st (48)',
+                'Rnd 5-12: ch 2 (does not count as st), dc around, join with sl st (48)'
+            ]
         },
         {
             id: 'beanie-seamless',
             name: 'Top-Down Beanie (seamless crown)',
             blurb: 'The same crown, with the last increase round rotated so the increase columns do not read as ridges under a close-fitting hat.',
-            text: BEANIE_FRONT_MATTER.concat([
-                'Crown',
-                'Rnd 1: ch 2 (does not count as a stitch), 12 dc in magic ring, sl st to first dc (12)',
-                'Rnd 2: ch 2 (does not count as a stitch), dc-inc in each st around, sl st to first dc (24)',
-                'Rnd 3: ch 2 (does not count as a stitch), [dc, dc-inc] x 12, sl st to first dc (36)',
+            front: BEANIE_FRONT_MATTER,
+            body: [
+                'CROWN',
+                'Rnd 1: ch 2 (does not count as st), 12 dc in MR, join with sl st (12)',
+                'Rnd 2: ch 2 (does not count as st), dc-inc x 12, join with sl st (24)',
+                'Rnd 3: ch 2 (does not count as st), [dc, dc-inc] x 12, join with sl st (36)',
                 // Twelve repeats rather than six, so the core runs 11 times and the split run is one dc
                 // on each side. The ch 2 and the joining sl st cost nothing, so they are not what makes
-                // this round read as offset - the 1 dc either side of the repeat is.
-                'Rnd 4: ch 2 (does not count as a stitch), 1 dc, dc-inc, [2 dc, dc-inc] x 11, 1 dc, sl st to first dc (48)',
-                'Rnd 5-12: ch 2 (does not count as a stitch), dc in each st around, sl st to first dc (48)'
-            ]).join('\n')
+                // this round read as offset - the dc either side of the repeat is.
+                'Rnd 4: ch 2 (does not count as st), dc, dc-inc, [2 dc, dc-inc] x 11, dc, join with sl st (48)',
+                'Rnd 5-12: ch 2 (does not count as st), dc around, join with sl st (48)'
+            ]
         },
         {
             id: 'scarf',
             name: 'Flat Scarf',
             blurb: 'Rows worked back and forth on a foundation chain. The simplest shape there is, and the one that teaches turning chains.',
-            text: [
+            front: [
                 'Hook: 5.0mm (H/8), or size needed to obtain gauge',
                 'Yarn: Worsted Weight (Category 4), approx. 350 yards',
                 'Gauge: 13 hdc x 10 rows = 4 in.',
@@ -3421,12 +3447,17 @@
                 'Abbreviations',
                 'ch = chain',
                 'hdc = half double crochet',
-                '',
-                'Scarf',
+                ''
+            ],
+            body: [
+                'SCARF',
                 'Row 1: ch 26',
+                // "in each ch across" rather than "across": the engine reads the shorter form as
+                // consuming the whole 26-chain foundation, turning chain included, and the row comes
+                // out two over.
                 'Row 2: hdc in 3rd ch from hook, hdc in each ch across (24)',
-                'Row 3-80: ch 2, turn, hdc in each st across (24)'
-            ].join('\n')
+                'Row 3-80: ch 2, turn, hdc across (24)'
+            ]
         },
         {
             id: 'granny',
@@ -3437,8 +3468,13 @@
             // rather than showing a fourteen-stitch discrepancy the reader has to diagnose. The control
             // visibly changes, so nothing is done behind the designer's back.
             chainSpace: 'discount',
-            blurb: 'Five rounds of clusters worked into chain spaces rather than into stitches. Grows by exactly four clusters a round \u2014 4, 8, 12, 16, 20 \u2014 which is what keeps it square.',
-            text: [
+            blurb: 'Five rounds of clusters worked into chain spaces rather than into stitches. Grows by exactly four clusters a round — 4, 8, 12, 16, 20 — which is what keeps it square.',
+            // Each round after the first is one repeat: a corner, then the side clusters between it and
+            // the next corner, x 3 - with the last side's clusters written out ahead of the repeat,
+            // because the round opened in the middle of a corner. The side count is the only number
+            // that changes from round to round, which is exactly the number a designer editing the
+            // square wants to find in one place.
+            front: [
                 'Hook: 4.0mm (G/6), or size needed to obtain gauge',
                 'Yarn: Worsted Weight (Category 4), approx. 60 yards',
                 'Gauge: 14 dc x 7 rows = 4 in.',
@@ -3447,19 +3483,22 @@
                 'ch = chain',
                 'dc = double crochet',
                 'sl st = slip stitch',
-                '',
+                ''
+            ],
+            // The note travels with the rows, not the front matter: appended under another pattern
+            // the square still counts the discount way, and the line is what says so.
+            body: [
+                'GRANNY SQUARE',
                 'Note: counts are double crochets only, and do not include the corner and side chains.',
-                'Set "Chain-Sp Counts As" to "only the stitches worked into it" to check them.',
-                '',
-                'Granny Square',
-                'Rnd 1: ch 4, sl st to form ring. ch 3, 2 dc in ring, [ch 2, 3 dc in ring] x 3, ch 2, sl st to top of ch-3 (12)',
-                'Rnd 2: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, sl st to top of ch-3 (24)',
-                'Rnd 3: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp, ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, 3 dc in next ch-1 sp, ch 1, sl st to top of ch-3 (36)',
-                'Rnd 4: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, sl st to top of ch-3 (48)',
-                'Rnd 5: sl st to next ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, 3 dc in next ch-1 sp, ch 1, sl st to top of ch-3 (60)'
-            ].join('\n')
+                'Note: set "Chain-Sp Counts As" to "only the stitches worked into it" to check them.',
+                'Rnd 1: ch 4, sl st to form ring, ch 3, 2 dc in ring, [ch 2, 3 dc in ring] x 3, ch 2, join with sl st to top of ch-3 (12)',
+                'Rnd 2: sl st to ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp] x 3, ch 1, join with sl st to top of ch-3 (24)',
+                'Rnd 3: sl st to ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, ch 1, 3 dc in next ch-1 sp, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp, ch 1, 3 dc in next ch-1 sp] x 3, ch 1, join with sl st to top of ch-3 (36)',
+                'Rnd 4: sl st to ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp] x 2, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp, [ch 1, 3 dc in next ch-1 sp] x 2] x 3, ch 1, join with sl st to top of ch-3 (48)',
+                'Rnd 5: sl st to ch-2 sp, ch 3, [2 dc, ch 2, 3 dc] in same sp, [ch 1, 3 dc in next ch-1 sp] x 3, [ch 1, [3 dc, ch 2, 3 dc] in next ch-2 sp, [ch 1, 3 dc in next ch-1 sp] x 3] x 3, ch 1, join with sl st to top of ch-3 (60)'
+            ]
         }
-    ];
+    ].map(template => ({ ...template, text: template.front.concat(template.body).join('\n') }));
 
     /**
      * Drops a skeleton into the editor and validates it, so the first thing a beginner sees is a green
@@ -3467,15 +3506,20 @@
      *
      * Existing work is confirmed first, through the confirm the rest of the app already uses. This is
      * the one control in the Studio that destroys text outright, and a template picker that silently
-     * ate forty rows would be the worst button in the application.
+     * ate forty rows would be the worst button in the application. The same question offers the
+     * other answer: APPEND the skeleton's rows under what is there, which is how a sphere gets bolted
+     * onto a beanie. Only the rows go in - the front matter is the editor's own, already.
      */
     function insertTemplate(id) {
         const template = PATTERN_TEMPLATES.find(t => t.id === id);
         const box = UI['bulk-input'];
         if (!template || !box) return;
 
-        const apply = () => {
-            box.value = template.text;
+        const apply = (mode) => {
+            const current = String(box.value || '');
+            box.value = mode === 'append' && current.trim()
+                ? current.replace(/\s+$/, '') + '\n\n' + template.body.join('\n')
+                : template.text;
             // Before the parse, not after: the convention decides what every round of the pattern
             // counts, so applying it afterwards would validate once against the wrong reading.
             if (template.chainSpace && UI['meta-chain-space-convention']) {
@@ -3484,15 +3528,20 @@
                 syncMetadataToGauge();
             }
             handleBulkSubmit();
-            notify(`Inserted the ${template.name} template.`, 'success');
+            notify(mode === 'append'
+                ? `Appended the ${template.name} rows to the pattern.`
+                : `Inserted the ${template.name} template.`, 'success');
         };
 
         if (String(box.value || '').trim()) {
-            askConfirm(`Replace the pattern in the editor with the ${template.name} template? `
-                + `What is there now will be lost.`, apply);
+            askConfirm(`Replace the pattern in the editor with the ${template.name} template, or append `
+                + `its rows below what is there? Replacing loses the current pattern; appending adds `
+                + `the rows only, without a second hook, yarn or gauge line.`,
+                () => apply('replace'),
+                { confirmLabel: 'Replace', altLabel: 'Append', onAlt: () => apply('append') });
             return;
         }
-        apply();
+        apply('replace');
     }
 
     /** One button per skeleton, built rather than written as markup so the blurb and the handler come
@@ -4555,6 +4604,7 @@
         let rowNumber = 0;        // continuous count, used when numbering does not restart
         let rowInSection = 0;     // count within the current section
         let indexInSection = 0;   // position within the section, for foundation handling
+        let sectionHasFoundation = false;   // the section opened with an unnumbered chain
         // A style-linter fix built while standing on Row 1, waiting for Row 2 to reach the map so it
         // has somewhere to attach - see the isEmptyFoundationRow block below. Captured and cleared at
         // the top of every iteration, so it lands on the very next step and nowhere further: a note or
@@ -4596,6 +4646,7 @@
                 blockedByLabel = null;
                 rowInSection = 0;
                 indexInSection = 0;
+                sectionHasFoundation = false;
                 sectionTitle = step.sectionTitle;
                 return {
                     step, index, status: 'section', sectionTitle: step.sectionTitle,
@@ -4705,10 +4756,60 @@
             // point, so rangeStartRow is read here rather than re-parsing text that is already gone.
             // Cosmetic only - rowInSection is the only thing touched, so stitch math and section-scoped
             // checks are unaffected. Skipped on the very first work row, already at 1 regardless.
-            if (restartNumbering && rowNumber > 0 && step.rangeStartRow === 1) rowInSection = 0;
+            //
+            // The foundation chain is the one row that takes no number at all. It makes no fabric of
+            // its own, and numbering it pushed every label one ahead of the pattern's own: the chain
+            // became Row 1, and then the explicit "Row 1" written under it hit the rule above - a
+            // restart it was never meant to catch - and landed on Row 1 a second time, so the matrix
+            // showed the number twice. Unnumbered, the chain keeps its place in the table (the reader
+            // still needs to see it was read) while the count carries straight on from it, restarting
+            // only where a section does.
+            //
+            // Foundation means the section's opening chain and nothing more: a bare "ch 46", or one
+            // closed into a ring ("ch 46, sl st to join") whose whole yield is still only the chain.
+            // A chain with work on the same line has made fabric and is a row - "ch 6, 6 sc in 2nd ch
+            // from hook", or a granny ring laying its first round of dc into the ring, which is why
+            // the yield is compared against the chain rather than isRingStart being trusted alone. So
+            // is a chain whose own label claims a number, which is the designer saying it is a row;
+            // "Row 0" is not that, it is how a foundation gets written when it is written at all.
+            let label;
+            // extractFoundationChain only absorbs a line that is exactly "ch N", so a chain closed
+            // into a ring on the same line keeps its count in the instruction instead. Read from
+            // either place, so both shapes are recognised as the opening chain they are.
+            const openingChain = step.initialChain > 0
+                ? step.initialChain
+                : Number((step.instructionString.match(/^(?:chain|ch)\s*(\d+)\b/i) || [])[1]) || 0;
+            const isFoundationRow = indexInSection === 0
+                && openingChain > 0
+                && !(step.rangeStartRow > 0)
+                && (!step.instructionString
+                    || (window.CrochetMathEngine.isRingStart(step.instructionString)
+                        && evaluation.calculatedYield === openingChain));
+            if (isFoundationRow) {
+                indexInSection++;
+                sectionHasFoundation = true;
+                label = 'Foundation';
+            } else {
+                // The row after the foundation says where the count starts. "Ch 12" then "Row 1" and
+                // "Ch 12" then "Row 2" are both written - the second counts the chain as its first row -
+                // and the matrix follows the pattern either way rather than deciding for it. Only the
+                // first section can seed the continuous count; a later piece under "Continue across
+                // sections" is numbered straight through, so its chain is not a row 1 to skip.
+                if (sectionHasFoundation && indexInSection === 1 && step.rangeStartRow >= 1) {
+                    if (restartNumbering) rowInSection = step.rangeStartRow - 1;
+                    else if (rowNumber === 0) rowNumber = step.rangeStartRow - 1;
+                }
+                // The restart is also held back when only one row stands above this one in the
+                // section, because that row is almost always its opening chain in a shape not
+                // recognised as one ("ch 16, turn" loses its count before it gets here). Restarting
+                // there prints the same number twice, which is the one thing the numbering must never
+                // do; a piece with a single row above a restated "Row 1" is rare enough, and reads
+                // ambiguously enough, to be worth that.
+                if (restartNumbering && rowNumber > 0 && step.rangeStartRow === 1 && rowInSection !== 1) rowInSection = 0;
 
-            rowNumber++; rowInSection++; indexInSection++;
-            const label = `${labelPrefix} ${restartNumbering ? rowInSection : rowNumber}`;
+                rowNumber++; rowInSection++; indexInSection++;
+                label = `${labelPrefix} ${restartNumbering ? rowInSection : rowNumber}`;
+            }
 
             // Once a row fails, every row after it measures against a stitch count that never got
             // produced, so report the cause once instead of per row.
@@ -4746,7 +4847,8 @@
             Object.assign(heldStitches,
                 window.CrochetMathEngine.parseHeldStitches(step.sourceLine || step.instructionString) || {});
 
-            return { step, index, evaluation, status, label, sectionTitle, availableStitches, blockedBy };
+            return { step, index, evaluation, status, label, sectionTitle, availableStitches, blockedBy,
+                     isFoundation: isFoundationRow };
         });
 
         addUpstreamCauses(rows);
@@ -4879,6 +4981,7 @@
        still has the non-conflicting half to write, and dropping that would lose work you did agree to. */
     let pendingConfirm = null;
     let pendingCancel = null;
+    let pendingAlt = null;
 
     /**
      * Asks before something destructive, and continues in a callback.
@@ -4890,25 +4993,39 @@
      * Under the stub the native confirm() answers immediately and onConfirm runs synchronously, which
      * is what keeps every existing destructive-path assertion working unchanged.
      */
+    /**
+     * @param {object} [options]
+     * @param {string} [options.confirmLabel]  what the confirming button says; "Continue" otherwise
+     * @param {Function} [options.onCancel]
+     * @param {string} [options.altLabel]      a third answer, shown between Cancel and the confirm
+     * @param {Function} [options.onAlt]       what the third answer does; shown only with a label
+     */
     function askConfirm(message, onConfirm, options) {
-        const cancel = options && typeof options.onCancel === 'function' ? options.onCancel : null;
-        if (!IS_BROWSER) {
-            if (typeof confirm !== 'function' || confirm(String(message))) onConfirm();
+        const opts = options || {};
+        const cancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
+        const alt = opts.altLabel && typeof opts.onAlt === 'function' ? opts.onAlt : null;
+        // Without the modal, a global confirm() answers. A boolean has no way to say the third
+        // thing, so a stub returning the alt label itself ("Append") is read as choosing it.
+        const fallback = () => {
+            const answer = typeof confirm === 'function' ? confirm(String(message)) : true;
+            if (alt && typeof answer === 'string' && answer.toLowerCase() === String(opts.altLabel).toLowerCase()) alt();
+            else if (answer) onConfirm();
             else if (cancel) cancel();
-            return;
-        }
+        };
+        if (!IS_BROWSER) { fallback(); return; }
         const scrim = document.getElementById('modal-scrim');
         const body = document.getElementById('modal-text');
         const yes = document.getElementById('modal-confirm');
-        if (!scrim || !body || !yes) {
-            if (typeof confirm !== 'function' || confirm(String(message))) onConfirm();
-            else if (cancel) cancel();
-            return;
-        }
-        const opts = options || {};
-        pendingCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
+        if (!scrim || !body || !yes) { fallback(); return; }
+        pendingCancel = cancel;
+        pendingAlt = alt;
         body.textContent = String(message);
         yes.textContent = opts.confirmLabel || 'Continue';
+        const altBtn = document.getElementById('modal-alt');
+        if (altBtn) {
+            altBtn.textContent = alt ? String(opts.altLabel) : '';
+            altBtn.classList.toggle('hidden', !alt);
+        }
         pendingConfirm = onConfirm;
         scrim.classList.remove('hidden');
         // aria-modal is a claim about the REST of the page - that none of it is reachable while this
@@ -4921,21 +5038,24 @@
         if (cancelBtn && typeof cancelBtn.focus === 'function') cancelBtn.focus();
     }
 
-    function closeConfirm(accepted) {
+    /** @param {boolean|'alt'} answer  true for the confirm, 'alt' for the third button, false to cancel */
+    function closeConfirm(answer) {
         const scrim = document.getElementById('modal-scrim');
         if (scrim) scrim.classList.add('hidden');
         document.getElementById('modal-card')?.removeAttribute('aria-modal');
-        const run = accepted ? pendingConfirm : pendingCancel;
-        // Both cleared before either runs, so a callback that opens a second question is not torn down
+        const run = answer === 'alt' ? pendingAlt : answer ? pendingConfirm : pendingCancel;
+        // All cleared before any runs, so a callback that opens a second question is not torn down
         // by the closing of the first.
         pendingConfirm = null;
         pendingCancel = null;
+        pendingAlt = null;
         if (typeof run === 'function') run();
     }
 
     function wireConfirmModal() {
         if (!IS_BROWSER) return;
         document.getElementById('modal-confirm')?.addEventListener('click', () => closeConfirm(true));
+        document.getElementById('modal-alt')?.addEventListener('click', () => closeConfirm('alt'));
         document.getElementById('modal-cancel')?.addEventListener('click', () => closeConfirm(false));
         // The scrim itself cancels; the card stops the click so pressing inside it does not.
         document.getElementById('modal-scrim')?.addEventListener('click', () => closeConfirm(false));
@@ -5106,7 +5226,15 @@
      * so they do not go looking there. Each present item says where it was read from, on the same
      * principle renderInferenceNotices follows: a tick whose provenance is hidden is a tick that has
      * to be re-checked by hand.
+     *
+     * The scope line says what the tick proves and what it does not. The About panel says the same,
+     * but About is on the Settings view; a claim about what a tick means has to sit under the tick,
+     * or a designer reads "Valid" as "will fit". Left off the empty state, where nothing was checked.
      */
+    const BADGE_SCOPE = 'A tick means the arithmetic adds up: every row can be worked from the one '
+        + 'before it, and the count you wrote matches. It does not check gauge, shaping or fit — only '
+        + 'a swatch does that.';
+
     function renderValidationBadge(pass) {
         const host = UI['validation-badge'];
         if (!host) return;
@@ -5136,6 +5264,7 @@
                 <span class="badge-headline">${escapeHtml(badge.headline)}</span>
             </div>
             <p class="badge-detail">${escapeHtml(badge.detail)}</p>
+            <p class="badge-scope">${escapeHtml(BADGE_SCOPE)}</p>
             <ul class="badge-elements">${items}</ul>`;
     }
 
@@ -5278,9 +5407,13 @@
         const groups = [];
         rows.forEach(row => {
             const prev = groups[groups.length - 1];
-            const foldable = row.status === 'valid' || row.status === 'blocked';
+            // The foundation chain is excluded because it carries no row number: a group prints its
+            // range by stripping the prefix off both end labels, and "Foundation" has no number left
+            // behind to print.
+            const foldable = (row.status === 'valid' || row.status === 'blocked') && !row.isFoundation;
             const matches = prev
                 && foldable
+                && !prev.isFoundation
                 && prev.status === row.status
                 && prev.step.instructionString === row.step.instructionString
                 && prev.step.multiplier === row.step.multiplier
@@ -9597,9 +9730,15 @@
     }
 
     /**
-     * A glossary of the pattern's own stitches: every term it works, and what that term means. Nothing
-     * is counted, weighed or ranked - the figures live on the Dashboard and in the Custom Stitch
-     * Dictionary, and this panel is for the designer who wants to know what "BPdc" is.
+     * A glossary of the pattern's own stitches: every term it works, what that term means, and what
+     * it costs - the stitches it uses from the row below and the stitches it makes for the row above.
+     * How many times each is worked is NOT here; those figures live on the Dashboard, and a share or
+     * a bar would turn a glossary into a report.
+     *
+     * The price is shown because the matrix's Calc Total can only be checked by hand when the reader
+     * can see what each stitch is worth. It is read from the same dictionary the arithmetic runs on
+     * (built-in primitives under the designer's own entries, the merge the engine itself uses), so
+     * this panel cannot disagree with a row the engine has already counted.
      *
      * Which stitches appear still comes from AggregateStitchCounts - the same aggregation behind the
      * stitch total and the yardage estimate - so the panel cannot list a stitch the rest of the app does
@@ -9608,6 +9747,15 @@
      * The wording is the engine's glossary - CYC master-list terms where the Council names the stitch,
      * our own descriptions where it does not, and the designer's OWN definition, which outranks both.
      */
+    function priceStitchForPanel(entry) {
+        // A term harvested from the pattern's own abbreviations key arrives with no numbers, and the
+        // row that works it fails until the designer supplies them - say so rather than print "uses ?".
+        if (!entry || typeof entry.cost !== 'number' || typeof entry.yield !== 'number') {
+            return 'not priced yet — add its numbers in the Custom Stitch Dictionary';
+        }
+        return `uses ${entry.cost} · makes ${entry.yield}`;
+    }
+
     function renderStitchUsage() {
         const host = UI['stitch-usage-content'];
         if (!host) return;
@@ -9630,6 +9778,8 @@
 
         const custom = window.CrochetMathEngine.CUSTOM_STITCHES || {};
         const glossary = window.CrochetMathEngine.STITCH_GLOSSARY || {};
+        // The engine's getFullDictionary is not exported; this is the same merge, custom on top.
+        const priced = { ...(window.CrochetMathEngine.STITCH_PRIMITIVES || {}), ...custom };
         // The engine dictionary prices a custom stitch but has no room for its wording; the definition
         // the designer typed is in the same store the Custom Stitch Dictionary panel reads.
         const savedStitches = getLocalStorage(state.savedStitchesKey);
@@ -9642,15 +9792,19 @@
                 name, isCustom ? (savedStitches[name] || {}) : null, glossary);
             if (meaning.cyc) citesCouncil = true;
             return `<div class="stitch-row">
-                <span class="stitch-name">${escapeHtml(name)}${isCustom ? '<span class="stitch-flag">yours</span>' : ''}</span>
+                <div class="stitch-head">
+                    <span class="stitch-name">${escapeHtml(name)}${isCustom ? '<span class="stitch-flag">yours</span>' : ''}</span>
+                    <span class="stitch-math">${escapeHtml(priceStitchForPanel(priced[name]))}</span>
+                </div>
                 <span class="stitch-working" title="${escapeHtml(meaning.source)}">${escapeHtml(meaning.text)}</span>
             </div>`;
         }).join('');
 
+        const legend = `<p class="stitch-summary">Uses is what a stitch takes from the row below; makes is what it leaves for the row above. The same numbers the matrix counts with.</p>`;
         const credit = citesCouncil
             ? `<p class="stitch-summary">Definitions come from the Craft Yarn Council master list where it names the stitch.</p>`
             : '';
-        host.innerHTML = `${credit}<div class="stitch-list">${rows}</div>`;
+        host.innerHTML = `${legend}${credit}<div class="stitch-list">${rows}</div>`;
     }
 
     // ---- Printed pattern preview ---------------------------------------------

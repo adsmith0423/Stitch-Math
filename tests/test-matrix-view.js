@@ -164,4 +164,86 @@ ck('a heading with no restated "1" leaves numbering continuous either way',
    JSON.stringify(['Yoke', 'Rnd 1', 'Rnd 2', 'Separating for Body & Sleeves', 'Rnd 3']));
 $('meta-row-numbering').value = 'restart';
 
+print('\n12. The foundation chain takes no row number');
+// A bare chain above an explicit "Row 1" used to print Row 1 twice: the chain took the section's
+// first number, then the row below restated 1 and the restart-on-restated-1 rule fired on it. The
+// chain is a foundation, not a row - it keeps its place in the table, unnumbered, and the count
+// carries on from it, restarting only where a section does.
+load([
+    "ch 16",
+    "Row 1: sc in 2nd ch from hook and in each ch across (15)",
+    "Row 2: ch 1, turn, sc in each st across (15)"
+]);
+ck('bare chain, then Row 1', JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 1', 'Row 2']));
+load([
+    "ch 46, sl st to join (46)",
+    "Rnd 1: sc in each ch around (46)",
+    "Rnd 2: sc in each st around (46)"
+]);
+ck('chain closed into a ring on its own line', JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Rnd 1', 'Rnd 2']));
+load([
+    "Row 0: ch 16",
+    "Row 1: sc in 2nd ch from hook and in each ch across (15)"
+]);
+ck('a chain written as Row 0', JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 1']));
+// The designer who counts the chain as their first row writes "Row 2" under it; the matrix follows
+// the label it is given rather than deciding which convention the pattern uses.
+load([
+    "Ch 12 (12)",
+    "Row 2: sc in each ch across (12)",
+    "Row 3: sc in each st across (12)"
+]);
+ck('the row after the chain sets where the count starts', JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 2', 'Row 3']));
+// Every section gets the same treatment, and the numbering setting still decides the rest.
+load([
+    "ch 16",
+    "Row 1: sc in 2nd ch from hook and in each ch across (15)",
+    "SLEEVE",
+    "ch 16",
+    "Row 1: sc in 2nd ch from hook and in each ch across (15)"
+]);
+ck('restart: each piece opens with its own foundation',
+   JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 1', '--- SLEEVE ---', 'Foundation', 'Row 1']));
+$('meta-row-numbering').value = 'continue';
+$('meta-row-numbering').fire('change');
+ck('continue: the foundation is skipped, not counted',
+   JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 1', '--- SLEEVE ---', 'Foundation', 'Row 2']));
+$('meta-row-numbering').value = 'restart';
+$('meta-row-numbering').fire('change');
+// A chain with work on the same line has made fabric and is a row, whatever its label says.
+load([
+    "Row 1: ch 16, sc in 2nd ch from hook and in each ch across (15)",
+    "Row 2: ch 1, turn, sc in each st across (15)"
+]);
+ck('a chain worked back along on the same line is Row 1', JSON.stringify(rowLabels()), JSON.stringify(['Row 1', 'Row 2']));
+load([
+    "ch 4, sl st to form ring. ch 3, 2 dc in ring, [ch 2, 3 dc in ring] x 3, ch 2, sl st to top of ch-3 (12)",
+    "Rnd 2: sc in each st around (12)"
+]);
+ck('a ring with its first round laid into it is a row', rowLabels()[0], 'Row 1');
+// A restated "Row 1" mid-document still starts a fresh sequence - that rule is untouched.
+load([
+    "Row 1: ch 16, sc in 2nd ch from hook and in each ch across (15)",
+    "Row 2: ch 1, turn, sc in each st across (15)",
+    "Row 1: ch 1, turn, sc in each st across (15)",
+    "Row 2: ch 1, turn, sc in each st across (15)"
+]);
+ck('a restated Row 1 with two rows above it still restarts', JSON.stringify(rowLabels()), JSON.stringify(['Row 1', 'Row 2', 'Row 1', 'Row 2']));
+// The single-row form's "Starting Chains" is the other way a foundation arrives.
+load([]);
+$('initial-chain-input').value = '16'; $('tokens-input').value = ''; $('expected-yield-input').value = '16';
+$('row-form').fire('submit');
+$('initial-chain-input').value = '0'; $('tokens-input').value = 'Row 1: sc in 2nd ch from hook and in each ch across'; $('expected-yield-input').value = '15';
+$('row-form').fire('submit');
+ck('a foundation added through the single-row form', JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 1']));
+// Collapsing never folds the foundation into a range, which would have nothing to print for its end.
+load([
+    "ch 16",
+    "Row 1: sc in 2nd ch from hook and in each ch across (15)",
+    "Rows 2-4: ch 1, turn, sc in each st across (15)"
+]);
+toggle('toggle-collapse-repeats', true);
+ck('the foundation stays out of collapsed groups', JSON.stringify(rowLabels()), JSON.stringify(['Foundation', 'Row 1', 'Rows 2-4×3']));
+toggle('toggle-collapse-repeats', false);
+
 endSuite();

@@ -1311,6 +1311,12 @@ window.CrochetMathEngine = (function() {
 
         if (looksLikeRowLabel(raw)) return { kind: 'work', why: 'carries a row label' };
 
+        // "Note: counts are double crochets only, and do not include the corner and side chains." An
+        // aside the designer has labelled as one, and written in the vocabulary of stitches because
+        // it is ABOUT the stitches. Read as a row it consumed one stitch and blocked everything under
+        // it. Below the row-label test on purpose: "Row 4 (note: dec row):" is still a row.
+        if (/^notes?\s*[:–—-]/i.test(raw)) return { kind: 'note', why: 'a labelled note, not a row' };
+
         // A specification, not an instruction. Checked before the stitch test because these lines are
         // written in stitches - "Gauge: 14 hdc x 10 rounds = 4in" read as a row of 140 hdc, failed for
         // want of a foundation, and blocked every row beneath it. Only the labels

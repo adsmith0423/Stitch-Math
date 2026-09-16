@@ -757,13 +757,18 @@ var usage = $('stitch-usage-content').innerHTML;
     ok('lists ' + st, new RegExp('class="stitch-name">' + st + '(<|")').test(usage));
 });
 no('does not invent a stitch the pattern never works', /class="stitch-name">dc(<|")/.test(usage));
-// It is a glossary, not a report: names and meanings only. Counts, shares and the bars that drew them
-// belong to the Dashboard, and the arithmetic to the Custom Stitch Dictionary.
+// Each term carries its price - what it uses from the row below and makes for the row above - read
+// from the same dictionary the matrix counts with, so a reader can check a Calc Total by hand.
+ok('sc uses one and makes one', /stitch-name">sc[\s\S]*?stitch-math">uses 1 · makes 1</.test(usage));
+ok('inc uses one and makes two', /stitch-name">inc[\s\S]*?stitch-math">uses 1 · makes 2</.test(usage));
+ok('ch uses none and makes one', /stitch-name">ch[\s\S]*?stitch-math">uses 0 · makes 1</.test(usage));
+ok('and the legend says what the two numbers are', /Uses is what a stitch takes from the row below/.test(usage));
+// Still a glossary, not a report: how OFTEN each is worked, shares and the bars that drew them belong
+// to the Dashboard.
 no('no counts', /class="stitch-count"/.test(usage));
 no('no shares', /class="stitch-share"/.test(usage));
 no('no bars', /mini-track|mini-bar/.test(usage));
 no('no totals line', /worked in total/.test(usage));
-no('no cost and yield anywhere', /uses \d+/.test(usage));
 
 // A term the designer defined is theirs, and is labelled as such.
 addStitch('vst', 'dc, ch1, dc', '1', '3');
@@ -772,6 +777,8 @@ $('bulk-parse-btn').fire('click');
 nav('nav-library');
 ok('a custom stitch is listed too', /class="stitch-name">vst/.test($('stitch-usage-content').innerHTML));
 ok('and marked as the designer\'s own', /stitch-flag">yours</.test($('stitch-usage-content').innerHTML));
+ok('and priced from the designer\'s own numbers',
+   /stitch-name">vst[\s\S]*?stitch-math">uses 1 · makes 3</.test($('stitch-usage-content').innerHTML));
 
 // What each stitch IS, in words. The designer's own wording wins for their own term - the Council has
 // nothing to say about "vst".
@@ -817,7 +824,7 @@ ck('sc2tog across is half the row',
                            [{ index: 0, availableStitches: 60 }]).sc2tog, 30);
 
 // A whole flat pattern, foundation row and all. The counts are asserted here rather than read back out
-// of the Stitch Library, which lists names and meanings and no longer prints a figure.
+// of the Stitch Library, which prices each stitch but never says how often it was worked.
 var flat = A.AggregateStitchCounts(
     [{ instructionString: 'ch 61, sc in 2nd ch from hook and in each ch across', multiplier: 1 },
      { instructionString: 'ch 3, turn, dc in each st across', multiplier: 1 }],

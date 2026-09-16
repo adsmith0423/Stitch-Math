@@ -123,7 +123,7 @@ source files did not have to change to run under Node.
 `./run-tests.sh` is kept as the macOS fallback and takes a filter argument, which the Node
 runner does not. Both exit non-zero on any failure, so either can gate a commit.
 
-The baseline is **5002 assertions, 0 failed** across 113 node:test cases, and the two runners report identical per-suite
+The baseline is **5046 assertions, 0 failed** across 113 node:test cases, and the two runners report identical per-suite
 counts. If a previously passing count drops, that is a regression; if one rises, check that
 an assertion was not simply loosened.
 

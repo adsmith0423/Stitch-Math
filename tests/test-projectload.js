@@ -85,8 +85,10 @@ ck('nor its designer', v1.metadata.designer, '');
 no('construction is no longer stored as its own key', 'construction' in v1.metadata);
 $('load-select').value = 'A version 1 file';
 $('load-btn').fire('click');
+// The second row, not the first: the file opens with a chain, which the matrix shows as "Foundation"
+// under either construction. The first numbered row is where the prefix appears.
 ck('and its rows are labelled by its own construction',
-   $('step-sequence-body').children[0].children[0].textContent.slice(0, 3), 'Row');
+   $('step-sequence-body').children[1].children[0].textContent.slice(0, 3), 'Row');
 
 print('\n4. Row numbering and chain-space counting persist, and do not leak between projects');
 // Neither lived in META_FIELDS before: both silently reverted to their default on every load, which

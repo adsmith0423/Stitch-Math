@@ -61,6 +61,10 @@ ck('a misspelled stitch under a row label is work', E.classifyPatternLine('Row 4
 ck('and an unlabelled line with stitches is work', E.classifyPatternLine('sc in each st across').kind, 'work');
 ck('a bare foundation chain is work', E.classifyPatternLine('Ch 20').kind, 'work');
 ck('assembly is not', E.classifyPatternLine('Sew shoulder seams.').kind, 'note');
+// A note the designer labelled as one, written about the stitches rather than working them. Read as
+// a row it consumed a stitch and blocked everything under it.
+ck('a "Note:" line is not, even in stitch words', E.classifyPatternLine('Note: counts are double crochets only, and do not include the corner and side chains.').kind, 'note');
+ck('but a row with a note in its label still is', E.classifyPatternLine('Row 4 (note: dec row): sc in each st across').kind, 'work');
 reset();
 load('Row 1: ch 21, sc in 2nd ch from hook and in each ch across (20)\nRow 2: dubble crochet in each st across');
 ck('and it still fails on the page', classes()[1], 'row-failed');

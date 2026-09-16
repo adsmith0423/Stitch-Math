@@ -43,7 +43,7 @@ the test baseline. `PERSISTENCE.md` covers the project file format and the recov
 ## Commands
 
 ```bash
-npm test              # 113 node:test cases, 5,002 assertions. No install needed.
+npm test              # 113 node:test cases, 5,046 assertions. No install needed.
 npm run build         # writes dist/
 npm run test:browser  # the storage and contrast suites, against a real browser
 ./run-tests.sh        # the same suites under macOS JavaScriptCore
