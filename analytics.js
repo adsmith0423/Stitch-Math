@@ -194,13 +194,19 @@ window.CrochetAnalyticsEngine = (() => {
     const round2 = (n) => Math.round(n * 100) / 100;
 
     // === 2. STITCH COMPLEXITY WEIGHTS === //
+    // Keyed by the token NormalizeAnalyticsToken emits, so a key here is a stitch the difficulty score
+    // can see and - where the engine's dictionary also knows it - a card in the Stitch Cabinet.
+    // 'shell', 'vst' and 'standingdc' are scored but not in the dictionary, so they weigh a custom
+    // stitch of that name without ever being rolled.
     const STITCH_COMPLEXITY_SCORES = {
-        ch: 1, slst: 1, sc: 1, hdc: 2, dc: 2, tr: 3, dtr: 4,
-        inc: 2, dec: 2, sc2tog: 3, hdc2tog: 3, dc2tog: 3, tr2tog: 4,
-        sc3tog: 5, puff: 4, bobble: 5, popcorn: 5, cluster: 5, shell: 4,
-        vst: 3, picot: 3, fpdc: 4, bpdc: 4, fpsc: 4, bpsc: 4,
-        crab: 4, esc: 5, ldc: 4, standingsc: 3, standingdc: 3,
-        magicring: 2, mr: 2, yo: 1, spike: 4, "3in1": 4, "4in1": 5, repeat: 1, rep: 1
+        ch: 1, slst: 1, sc: 1, hdc: 2, dc: 2, tr: 3, dtr: 4, trtr: 4, qtr: 5,
+        inc: 2, dec: 2, invdec: 3, sc2tog: 3, hdc2tog: 3, dc2tog: 3, tr2tog: 4,
+        sc3tog: 5, hdc3tog: 4, dc3tog: 4, puff: 4, bobble: 5, popcorn: 5, cluster: 5, shell: 4,
+        vst: 3, picot: 3, fpdc: 4, bpdc: 4, fpsc: 4, bpsc: 4, fphdc: 4, bphdc: 4,
+        fptr: 4, bptr: 4, fpslst: 3, bpslst: 3,
+        rsc: 4, esc: 5, ehdc: 4, edc: 4, etr: 4, ldc: 4, wsc: 4, xdc: 4, stsc: 3, standingdc: 3,
+        fsc: 3, fhdc: 3, fdc: 3, ftr: 4,
+        magicring: 2, mr: 2, yo: 1, spike: 4, "3in1": 4, "4in1": 5, "5in1": 5, repeat: 1, rep: 1
     };
 
     // === 2b. STITCH CATEGORIES === //
@@ -222,7 +228,8 @@ window.CrochetAnalyticsEngine = (() => {
             'front post double crochet', 'back post double crochet',
             'ssc', 'spike', 'spike sc', 'spike single crochet',
             'cross st', 'cross stitch', 'crossed dc', 'xdc',
-            'wsc', 'waistcoat', 'waistcoat stitch'
+            'wsc', 'waistcoat', 'waistcoat stitch',
+            'rsc', 'rev sc', 'reverse sc', 'reverse single crochet', 'crab', 'crab st', 'crab stitch'
         ],
         shaping: [
             'inc', 'sc inc', 'hdc inc', 'dc inc', 'tr inc', 'dtr inc',
@@ -290,10 +297,25 @@ window.CrochetAnalyticsEngine = (() => {
     // === 3. CORE ANALYTICS FUNCTIONS === //
     function NormalizeAnalyticsToken(token) {
         token = token.trim().toLowerCase();
+        // One stitch, one key: a pattern that writes "bo" has worked a bobble, and the totals, the
+        // difficulty score and the Stitch Cabinet should all say so. Only abbreviations that name
+        // exactly the same stitch are folded - "sc inc" stays apart from "inc" because they are priced
+        // apart in the yardage table.
         const aliases = {
-            ss: "slst", slip: "slst", slipstitch: "slst", slipst: "slst",
+            ss: "slst", slip: "slst", slipstitch: "slst", slipst: "slst", "sl st": "slst",
+            "slip stitch": "slst",
             magicring: "mr", magiccircle: "mr", single: "sc",
-            halfdouble: "hdc", double: "dc", treble: "tr"
+            halfdouble: "hdc", double: "dc", treble: "tr",
+            bo: "bobble", cl: "cluster", pc: "popcorn", "pc st": "popcorn", "popcorn st": "popcorn",
+            ps: "puff", "puff stitch": "puff",
+            exsc: "esc", "extended single crochet": "esc", "extended double crochet": "edc",
+            "extended treble": "etr", "extended treble crochet": "etr",
+            ssc: "spike", "spike sc": "spike", "spike single crochet": "spike",
+            standingsc: "stsc", "standing sc": "stsc",
+            crab: "rsc", "crab st": "rsc", "crab stitch": "rsc", "rev sc": "rsc", "reverse sc": "rsc",
+            "reverse single crochet": "rsc",
+            "crossed dc": "xdc", waistcoat: "wsc", "waistcoat stitch": "wsc",
+            "linked dc": "ldc", "linked double crochet": "ldc"
         };
         return aliases[token] || token;
     }

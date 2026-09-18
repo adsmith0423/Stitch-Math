@@ -59,7 +59,7 @@ var ROWS = practiceRows();
 
 print('\n1. The table was read, and it is worth reading');
 ok('at least thirty rows are offered, there are ' + ROWS.length, ROWS.length >= 30);
-ok('and they span every tier', [1, 2, 3, 4].every(function (tier) {
+ok('and they span every tier', [1, 2, 3, 4, 5, 6, 7, 8].every(function (tier) {
     return ROWS.some(function (row) { return row.tier === tier; });
 }));
 
@@ -74,7 +74,7 @@ function answersUpTo(tier) {
     return ROWS.filter(function (r) { return r.tier <= tier; })
         .map(function (r) { return E.evaluateStep(0, r.available, r.instruction, 1, 0, 0, 0).calculatedYield; });
 }
-[1, 2, 3, 4].forEach(function (tier) {
+[1, 2, 3, 4, 5, 6, 7, 8].forEach(function (tier) {
     var answers = answersUpTo(tier);
     var distinct = new Set(answers).size;
     ok('tier ' + tier + ' opens at least 10 rows, has ' + answers.length, answers.length >= 10);
@@ -108,7 +108,7 @@ ROWS.forEach(function (row) {
     no(row.id + ' is not a duplicate', ids[row.id]);
     ids[row.id] = true;
     ok(row.id + ' explains itself', row.teaches.length > 20);
-    ok(row.id + ' sits in a real tier', row.tier >= 1 && row.tier <= 4);
+    ok(row.id + ' sits in a real tier', row.tier >= 1 && row.tier <= 8);
 });
 
 print('\n4. NO ROW STORES ITS ANSWER');

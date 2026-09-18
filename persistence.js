@@ -140,7 +140,7 @@ window.StitchPersistence = (() => {
     function checkHeader(env, ceiling) {
         const top = typeof ceiling === 'number' ? ceiling : CURRENT_FILE_VERSION;
         if (!isPlainObject(env)) {
-            return fail(ERRORS.MALFORMED, 'This file is not a Stitch Math project: it does not contain a JSON object.');
+            return fail(ERRORS.MALFORMED, 'This file is not a Stitch Math project file.');
         }
         if (env.kind !== KIND) {
             const found = typeof env.kind === 'string' && env.kind
@@ -192,7 +192,7 @@ window.StitchPersistence = (() => {
         }
         const body = env.body;
         if (typeof body.rawText !== 'string') return bad('body.rawText', 'This Stitch Math project has unreadable pattern text.');
-        if (!isPlainObject(body.metadata)) return bad('body.metadata', 'This Stitch Math project has an unreadable metadata block.');
+        if (!isPlainObject(body.metadata)) return bad('body.metadata', 'This Stitch Math project has unreadable pattern info.');
         if (!isPlainObject(body.gauge)) return bad('body.gauge', 'This Stitch Math project has an unreadable gauge block.');
         if (!Array.isArray(body.gaugeHistory)) return bad('body.gaugeHistory', 'This Stitch Math project has an unreadable gauge history.');
         if (!isPlainObject(body.grading)) return bad('body.grading', 'This Stitch Math project has an unreadable grading block.');
@@ -349,7 +349,7 @@ window.StitchPersistence = (() => {
             parsed = JSON.parse(String(text === undefined || text === null ? '' : text));
         } catch (err) {
             return fail(ERRORS.MALFORMED,
-                'This file could not be read as a Stitch Math project: it is not valid JSON.');
+                'This file could not be read as a Stitch Math project: it is damaged or is not a project file.');
         }
         return migrate(parsed);
     }

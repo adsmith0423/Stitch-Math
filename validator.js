@@ -59,6 +59,11 @@ window.CrochetMathEngine = (function() {
         'ssc': { cost: 1, yield: 1 }, 'spike': { cost: 1, yield: 1 },
         'spike sc': { cost: 1, yield: 1 }, 'spike single crochet': { cost: 1, yield: 1 },
         'stsc': { cost: 1, yield: 1 }, 'standing sc': { cost: 1, yield: 1 },
+        // Reverse single crochet, worked left to right for a corded edge. Direction changes the look,
+        // not the arithmetic: still one in, one out.
+        'rsc': { cost: 1, yield: 1 }, 'rev sc': { cost: 1, yield: 1 }, 'reverse sc': { cost: 1, yield: 1 },
+        'reverse single crochet': { cost: 1, yield: 1 },
+        'crab': { cost: 1, yield: 1 }, 'crab st': { cost: 1, yield: 1 }, 'crab stitch': { cost: 1, yield: 1 },
 
         // --- Post stitches, extending the fp/bp family. Worked around the post, still one in, one out.
         'fptr': { cost: 1, yield: 1 }, 'bptr': { cost: 1, yield: 1 },
@@ -229,6 +234,8 @@ window.CrochetMathEngine = (function() {
           keys: ['ssc', 'spike', 'spike sc', 'spike single crochet'] },
         { abbr: 'stsc', term: 'standing single crochet - starts a new yarn with no turning chain', cyc: false,
           keys: ['stsc', 'standing sc'] },
+        { abbr: 'rsc', term: 'reverse single crochet - the crab stitch, worked left to right for a corded edge', cyc: false,
+          keys: ['rsc', 'rev sc', 'reverse sc', 'reverse single crochet', 'crab', 'crab st', 'crab stitch'] },
         { abbr: 'fpslst', term: 'front post slip stitch - worked around the post of the stitch below from the front', cyc: false, keys: ['fpslst'] },
         { abbr: 'bpslst', term: 'back post slip stitch - worked around the post of the stitch below from the back', cyc: false, keys: ['bpslst'] },
         { abbr: 'cross st', term: 'cross stitch - two stitches worked out of order over the same two stitches', cyc: false,
@@ -1589,9 +1596,9 @@ window.CrochetMathEngine = (function() {
      */
     const REQUIRED_ELEMENTS = [
         { key: 'hook', label: 'Hook Size',
-          hint: 'Add it under Pattern Metadata, or write "Hook: 4.0mm (G)" near the top of the pattern.' },
+          hint: 'Add it under Pattern Info, or write "Hook: 4.0mm (G)" near the top of the pattern.' },
         { key: 'yarnWeight', label: 'Yarn Weight',
-          hint: 'Choose a weight under Pattern Metadata, or write "Yarn: Worsted Weight (Category 4)".' },
+          hint: 'Choose a weight under Pattern Info, or write "Yarn: Worsted Weight (Category 4)".' },
         { key: 'gauge', label: 'Gauge',
           hint: 'Measure a swatch on the Gauge tab, or state it: "Gauge: 14 hdc x 10 rows = 4 in."' },
         { key: 'abbreviations', label: 'Abbreviations Key',
@@ -3206,8 +3213,8 @@ window.CrochetMathEngine = (function() {
         const parsed = parseInstructions(instructionString, availableStitches, 0, availableCorners);
 
         if (parsed.unrecognizedTokens.length > 0) {
-            reasons.push(`Unrecognized instructions/tokens: "${parsed.unrecognizedTokens.join(', ')}"`);
-            errorDetails.push({ type: 'syntax', message: 'Unknown token' });
+            reasons.push(`Unrecognized instructions: "${parsed.unrecognizedTokens.join(', ')}"`);
+            errorDetails.push({ type: 'syntax', message: 'Unknown stitch' });
         }
 
         const totalCost = parsed.totalCost * rowMultiplier;

@@ -44,7 +44,7 @@ ck('form grid reflows when narrow', /\.form-container \{[^}]*auto-fit/.test(css)
 print('\n3. Toggles moved above the column titles');
 var opts = html.indexOf('matrix-view-options');
 var thead = html.indexOf('<th>Row #</th>');
-var h3 = html.indexOf('Pattern Validation Matrix');
+var h3 = html.indexOf('Pattern Validation</h3>');
 ck('after the panel heading', h3 < opts, true);
 ck('before the column titles', opts < thead, true);
 ck('only one options block', (html.match(/class="matrix-view-options"/g)||[]).length, 1);

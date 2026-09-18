@@ -242,6 +242,6 @@ ok('the dashes form', /Between dashes/.test(IH));
 ok('and the make-count form', /With a make count/.test(IH));
 ok('it warns that a title restarts the count', /restarts the stitch/.test(IH));
 ok('and explains holding stitches by name', /skip 38 sts \(Right Sleeve\)/.test(IH));
-ok('the guide is styled', /\.heading-rules \{/.test(readFile('style.css')));
+ok('the guide is styled', /\.heading-rules[^{]*\{/.test(readFile('style.css')));
 
 endSuite();

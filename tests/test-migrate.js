@@ -179,8 +179,9 @@ ck('nothing at all', P.parsePortable(null).error.code, 'malformed');
 ck('valid JSON that is not a project', P.parsePortable('{"hello":"world"}').error.code, 'malformed');
 ck('valid JSON that is a list', P.parsePortable('[1,2,3]').error.code, 'malformed');
 ck('the literal null', P.parsePortable('null').error.code, 'malformed');
-ok('the JSON refusal says what is wrong with the file',
-   P.parsePortable('nope').error.message.indexOf('JSON') >= 0);
+// In the reader's words, not the format's: "JSON" means nothing to a crocheter whose file will not open.
+ok('the unreadable-file refusal says what is wrong with the file',
+   /damaged or is not a project file/.test(P.parsePortable('nope').error.message));
 
 print('\n17. parsePortable and the newer file');
 // The same refusal, reached through the path an import actually takes.

@@ -58,6 +58,7 @@
     /* Sea ink, not black. A deep teal-grey reads as softly as an e-reader and still hits 9:1. */
     --ink: #2E4A47;
     --ink-soft: #5F7A76;
+    --select-arrow: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path d=%22M4 6l4 4 4-4%22 fill=%22none%22 stroke=%22%235F7A76%22 stroke-width=%221.8%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>");
     --ink-rgb: 46, 74, 71;
 
     /* The six pairs. */
@@ -326,6 +327,7 @@
     --paper: #20243A;
     --ink: #E8E9F4;
     --ink-soft: #A6ABC6;
+    --select-arrow: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path d=%22M4 6l4 4 4-4%22 fill=%22none%22 stroke=%22%23A6ABC6%22 stroke-width=%221.8%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>");
     --ink-rgb: 232, 233, 244;
 
     --mint: rgba(143, 220, 198, 0.18);     --mint-ink: #8FDCC6;
@@ -468,6 +470,7 @@
     --paper: #FFFFFF;
     --ink: #111111;
     --ink-soft: #3B3B3B;
+    --select-arrow: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path d=%22M4 6l4 4 4-4%22 fill=%22none%22 stroke=%22%233B3B3B%22 stroke-width=%221.8%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>");
     --ink-rgb: 17, 17, 17;
 
     /* The pairs, as pale tint plus dark ink. Same hues, same meanings, AAA in both directions. */
@@ -628,6 +631,8 @@ html:where([data-theme="readable"]) textarea {
     background-image: none;
     -webkit-backdrop-filter: none; backdrop-filter: none;
 }
+/* The gloss goes; the select's arrow is a background image too, and it stays. */
+html:where([data-theme="readable"]) select { background-image: var(--select-arrow); }
 :root[data-theme="readable"] #app-shell { background-image: none; }
 /* The hairline under every heading. Coral at 15% is a tint by day and all but invisible against
    this ground, so here it is the same line everything else is edged with. */
@@ -701,7 +706,9 @@ textarea, pre, code, .stitch-name, .matrix-table td.step-cell { font-family: var
    One set, one weight, one colour source: every glyph is a <use> of a sprite symbol, 24px box,
    stroked not filled, so it takes the colour and weight of the text beside it. Replaces emoji,
    which cannot be made to look designed - six of them are six illustration styles at six weights. */
-.icon-sprite { display: none; }
+/* Hidden by size, not display: none - the brand symbol carries a clipPath, and Safari drops a
+   clip or gradient whose definition sits inside a display: none document. */
+.icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .ic {
     display: inline-block; vertical-align: -0.14em; flex: none;
     width: 1em; height: 1em;
@@ -1248,6 +1255,33 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
               background: var(--glass-border); flex: 1 1 auto; }
 .stage-label { min-width: 0; }
 .stage-num { line-height: 1; }
+/* A step's pages, strung along the thread after its pill: one dot per entry under that step's
+   hub, in the step's pastel, with a length of thread either side - so the rail says not just "you
+   are in Setup" but "Setup is three pages and this is the second". The threads are the flexible
+   part, so the dots fall evenly however wide the rail is. The dots carry no words: a name each
+   in a tooltip, and the page you are on is the one turned over to the step's ink and haloed in
+   its pastel, the same done-and-here vocabulary the discs beside them use. The button is bigger
+   than the dot it draws, so a fingertip lands on it. */
+.stage-sub,
+.stage-sub:hover {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 20px; height: 20px; padding: 0; border-radius: var(--r-pill);
+    background: transparent; background-image: none; box-shadow: none; filter: none;
+    transition: transform 0.2s var(--spring);
+}
+.stage-sub::before {
+    content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
+    background: var(--step, var(--lavender));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 1px 0 rgba(var(--shade), 0.10);
+    transition: background-color 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out);
+}
+.stage-sub:hover { transform: scale(1.3); }
+.stage-sub:active { transform: scale(1.1); box-shadow: none; }
+.stage-sub:focus-visible { box-shadow: 0 0 0 3px rgba(var(--shade), 0.18); }
+.stage-sub.is-here::before {
+    background: var(--step-ink, var(--lavender-ink));
+    box-shadow: 0 0 0 2px var(--step, var(--lavender)), 0 1px 0 rgba(var(--shade), 0.14);
+}
 
 /* Two topbar pills, same puffy recipe as every button and the same size as each other. New Project
    keeps the coral: it is the call to START something, and the warmest pair is what makes it the
@@ -1339,6 +1373,9 @@ main {
 .tint-mint     { --h-tint: var(--mint);     --h-ink: var(--mint-ink); }
 .tint-aqua     { --h-tint: var(--aqua);     --h-ink: var(--aqua-ink); }
 .tint-coral    { --h-tint: var(--coral);    --h-ink: var(--coral-ink); }
+/* The About heading carries the logo itself rather than a subject icon: no disc, no tint, so
+   the mark keeps its own colours and sits at the same size as the sidebar mark would scaled. */
+.h-ic-brand { padding: 0; background: none; box-shadow: none; border-radius: 0; width: 34px; height: 34px; }
 
 /* ===================================================== */
 /* 3. INPUTS & FORMS                                     */
@@ -1373,7 +1410,17 @@ textarea, input[type="text"], input[type="number"], select {
 }
 input[type="text"]   { --field: var(--sky);      --field-ink: var(--sky-ink); }
 input[type="number"] { --field: var(--butter);   --field-ink: var(--butter-ink); }
-select               { --field: var(--lavender); --field-ink: var(--lavender-ink); }
+/* The native arrow sits hard against the right edge, and on a wide field that is a long way from
+   the words. Drawn ourselves instead: a small chevron a padding's width in from the edge, in the
+   theme's soft ink (--select-arrow, one per theme, because a data URI cannot read currentColor).
+   The value sits at the left like every other field's; the right padding keeps it off the arrow. */
+select {
+    --field: var(--lavender); --field-ink: var(--lavender-ink);
+    appearance: none; -webkit-appearance: none;
+    background-image: var(--select-arrow); background-repeat: no-repeat;
+    background-position: right 12px center; background-size: 16px 16px;
+    padding-right: 36px;
+}
 textarea { font-family: var(--font-mono); resize: vertical; }
 /* A placeholder is an example, not an answer, and it has to look like one: upright and in the
    field's full ink it read as a figure already entered, and a form of placeholders passed for a
@@ -1425,12 +1472,8 @@ input:focus, textarea:focus, select:focus {
 /* A fieldset whose first child is a row of fields needs a little air under the legend. */
 .input-group > .field-row { margin-top: var(--space-1); }
 
-/* Single-row entry, folded away under the paste box it duplicates. */
-#single-row-entry { margin-top: var(--space-4); border-top: 1px solid var(--border); padding-top: var(--space-3); }
-#single-row-entry > summary {
-    cursor: pointer; font-size: var(--fs-sm); font-weight: 600; color: var(--text-muted);
-    list-style: revert; padding: var(--space-1) 0;
-}
+/* Single-row entry, folded away between the template picker and the paste box it duplicates.
+   Its card is the shared rule with .heading-rules below. */
 #single-row-entry > summary:hover { color: var(--text-primary); }
 #single-row-entry[open] > summary { margin-bottom: var(--space-3); }
 
@@ -1532,8 +1575,15 @@ input:focus, textarea:focus, select:focus {
 .list-container { margin-bottom: 15px; padding: 12px 14px; background: var(--glass-thin); border-radius: var(--r-gum-sm); border: 1px dashed var(--glass-border); overflow-wrap: anywhere; }
 .list-container ul { padding-left: 18px; margin: 5px 0; }
 /* Collapsed by default: reference the user needs once, and the paste box is what they came for. */
-.heading-rules { margin-bottom: 14px; padding: 10px 14px; background: var(--glass-thin); border-radius: var(--r-gum-sm); border: 1px dashed var(--glass-border); }
-.heading-rules summary { font-size: var(--fs-sm); font-weight: 600; color: var(--text-muted); cursor: pointer; }
+/* The three folded blocks above the editor - title rules, templates, single row - are one shape:
+   a dashed glass card with a small muted summary line. Different contents, same fold. */
+.heading-rules, .template-picker, #single-row-entry {
+    margin-bottom: 14px; padding: 10px 14px; background: var(--glass-thin);
+    border-radius: var(--r-gum-sm); border: 1px dashed var(--glass-border);
+}
+.heading-rules summary, .template-picker > summary, #single-row-entry > summary {
+    font-size: var(--fs-sm); font-weight: 600; color: var(--text-muted); cursor: pointer;
+}
 .heading-rules > *:last-child { margin-bottom: 0; }
 .heading-rules ul { padding-left: 18px; margin: 5px 0 12px; }
 .heading-rules li { margin-bottom: 3px; }
@@ -2066,12 +2116,7 @@ mark.unknown-token {
 /* The template picker, above the editor. A closed <details> by default: a designer who already knows
    what they are writing should see one line, not four cards competing with the box they came here to
    type in. */
-.template-picker {
-    margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    background: var(--bg-main);
-}
-.template-picker > summary { cursor: pointer; font-weight: 600; }
+/* Card and summary are the shared rule with .heading-rules. */
 .template-list { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
 .template-row {
     display: grid; grid-template-columns: minmax(0, 1fr) auto;
@@ -2273,7 +2318,7 @@ mark.unknown-token {
 .select-with-unit { display: flex; width: 100%; gap: 8px; }
 .select-with-unit > select {
     padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-    background: var(--panel-bg); font-weight: 500; box-sizing: border-box;
+    background-color: var(--panel-bg); font-weight: 500; box-sizing: border-box;
 }
 .select-with-unit > select:first-child { flex: 1; min-width: 0; }
 .select-with-unit > select:last-child  { width: 74px; flex: none; }
@@ -2964,6 +3009,8 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
     .stage { transition: none; }
     .stage:active { transform: none; }
     .stage-dot { transition: none; }
+    .stage-sub, .stage-sub::before { transition: none; }
+    .stage-sub:hover, .stage-sub:active { transform: none; }
     .dock.is-open { animation: none; }
     .dock-btn { transition: none; }
 }

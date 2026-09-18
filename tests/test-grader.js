@@ -1219,7 +1219,7 @@ print('\n34. The export package');
 var exportRows = $('export-package').text().replace(/\s+/g, ' ');
 ['Finished-measurement table', 'Body-measurement table', 'Schematic labels',
  'Multi-size instructions', 'Grading calculation report',
- 'Technical-editing report', 'JSON for Stitch Math'].forEach(function (name) {
+ 'Technical-editing report', 'Stitch Math project file'].forEach(function (name) {
     ok('the package offers the ' + name.toLowerCase(), exportRows.indexOf(name) !== -1);
 });
 no('and no longer a tester worksheet', /Tester worksheet/.test(exportRows));

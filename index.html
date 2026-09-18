@@ -87,6 +87,23 @@
     <!-- Four corner brackets round a plus, for Construction. The frame is open on all four sides: the
          thing inside it is finished, the way in is not. -->
     <symbol id="ic-frame" viewBox="0 0 24 24"><path d="M4.4 9.6V4.4h5.2M14.4 4.4h5.2v5.2M19.6 14.4v5.2h-5.2M9.6 19.6H4.4v-5.2M9.2 12h5.6M12 9.2v5.6"/></symbol>
+    <!-- The app icon: the Stitch Math logo, drawn once here and used by the sidebar mark and
+         the About heading. See the note on the sidebar mark for how it relates to icons/. -->
+    <symbol id="ic-brand" viewBox="22.5 18 85 85">
+        <defs><clipPath id="brand-ball"><circle cx="58.555" cy="52" r="26"></circle></clipPath></defs>
+        <path class="mark-strand mark-tail" d="M52.29,89.491C42.086,95.512 30.763,95.251 27.021,88.909C23.431,82.825 28.114,73.34 37.51,67.263"></path>
+        <circle class="mark-ball" cx="58.555" cy="52" r="26"></circle>
+        <g clip-path="url(#brand-ball)">
+            <path class="mark-strand" d="M62.078,34.554C68.353,40.317 72.241,49.416 71.879,59.504C71.646,65.975 69.698,71.914 66.571,76.739M58.022,38.373C62.704,44.076 65.462,51.93 65.154,60.497C64.917,67.077 62.907,73.107 59.686,77.976M54.304,43.795C57.121,48.857 58.664,54.966 58.429,61.49C58.246,66.577 57.004,71.335 54.961,75.482M49.06,76.209C45.685,70.975 43.677,64.422 43.677,57.313C43.677,45.923 48.832,35.959 56.508,30.563C59.018,28.798 61.797,27.523 64.754,26.845M41.744,72.984C39.7,68.703 38.401,63.804 38.088,58.554C37.381,46.672 41.909,35.972 49.235,29.887C51.74,27.807 54.571,26.267 57.633,25.403M71.725,30.064C68.603,30.731 65.677,32.032 63.055,33.844C55.562,39.023 50.555,48.381 50.555,59.055C50.555,66.23 52.817,72.81 56.576,77.926M67.045,32.083C74.341,37.689 78.999,47.512 78.603,58.511C78.432,63.272 77.333,67.745 75.518,71.699"></path>
+        </g>
+        <circle class="mark-rim" cx="58.555" cy="52" r="24.8"></circle>
+        <!-- The pencil, eraser end first so each piece overlaps the one behind it. -->
+        <path class="mark-pencil-band" d="M94.074,36.052C94.619,35.507 95.359,35.201 96.13,35.201C96.902,35.201 97.641,35.507 98.187,36.052C99.81,37.676 102.064,39.93 103.688,41.553C104.233,42.099 104.539,42.838 104.539,43.61C104.539,44.381 104.233,45.121 103.688,45.666C102.224,47.13 100.515,48.838 100.515,48.838L90.902,39.225C90.902,39.225 92.61,37.516 94.074,36.052Z"></path>
+        <path class="mark-pencil-ferrule" d="M90.359,39.225L100.515,49.381L95.515,54.381L85.359,44.225L90.359,39.225Z"></path>
+        <path class="mark-pencil" d="M84.555,45.029L94.711,55.185L63.001,86.895L52.845,76.739L84.555,45.029Z"></path>
+        <path class="mark-pencil-tip" d="M48.349,91.587L53.041,76.739L63.198,86.895L48.349,91.587Z"></path>
+        <path class="mark-pencil-lead" d="M49.349,90.587L50.16,85.857L54.079,89.776L49.349,90.587Z"></path>
+    </symbol>
 </defs></svg>
 
 <!-- ========================================================= -->
@@ -139,7 +156,8 @@
     <!-- === SIDEBAR ====================================== -->
     <aside id="app-sidebar">
         <div class="sidebar-brand">
-            <!-- The app icon, inlined. The paths are icons/icon-SMath.svg's, with its 119-unit
+            <!-- The app icon, from the #ic-brand symbol in the sprite above. The paths are
+                 icons/icon-SMath.svg's, with its 119-unit
                  coordinates kept as they are and the viewBox cropped to the artwork, so the mark and
                  the installed icon are the same drawing: change one and bring the other along - the
                  PNGs in icons/ are rendered from that file. The colours are the file's too, set in
@@ -150,24 +168,10 @@
                  point both sit over it and it reads as yarn running out from under them; the ball's
                  wraps are clipped to the ball and its rim is drawn after them, or the clip would eat
                  the inner half of the rim's own stroke. -->
-            <svg class="brand-mark" viewBox="22.5 18 85 85" aria-hidden="true" focusable="false">
-                <defs><clipPath id="brand-ball"><circle cx="58.555" cy="52" r="26"></circle></clipPath></defs>
-                <path class="mark-strand mark-tail" d="M52.29,89.491C42.086,95.512 30.763,95.251 27.021,88.909C23.431,82.825 28.114,73.34 37.51,67.263"></path>
-                <circle class="mark-ball" cx="58.555" cy="52" r="26"></circle>
-                <g clip-path="url(#brand-ball)">
-                    <path class="mark-strand" d="M62.078,34.554C68.353,40.317 72.241,49.416 71.879,59.504C71.646,65.975 69.698,71.914 66.571,76.739M58.022,38.373C62.704,44.076 65.462,51.93 65.154,60.497C64.917,67.077 62.907,73.107 59.686,77.976M54.304,43.795C57.121,48.857 58.664,54.966 58.429,61.49C58.246,66.577 57.004,71.335 54.961,75.482M49.06,76.209C45.685,70.975 43.677,64.422 43.677,57.313C43.677,45.923 48.832,35.959 56.508,30.563C59.018,28.798 61.797,27.523 64.754,26.845M41.744,72.984C39.7,68.703 38.401,63.804 38.088,58.554C37.381,46.672 41.909,35.972 49.235,29.887C51.74,27.807 54.571,26.267 57.633,25.403M71.725,30.064C68.603,30.731 65.677,32.032 63.055,33.844C55.562,39.023 50.555,48.381 50.555,59.055C50.555,66.23 52.817,72.81 56.576,77.926M67.045,32.083C74.341,37.689 78.999,47.512 78.603,58.511C78.432,63.272 77.333,67.745 75.518,71.699"></path>
-                </g>
-                <circle class="mark-rim" cx="58.555" cy="52" r="24.8"></circle>
-                <!-- The pencil, eraser end first so each piece overlaps the one behind it. -->
-                <path class="mark-pencil-band" d="M94.074,36.052C94.619,35.507 95.359,35.201 96.13,35.201C96.902,35.201 97.641,35.507 98.187,36.052C99.81,37.676 102.064,39.93 103.688,41.553C104.233,42.099 104.539,42.838 104.539,43.61C104.539,44.381 104.233,45.121 103.688,45.666C102.224,47.13 100.515,48.838 100.515,48.838L90.902,39.225C90.902,39.225 92.61,37.516 94.074,36.052Z"></path>
-                <path class="mark-pencil-ferrule" d="M90.359,39.225L100.515,49.381L95.515,54.381L85.359,44.225L90.359,39.225Z"></path>
-                <path class="mark-pencil" d="M84.555,45.029L94.711,55.185L63.001,86.895L52.845,76.739L84.555,45.029Z"></path>
-                <path class="mark-pencil-tip" d="M48.349,91.587L53.041,76.739L63.198,86.895L48.349,91.587Z"></path>
-                <path class="mark-pencil-lead" d="M49.349,90.587L50.16,85.857L54.079,89.776L49.349,90.587Z"></path>
-            </svg>
+            <svg class="brand-mark" aria-hidden="true" focusable="false"><use href="#ic-brand"></use></svg>
             <div class="brand-words">
                 <strong>Stitch Math</strong>
-                <span>Crochet Pattern Compiler<br>&amp; Designer Suite</span>
+                <span>Crochet Designer Suite<br>&amp; Pattern Validation</span>
             </div>
         </div>
 
@@ -270,9 +274,9 @@
                     <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-book-open"></use></svg>
                     <span class="dock-btn-label">Stitches</span>
                 </button>
-                <button type="button" id="dock-btn-compiler" class="dock-btn gum-press" aria-expanded="false" aria-controls="dock-compiler" title="Compiler Overview">
+                <button type="button" id="dock-btn-compiler" class="dock-btn gum-press" aria-expanded="false" aria-controls="dock-compiler" title="Pattern Overview">
                     <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
-                    <span class="dock-btn-label">Compiler</span>
+                    <span class="dock-btn-label">Pattern Validator</span>
                 </button>
 
                 <!-- Status pill. This replaced three separate meter cards.
@@ -341,7 +345,7 @@
                 </button>
                 <button type="button" id="tile-compiler" class="dash-tile tile-compiler">
                     <svg class="ic tile-art" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
-                    <span class="tile-name">Compiler</span>
+                    <span class="tile-name">Pattern Validator</span>
                     <strong id="tile-compiler-value" class="tile-value">0</strong>
                     <span class="tile-note">Needs attention</span>
                     <span class="tile-link">Check now →</span>
@@ -384,15 +388,15 @@
                 <div id="dock-compiler" class="dock" aria-label="Compiler Overview">
                 <div class="dock-head">
                     <svg class="ic dock-head-ic" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>
-                    <strong class="dock-title">Compiler Overview</strong>
-                    <button type="button" id="dock-close-compiler" class="dock-close" aria-label="Close the Compiler Overview"><svg class="ic dock-close-ic" aria-hidden="true" focusable="false"><use href="#ic-close"></use></svg></button>
+                    <strong class="dock-title">Pattern Overview</strong>
+                    <button type="button" id="dock-close-compiler" class="dock-close" aria-label="Close the Pattern Overview"><svg class="ic dock-close-ic" aria-hidden="true" focusable="false"><use href="#ic-close"></use></svg></button>
                 </div>
                 <div class="dock-body">
 
                 <section class="dash-card card-compiler">
                     <div class="dash-card-head">
-                        <h3>Compiler Overview</h3>
-                        <button type="button" id="link-compiler" class="dash-link">Open compiler</button>
+                        <h3>Pattern Overview</h3>
+                        <button type="button" id="link-compiler" class="dash-link">Open Pattern Validator</button>
                     </div>
                     <div class="compiler-split">
                         <div id="dash-findings" class="dash-findings"></div>
@@ -433,7 +437,7 @@
                         <h3>Daily Quest</h3>
                         <svg class="ic quest-chest" aria-hidden="true" focusable="false"><use href="#ic-gift"></use></svg>
                     </div>
-                    <p id="quest-text" class="quest-text">Compile a pattern without any errors</p>
+                    <p id="quest-text" class="quest-text">Crochet with 0 math errors</p>
                     <p class="quest-reward"><svg class="ic quest-spark" aria-hidden="true" focusable="false"><use href="#ic-spark"></use></svg> <span id="quest-reward">+50 Stitch Points</span></p>
                     <div class="quest-foot">
                         <div class="meter-track"><span id="quest-bar" class="meter-bar"></span></div>
@@ -453,10 +457,10 @@
                         <div class="record-figure"><strong id="rec-patterns">0</strong><span>Patterns saved</span></div>
                         <div class="record-figure"><strong id="rec-exports">0</strong><span>Exports shipped</span></div>
                         <div class="record-figure"><strong id="rec-stitches">0</strong><span>Stitches worked</span></div>
-                        <div class="record-figure"><strong id="rec-compiles">0</strong><span>Clean compiles</span></div>
+                        <div class="record-figure"><strong id="rec-compiles">0</strong><span>Clean checks</span></div>
                         <div class="record-figure"><strong id="rec-best">0</strong><span>Best streak</span></div>
                         <div class="record-figure record-collection">
-                            <strong id="rec-collected">0 / 27</strong><span>Stitches collected</span>
+                            <strong id="rec-collected">0 / 0</strong><span>Stitches collected</span>
                             <div class="meter-track"><span id="rec-collection-bar" class="meter-bar"></span></div>
                         </div>
                     </div>
@@ -511,7 +515,7 @@
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Catch errors before they ship</span>
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Grade with confidence</span>
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Design with precision</span>
-                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Compile smarter</span>
+                <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Count smarter</span>
                 <span><svg class="ic strip-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg> Publish beautifully</span>
                 <!-- The build. Set from APP_VERSION at start-up rather than written here, so the number
                      cannot be bumped in one place and left stale in the other. -->
@@ -549,7 +553,7 @@
             <section class="panel" id="output-section">
                 <h2><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg>Validation Results</h2>
                 <div id="cumulative-status">
-                    <p class="placeholder-text">No pattern steps configured.<br>Add a row to begin mathematical validation.</p>
+                    <p class="placeholder-text">No rows written.<br>Add a row to begin validating.</p>
                 </div>
             </section>
 
@@ -978,7 +982,7 @@
                  the pull comes from seeing the holes. Built in app.js section 12. -->
             <section class="panel" id="cabinet-panel">
                 <h2><svg class="ic h-ic tint-butter" aria-hidden="true" focusable="false"><use href="#ic-package"></use></svg>Stitch Cabinet</h2>
-                <p class="helper-text">Every stitch the daily roll can ask for. One is unlocked the first time you work it into a pattern that compiles clean.</p>
+                <p class="helper-text">Every stitch the daily roll can ask for. One is unlocked the first time you work it into a pattern that is verifiable.</p>
                 <p id="cabinet-count" class="cabinet-count">0 of 0 stitches worked</p>
                 <div id="cabinet-grid" class="cabinet-grid"></div>
             </section>
@@ -1019,7 +1023,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <details class="help-topic">
                         <summary>3. Read the results</summary>
                         <div class="help-body">
-                            <p>The <strong>Pattern Validation Matrix</strong> gives every row a line. <strong>Calc Total</strong> is what Stitch Math counted; <strong>User Total</strong> is what you wrote.</p>
+                            <p>The <strong>Pattern Validation</strong> table gives every row a line. <strong>Calc Total</strong> is what Stitch Math counted; <strong>User Total</strong> is what you wrote.</p>
                             <ul class="help-points">
                                 <li><span class="help-swatch swatch-pass"></span> <strong>Green</strong> &mdash; the row adds up. That is arithmetic only; it says nothing about gauge or fit.</li>
                                 <li><span class="help-swatch swatch-fail"></span> <strong>Red</strong> &mdash; the row cannot be worked as written. The reason is in the last column.</li>
@@ -1063,8 +1067,8 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                                 <li><strong>Save File</strong>, on Patterns &mdash; name the project and save it. It stays in this browser, and autosave keeps recovery points between saves.</li>
                                 <li><strong>Export Project</strong> &mdash; the project as a file on your device. This is the copy you own; <strong>Import Project</strong> brings it back.</li>
                                 <li><strong>Save as Text</strong> &mdash; the pattern with every stitch count corrected.</li>
-                                <li><strong>Save as PDF</strong> &mdash; the pattern as a PDF, with its metadata and stitch table.</li>
-                                <li><strong>Export annotated draft</strong> &mdash; the pattern with the linter&rsquo;s marks still on it, for review.</li>
+                                <li><strong>Save as PDF</strong> &mdash; the pattern as a PDF, with its pattern info and stitch table.</li>
+                                <li><strong>Export annotated draft</strong> &mdash; the pattern with the suggestion marks still on it, for review.</li>
                                 <li><strong>Export gauge history</strong> &mdash; every swatch you have logged, as a file.</li>
                                 <li><strong>Multi-size package</strong> &mdash; generated instructions for every graded size.</li>
                             </ul>
@@ -1078,8 +1082,8 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                         <div class="help-body">
                             <p><strong>Daily Practice</strong> has three things to do, and any one of them counts as a day&rsquo;s work &mdash; you do not have to be writing a pattern to keep a streak going.</p>
                             <ul class="help-points">
-                                <li><strong>Read a row</strong> &mdash; one row of crochet and the count going into it. Say what comes out. The answer is worked out by the same engine that checks your own patterns, so it cannot disagree with the rest of the app.</li>
-                                <li><strong>Meet a stitch</strong> &mdash; one stitch a day, drawn at random. Work it into a pattern that compiles clean and it pays; press <strong>I&rsquo;ve worked this</strong> to add it to your <strong>Stitch Cabinet</strong> if you worked it off-pattern.</li>
+                                <li><strong>Read a row</strong> &mdash; one row of crochet and the count going into it. Say what comes out. The answer is worked out by the same arithmetic that checks your own patterns, so it cannot disagree with the rest of the app.</li>
+                                <li><strong>Meet a stitch</strong> &mdash; one stitch a day, drawn at random. Work it into a pattern that is verifiable and it pays; press <strong>I&rsquo;ve worked this</strong> to add it to your <strong>Stitch Cabinet</strong> if you worked it off-pattern.</li>
                                 <li><strong>Log a swatch</strong> &mdash; a shortcut to <strong>Gauge Profile</strong>, which is where swatches are recorded.</li>
                             </ul>
                             <p>Miss a day and a banked rest day covers it, if you have one &mdash; you earn one for every seven days in a row, up to two.</p>
@@ -1128,7 +1132,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                  The privacy line is first because it is the one a designer actually wants answered, and
                  because it is the shortest true sentence this app can say about itself. -->
             <section class="panel" id="about-panel">
-                <h2><svg class="ic h-ic tint-pink" aria-hidden="true" focusable="false"><use href="#ic-yarn"></use></svg>About Stitch Math</h2>
+                <h2><svg class="ic h-ic h-ic-brand" aria-hidden="true" focusable="false"><use href="#ic-brand"></use></svg>About Stitch Math</h2>
 
                 <p class="about-privacy">
                     <svg class="ic about-ic" aria-hidden="true" focusable="false"><use href="#ic-check"></use></svg>
@@ -1302,11 +1306,11 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     </button>
                     <button type="button" id="pub-export-pdf" class="publish-action">
                         <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-print"></use></svg>
-                        <span class="pub-text"><strong>Save as PDF</strong><span>The pattern as a PDF file, with metadata and stitch table.</span></span>
+                        <span class="pub-text"><strong>Save as PDF</strong><span>The pattern as a PDF file, with its pattern info and stitch table.</span></span>
                     </button>
                     <button type="button" id="pub-export-markup" class="publish-action">
                         <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-alert"></use></svg>
-                        <span class="pub-text"><strong>Export annotated draft</strong><span>The pattern with the linter&rsquo;s marks still on it, for review.</span></span>
+                        <span class="pub-text"><strong>Export annotated draft</strong><span>The pattern with the suggestion marks still on it, for review.</span></span>
                     </button>
                     <button type="button" id="pub-export-history" class="publish-action">
                         <svg class="ic pub-icon" aria-hidden="true" focusable="false"><use href="#ic-trend"></use></svg>
@@ -1630,6 +1634,31 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     <p class="helper-text">Each one is a complete, working pattern that already states its hook, yarn, gauge and abbreviations &mdash; the four things a pattern has to say before anyone else can work it. Change the numbers and make it yours.</p>
                     <div id="template-list" class="template-list"></div>
                 </details>
+                <!-- One row at a time, between the template picker and the whole-pattern editor. -->
+                <details id="single-row-entry">
+                    <summary>Add foundation row / single row</summary>
+                    <form id="row-form">
+                        <div class="form-container">
+                            <div class="form-group full-width">
+                                <label for="initial-chain-input">Starting Chains (first row only)</label>
+                                <input type="number" id="initial-chain-input" value="0" min="0" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="tokens-input">Row Instructions</label>
+                                <input type="text" id="tokens-input" placeholder="[sc, inc] x 3, dc">
+                            </div>
+                            <div class="form-group">
+                                <label for="multiplier-input">Times to Work This Row</label>
+                                <input type="number" id="multiplier-input" value="1" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expected-yield-input">Expected Stitch Count</label>
+                                <input type="number" id="expected-yield-input" value="0" min="0">
+                            </div>
+                        </div>
+                        <button type="submit">Add &amp; Validate Row</button>
+                    </form>
+                </details>
                 <div class="lint-shell">
                     <div class="lint-editor">
                         <div class="lint-gutter" id="lint-gutter" aria-hidden="true"></div>
@@ -1655,31 +1684,6 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
                     </label>
                 </div>
                 <button type="button" id="bulk-parse-btn" class="btn-dark">Validate Entire Pattern</button>
-
-                <details id="single-row-entry">
-                    <summary>Add foundation row / single row</summary>
-                    <form id="row-form">
-                        <div class="form-container">
-                            <div class="form-group full-width">
-                                <label for="initial-chain-input">Starting Chains (first row only)</label>
-                                <input type="number" id="initial-chain-input" value="0" min="0" required>
-                            </div>
-                            <div class="form-group full-width">
-                                <label for="tokens-input">Row Instructions</label>
-                                <input type="text" id="tokens-input" placeholder="[sc, inc] x 3, dc">
-                            </div>
-                            <div class="form-group">
-                                <label for="multiplier-input">Times to Work This Row</label>
-                                <input type="number" id="multiplier-input" value="1" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="expected-yield-input">Expected Stitch Count</label>
-                                <input type="number" id="expected-yield-input" value="0" min="0">
-                            </div>
-                        </div>
-                        <button type="submit">Add &amp; Validate Row</button>
-                    </form>
-                </details>
 
                 <!-- Whole-pattern actions. Outside the collapsible above, because they act on the
                      pattern as a whole rather than on one row. -->
@@ -1731,7 +1735,7 @@ Row 2: ch 1, turn, [sc in next st, inc in next st] x 6 (18)</pre>
             <!-- === 11. VALIDATION MATRIX TABLE === -->
             <section class="panel" id="matrix-section">
                 <div class="panel-title-row">
-                    <h3><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>Pattern Validation Matrix</h3>
+                    <h3><svg class="ic h-ic tint-mint" aria-hidden="true" focusable="false"><use href="#ic-scan"></use></svg>Pattern Validation</h3>
                     <button type="button" id="jump-error-btn" class="btn-jump-error" onclick="window.jumpToFirstError()"><svg class="ic btn-ic" aria-hidden="true" focusable="false"><use href="#ic-alert"></use></svg> Jump to First Error</button>
                 </div>
                 <!-- === THE VALIDATION BADGE ===

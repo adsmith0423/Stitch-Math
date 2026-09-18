@@ -197,6 +197,21 @@ ok('and marks the sidebar entry active', $('nav-publish').classList.contains('is
 ok('and opens the hub that owns it', $('hub-export').classList.contains('is-open'));
 ck('and moves the current step', stage('nav-publish').getAttribute('aria-current'), 'step');
 
+// Every page under a step is a dot beside its pill, so the Stitch Library and the Gauge Profile
+// are one press from the rail as much as Patterns is. A dot has no word: its name is its label.
+function sub(navId) { return $('stage-sub-' + navId); }
+['nav-patterns', 'nav-library', 'nav-gauge', 'nav-studio', 'nav-construction', 'nav-sizer', 'nav-publish'].forEach(function (id) {
+    ok('a dot is drawn for ' + id, !!sub(id).className && sub(id).className.indexOf('stage-sub') >= 0);
+    ok('and it is named', !!sub(id).getAttribute('aria-label'));
+});
+ck('the dot for the page you are on is lit', sub('nav-publish').getAttribute('aria-current'), 'page');
+no('and the others are not', sub('nav-patterns').getAttribute('aria-current') === 'page');
+sub('nav-gauge').fire('click');
+ok('a dot press switches view', shown('gauge-profile-panel'));
+ck('and lights that dot', sub('nav-gauge').getAttribute('aria-current'), 'page');
+ck('under its step', stage('nav-patterns').getAttribute('aria-current'), 'step');
+stage('nav-publish').fire('click');
+
 print('\n1d-ii. A stage marks itself off what the pattern actually has, and reports nothing else');
 // The marks are read from live state every redraw, never recorded, so they must follow the pattern
 // rather than the visits. Walking all three above must NOT have marked anything.
@@ -966,7 +981,7 @@ print('\n8. Empty states rather than invented figures');
 $('new-file-btn').fire('click');
 ck('errors back to zero', $('dash-errors').textContent, '0');
 ck('health has no number to show', $('dash-health').textContent, '—');
-ok('the compiler card says so', /No pattern compiled yet/.test($('dash-findings').innerHTML));
+ok('the pattern overview card says so', /No pattern validated yet/.test($('dash-findings').innerHTML));
 ok('recent projects says so', /No saved projects yet/.test($('dash-recent').innerHTML));
 ok('gauges says so', /No swatches logged/.test($('dash-gauges').innerHTML));
 ok('size charts says so', /written for one size/.test($('dash-sizes').innerHTML));
@@ -1312,8 +1327,14 @@ nav('nav-dashboard');
 ck('patterns saved', $('rec-patterns').textContent, '1');
 ck('stitches worked', $('rec-stitches').textContent, '56');
 ck('clean compiles', $('rec-compiles').textContent, '1');
+// The denominator is the roll pool, read from the same two tables the app reads it from, so
+// adding a stitch to the cabinet does not fail a test about the record strip.
+var COLLECTABLE = Object.keys(A.STITCH_COMPLEXITY_SCORES).filter(function (token) {
+    return ['ch', 'yo', 'repeat', 'rep', 'magicring'].indexOf(token) === -1
+        && !!window.CrochetMathEngine.STITCH_PRIMITIVES[token];
+}).length;
 ok('and the collection counts the stitches it can ask for',
-   /^[0-9]+ \/ 27$/.test($('rec-collected').textContent));
+   new RegExp('^[0-9]+ / ' + COLLECTABLE + '$').test($('rec-collected').textContent));
 $('new-file-btn').fire('click');
 nav('nav-dashboard');
 ck('and New File leaves all of it standing', $('rec-stitches').textContent, '56');

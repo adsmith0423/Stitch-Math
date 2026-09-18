@@ -4408,7 +4408,7 @@
         if (yarnWeight) metaItems.push(`<span><strong>Yarn:</strong> ${escapeHtml(yarnWeight)}</span>`);
         if (construction) metaItems.push(`<span><strong>Style:</strong> ${escapeHtml(construction)}</span>`);
 
-        UI['print-metadata'].innerHTML = metaItems.length > 0 ? metaItems.join('<span class="meta-separator">•</span>') : '<em>No metadata specified</em>';
+        UI['print-metadata'].innerHTML = metaItems.length > 0 ? metaItems.join('<span class="meta-separator">•</span>') : '<em>No pattern info yet</em>';
             
         const instructionsList = workedSteps().map(s => s.instructionString || ('ch ' + s.initialChain));
         const usedStitches = window.CrochetMathEngine.getUsedStitches ? window.CrochetMathEngine.getUsedStitches(instructionsList) : [];
@@ -4448,7 +4448,7 @@
 
         const totalSteps = state.patternSteps.length;
         UI['print-validation-results'].innerHTML = totalSteps === 0
-            ? '<span>No pattern steps configured.</span>'
+            ? '<span>No rows written.</span>'
             : `<span><strong>Validation Status:</strong> ${allStepsValid ? 'VALID ✓' : 'DISCREPANCIES DETECTED ✗'} &nbsp;|&nbsp; <strong>${labelPrefix}s Passed:</strong> ${passedRowsCount} / ${totalSteps} &nbsp;|&nbsp; <strong>Total Stitches:</strong> ${totalStitchesAllRounds.toLocaleString()} &nbsp;|&nbsp; <strong>Total ${labelPrefix}s:</strong> ${totalSteps}</span>`;
     }
 
@@ -5326,7 +5326,7 @@
         const total = pass.validation.rows.length;
 
         if (!health) {
-            return `<div class="status-invalid"><strong>Analytics engine unavailable.</strong></div>`;
+            return `<div class="status-invalid"><strong>Pattern analysis is unavailable.</strong></div>`;
         }
 
         const band = health.score >= 90 ? 'health-good' : health.score >= 75 ? 'health-ok' : 'health-bad';
@@ -5599,7 +5599,7 @@
         // Same reason: the parse that just ran is what decides whether Draft and Export are ticked.
         refreshStageRail();
         if (totalSteps === 0) {
-            UI['cumulative-status'].innerHTML = `<p class="placeholder-text">No pattern steps configured.<br>Add a ${labelPrefix.toLowerCase()} to begin validation.</p>`;
+            UI['cumulative-status'].innerHTML = `<p class="placeholder-text">No rows written.<br>Add a ${labelPrefix.toLowerCase()} to begin validating.</p>`;
         } else {
             const health = computePatternHealth(pass);
             state.analytics.health = health;
@@ -7854,7 +7854,7 @@
               body: editingReport(warnings, reports, {
                   check, statement: sizingStatement(garment, labels, state.grading.baseSize)
               }), empty: !garment.length },
-            { key: 'json', label: 'JSON for Stitch Math',
+            { key: 'json', label: 'Stitch Math project file',
               file: `${slug}-grading.json`, type: 'application/json',
               body: JSON.stringify({ version: 1, grading: state.grading, gauge: state.gauge,
                                      garment, sizes: labels }, null, 2), empty: !garment.length }
@@ -7971,7 +7971,7 @@
         }
 
         if (reports) {
-            lines.push('', 'Per size, from the compiler:');
+            lines.push('', 'Per size, from the Pattern Validator:');
             reports.forEach(r => {
                 lines.push(`  ${r.label}: ${r.rowsCounted} rows, ${r.startingCount} → ${r.endingCount} sts, `
                     + `${r.consumed} consumed, ${r.produced} produced, `
@@ -8051,7 +8051,7 @@
         host.replaceChildren();
 
         if (!sections.length) {
-            host.appendChild(elem('p', 'placeholder-text', 'No pattern is open. Compile one on the Studio tab and its pieces are checked here.'));
+            host.appendChild(elem('p', 'placeholder-text', 'No pattern is open. Check one on the Studio tab and its pieces are graded here.'));
             return;
         }
 
@@ -9324,9 +9324,9 @@
      */
     const NAV_TARGETS = {
         'nav-dashboard':  { view: 'dashboard', title: 'Dashboard', sub: 'Your creative command center' },
-        'nav-patterns':   { view: 'patterns',  title: 'Patterns',  sub: 'Saved files and pattern metadata' },
+        'nav-patterns':   { view: 'patterns',  title: 'Patterns',  sub: 'Saved files and pattern info' },
         'nav-library':    { view: 'library',   title: 'Stitch Library', sub: 'Common & custom stitches' },
-        'nav-studio':     { view: 'studio',    title: 'Studio',    sub: 'Write, compile and check your pattern' },
+        'nav-studio':     { view: 'studio',    title: 'Studio',    sub: 'Write and check your pattern' },
         'nav-sizer':      { view: 'sizer',     title: 'Size Grader', sub: 'Grade one size into multiple sizes' },
         'nav-analytics':  { view: 'analytics', title: 'Analytics', sub: 'Pattern health and complexity' },
         'nav-practice':   { view: 'practice',  title: 'Daily Practice', sub: 'Three things to do today, and none of them need a pattern' },
@@ -9555,15 +9555,15 @@
           note: 'Flags US terms in a UK pattern and UK terms in a US one. Never rewrites a stitch, and never changes a count.',
           apply: () => applyMetadataChange('meta-terminology') },
 
-        { id: 'toggle-trend-markers', kind: 'checkbox', group: 'Validation and linting', label: 'Show trend markers',
+        { id: 'toggle-trend-markers', kind: 'checkbox', group: 'Checking and suggestions', label: 'Show trend markers',
           note: 'Mark whether each row grew, shrank or held its stitch count.', apply: applyTrendMarkerPref },
-        { id: 'toggle-collapse-repeats', kind: 'checkbox', group: 'Validation and linting', label: 'Collapse repeated rows',
+        { id: 'toggle-collapse-repeats', kind: 'checkbox', group: 'Checking and suggestions', label: 'Collapse repeated rows',
           note: 'Fold runs of identical rows into a single line with a count.', apply: applyCollapseRepeatPref },
-        { id: 'toggle-outline-view', kind: 'checkbox', group: 'Validation and linting', label: 'Geometric outline only',
+        { id: 'toggle-outline-view', kind: 'checkbox', group: 'Checking and suggestions', label: 'Geometric outline only',
           note: 'Strip the prose and show only the stitch count each row produces, and what it did to the row above.',
           apply: applyOutlineViewPref },
 
-        { id: 'toggle-beginner-phrasing', kind: 'checkbox', group: 'Validation and linting', label: 'Beginner-friendly repeat phrasing',
+        { id: 'toggle-beginner-phrasing', kind: 'checkbox', group: 'Checking and suggestions', label: 'Beginner-friendly repeat phrasing',
           note: 'Spell every repeat out in full instead of bracket shorthand - switching back off folds them back to brackets.',
           apply: applyRepeatPhrasingMode },
 
@@ -10035,8 +10035,29 @@
             // announces as nothing at all.
             if (here) el.setAttribute('aria-current', 'step');
             if (done) el.appendChild(elem('span', 'visually-hidden', ' (done)'));
-
             track.appendChild(el);
+
+            // The hub's entries, as dots strung along the thread after the step: stage, thread,
+            // dot, thread, dot, thread, dot, thread, next stage. Every page under this step is one
+            // hop from the rail, not only the page the step lands on - the Stitch Library and the
+            // Gauge Profile are step 1 as much as Patterns is. The threads are what stretch, so
+            // the dots space themselves evenly whatever the rail's width. A dot has no word of its
+            // own, so its name goes on the button for the tooltip and the screen reader; the lit
+            // one is the page you are on. Real buttons with ids, for the same reason the stages
+            // are - see above. The step's pastel comes off the dot's own [data-step].
+            NAV_HUBS[stage.hub].forEach(navId => {
+                track.appendChild(elem('span', 'stage-link'));
+                const onIt = navId === currentNav;
+                const sub = button('stage-sub' + (onIt ? ' is-here' : ''), null, `stage-sub-${navId}`,
+                    () => navigateTo(navId));
+                const name = NAV_TARGETS[navId].title;
+                sub.dataset.step = String(i + 1);
+                sub.setAttribute('title', name);
+                sub.setAttribute('aria-label', name);
+                if (onIt) sub.setAttribute('aria-current', 'page');
+                UI[sub.id] = sub;
+                track.appendChild(sub);
+            });
         });
     }
 
@@ -10630,7 +10651,7 @@
 
     /* Rarer stitches are both harder to land and worth more, which is the whole shape of the thing:
        `odds` is the number of tickets a stitch of that weight holds in the draw, `pay` what it multiplies
-       the base reward by. Roughly 39% Common, 22% Uncommon, 30% Rare, 9% Legendary across the pool. */
+       the base reward by. Roughly 22% Common, 31% Uncommon, 41% Rare, 7% Legendary across the pool. */
     const ROLL_TIERS = {
         1: { name: 'Common', odds: 5, pay: 1 },
         2: { name: 'Common', odds: 4, pay: 1.5 },
@@ -10926,14 +10947,81 @@
           teaches: 'Twelve worked, thirteen made, four times over - the far end of a flat circle.' },
         { id: 'dtr-inc-seven', tier: 4, available: 14,
           instruction: '[dtr in next st, 2 dtr in next st] * 7',
-          teaches: 'The tallest stitch in the book increases exactly like the shortest one does.' }
+          teaches: 'The tallest stitch in the book increases exactly like the shortest one does.' },
+
+        // Tiers 5-8 reach for the rest of the Stitch Cabinet: worked-differently stitches, post
+        // stitches, mixed shaping, and the long repeats of a big flat piece. Same rule throughout -
+        // the stitch changes the fabric, the arithmetic is the same one the first tier taught.
+        { id: 'esc-round', tier: 5, available: 24,
+          instruction: 'esc in each st around',
+          teaches: 'An extended single crochet is taller than a plain one and still counts one for one.' },
+        { id: 'wsc-inc', tier: 5, available: 21,
+          instruction: '[wsc in next 2 sts, 2 wsc in next st] * 7',
+          teaches: 'Waistcoat stitch goes into the V of the stitch below, but an increase into it still adds one.' },
+        { id: 'crab-edge', tier: 5, available: 30,
+          instruction: 'rsc in each st around',
+          teaches: 'Crab stitch is worked backwards, left to right, and the direction changes nothing about the count.' },
+        { id: 'xdc-round', tier: 5, available: 22,
+          instruction: '[xdc] * 11',
+          teaches: 'A crossed double crochet is two stitches worked out of order over two stitches: two in, two out.' },
+        { id: 'hdc2tog-run', tier: 5, available: 33,
+          instruction: '[hdc in next 9 sts, hdc2tog] * 3',
+          teaches: 'Eleven stitches spent and ten made, three times over. A decrease is a decrease whatever its height.' },
+        { id: 'post-inc', tier: 6, available: 20,
+          instruction: '[fpdc in next st, 2 bpdc in next st] * 10',
+          teaches: 'Post stitches increase like any other: two around one post adds one to the round.' },
+        { id: 'fptr-cable', tier: 6, available: 28,
+          instruction: '[fptr in next 2 sts, dc in next 2 sts] * 7',
+          teaches: 'A cable panel of front post trebles stands out from the fabric, and still uses one stitch each.' },
+        { id: 'bpslst-rib', tier: 6, available: 36,
+          instruction: '[bpslst in next st, dc in next st] * 18',
+          teaches: 'A back post slip stitch is barely there, but it occupies a stitch like a tall one does.' },
+        { id: 'fphdc-dec', tier: 6, available: 44,
+          instruction: '[fphdc in next 9 sts, hdc2tog] * 4',
+          teaches: 'Post stitches and a decrease in the same repeat: eleven consumed, ten made, four times.' },
+        { id: 'tr3tog-run', tier: 6, available: 24,
+          instruction: '[tr in next 3 sts, tr3tog] * 4',
+          teaches: 'tr3tog gathers three trebles into one, so each repeat spends six stitches and makes four.' },
+        { id: 'inc-dec-balance', tier: 7, available: 24,
+          instruction: '[inc, sc in next st, dec] * 6',
+          teaches: 'An increase and a decrease in the same repeat cancel out - the round moves the stitches, not the count.' },
+        { id: 'invdec-run', tier: 7, available: 42,
+          instruction: '[sc in next 4 sts, invdec] * 7',
+          teaches: 'An invisible decrease is worked under the front loops only, and it counts exactly like a visible one.' },
+        { id: 'dc3tog-run', tier: 7, available: 39,
+          instruction: '[dc in next 10 sts, dc3tog] * 3',
+          teaches: 'dc3tog takes three and leaves one, so every repeat loses two, and three repeats lose six.' },
+        { id: 'five-in-one', tier: 7, available: 26,
+          instruction: '[sc in next 12 sts, 5 sc in next st] * 2',
+          teaches: 'Five into one adds four, not five - a fan replaces the stitch it stands in and adds the rest.' },
+        { id: 'trtr-inc', tier: 7, available: 15,
+          instruction: '[trtr in next 4 sts, 2 trtr in next st] * 3',
+          teaches: 'A triple treble is as tall as they come, and an increase in it still adds exactly one.' },
+        { id: 'hdc3tog-run', tier: 8, available: 50,
+          instruction: '[hdc in next 7 sts, hdc3tog] * 5',
+          teaches: 'Ten stitches in, eight out, five times: a three-together decrease loses two per repeat.' },
+        { id: 'qtr-inc', tier: 8, available: 9,
+          instruction: '[qtr in next 2 sts, 2 qtr in next st] * 3',
+          teaches: 'Quadruple treble, and the arithmetic has not moved: three repeats, three stitches gained.' },
+        { id: 'inc-thirteen-run', tier: 8, available: 70,
+          instruction: '[13 sc, inc] * 5',
+          teaches: 'Fourteen worked, fifteen made, five times over - the last rounds of a large flat circle.' },
+        { id: 'dec-twelve-run', tier: 8, available: 98,
+          instruction: '[12 sc, dec] * 7',
+          teaches: 'Fourteen spent and thirteen made, seven times: a big round loses only seven.' },
+        { id: 'popcorn-inc', tier: 8, available: 32,
+          instruction: '[popcorn in next st, sc in next 2 sts, 2 sc in next st] * 8',
+          teaches: 'A popcorn counts as one whatever it is made of, and the increase beside it still adds one.' },
+        { id: 'sc4tog-run', tier: 8, available: 30,
+          instruction: '[sc in next 2 sts, sc4tog] * 5',
+          teaches: 'sc4tog eats four stitches and leaves one, so each repeat spends six and keeps three.' }
     ];
 
     /* A correct answer is worth about what a swatch is. Deliberately modest: the reason to do this is
        to find out whether you can read the row, and pricing it higher would make it a chore to farm. */
     const PRACTICE_POINTS = 20;
 
-    const PRACTICE_TIERS = 4;
+    const PRACTICE_TIERS = 8;
 
     /** Which tiers today's draw may reach. The ladder is the collection, because how many stitches
      *  somebody has actually worked is the only evidence in the store of how far along they are - a
@@ -11246,7 +11334,7 @@
             ? 'Worked today. A new stitch is drawn tomorrow.'
             : roll.isNew
                 ? `You have never worked this one - it pays ${DISCOVERY_BONUS} extra.`
-                : 'Work it into a pattern that compiles clean.');
+                : 'Work it into a pattern that is verifiable.');
 
         const reroll = shellEl('roll-again');
         if (reroll) {
@@ -11352,7 +11440,7 @@
 
         if (!ids.length) {
             host.innerHTML = emptyState(
-                'Nothing yet. Accept a suggestion in the Pattern Linter and what it taught is recorded here.');
+                'Nothing yet. Accept a suggestion beside your pattern and what it taught is recorded here.');
             return;
         }
 
@@ -11612,7 +11700,7 @@
 
     function renderDashCompiler(pass, health) {
         if (!pass || !pass.validation.rows.length) {
-            setHtml('dash-findings', emptyState('No pattern compiled yet. Paste one into the Compiler to see its findings here.'));
+            setHtml('dash-findings', emptyState('No pattern validated yet. Paste one into the Studio to see its findings here.'));
             setHtml('dash-graph', '<p class="graph-empty">Nothing to plot yet.</p>');
             setText('dash-errors', 0);
             setText('dash-warnings', 0);
@@ -11710,7 +11798,7 @@
         checkStitchRoll(pass);
         const done = checkDailyQuest(pass);
 
-        setText('quest-text', 'Compile a pattern without any errors');
+        setText('quest-text', 'Crochet with 0 math errors');
         setText('quest-reward', `+${POINTS.quest} Stitch Points`);
         setText('quest-count', done ? '1 / 1' : '0 / 1');
         setBarWidth('quest-bar', done ? 100 : 0);
