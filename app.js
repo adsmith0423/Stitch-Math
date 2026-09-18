@@ -5216,7 +5216,8 @@
         };
     }
 
-    const BADGE_ICONS = { valid: '✓', incomplete: '◐', invalid: '✗', empty: '·' };
+    // Empty has no mark: a dot in front of "Nothing to check yet" read as stray punctuation.
+    const BADGE_ICONS = { valid: '✓', incomplete: '◐', invalid: '✗' };
 
     /**
      * The badge, and the checklist under it.
@@ -5242,7 +5243,7 @@
         const badge = computeValidationBadge(pass);
         if (badge.state === 'empty') {
             host.className = 'validation-badge badge-empty';
-            host.innerHTML = `<div class="badge-head"><span class="badge-icon">${BADGE_ICONS.empty}</span>`
+            host.innerHTML = `<div class="badge-head">`
                 + `<span class="badge-headline">${escapeHtml(badge.headline)}</span></div>`
                 + `<p class="badge-detail">${escapeHtml(badge.detail)}</p>`;
             return;
@@ -9852,7 +9853,8 @@
     /*
      * Opens one hub and closes the other three. An accordion rather than four independent
      * disclosures: with all four open the rail is the same twelve-item list it was before, only
-     * taller, and the grouping stops doing any work.
+     * taller, and the grouping stops doing any work. Every group whose entry is not the one you
+     * are on is folded, so the open group is always the one you are in.
      *
      * The open/closed state is not stored. It is derived from wherever you currently are, every
      * time - navigateTo calls this with the hub owning the destination - so the rail cannot drift

@@ -280,13 +280,21 @@
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
     /* ---- The washes ----
-       Four pastel blooms bled into the seafoam, big enough to read as weather rather than as
-       decoration: pink at the top right, mint at the top left, butter low in the middle, lavender
-       across the foot. The names are the old ones; the colours are the new pairs' fills. */
-    --wash-coral: rgba(255, 201, 191, 0.55);
-    --wash-teal: rgba(185, 235, 220, 0.65);
-    --wash-sun: rgba(251, 239, 193, 0.55);
-    --wash-depth: rgba(220, 211, 245, 0.50);
+       Four pastel blooms on the seafoam: mint at the top left, rose at the top right, butter low
+       on the right, lavender low on the left. The names are the old ones. The colours are NOT
+       the pairs' fills: those are chalky by design, and four chalky tints laid over each other at
+       strength went grey where they met. These are cleaner - lighter and higher in chroma - and
+       each bloom is kept to its own corner so no two of them mix. Bright is what comes of clean
+       colour that stays apart; it was never a matter of alpha. */
+    --wash-coral: rgba(255, 196, 214, 0.90);
+    --wash-teal: rgba(168, 240, 218, 0.92);
+    /* Quieter than the other three on purpose. Yellow reads louder than pink or lavender at the same
+       alpha - it is the lightest hue and sits nearest the ground's own cream - so at 0.90 the foot
+       of the page was a splash where the other corners were a tint, and at 0.50 it went flat and
+       lost the bubbly look the rest of the page has. Halfway between the two: still plainly a
+       yellow bloom, no longer the loudest thing on the page. */
+    --wash-sun: rgba(255, 244, 186, 0.75);
+    --wash-depth: rgba(217, 200, 255, 0.85);
 
     /* The four blooms as ONE background-image stack, because two elements paint them: the workspace
        and the sidebar. Both attach it fixed, so both resolve the same gradients against the same
@@ -301,12 +309,27 @@
        topmost layer, it deepens by the same amount wherever a bloom happens to fall. */
     --rail-deepen: rgba(var(--shade), 0.075);
 
+    /* One bloom per corner, each run out by 60% of its radius, so the centre of the page is the
+       seafoam and the corners are the colour - and nowhere does one bloom sit on another. The
+       lavender used to be a flat gradient across the whole foot, under the butter: that overlap
+       was most of the mud. */
     --page-washes:
-        linear-gradient(180deg, transparent 0%, var(--wash-depth) 100%),
-        radial-gradient(1500px 900px at 12% -14%, var(--wash-teal) 0%, transparent 70%),
-        radial-gradient(1400px 820px at 96% 2%, var(--wash-coral) 0%, transparent 66%),
-        radial-gradient(1300px 900px at 70% 62%, var(--wash-sun) 0%, transparent 68%),
-        radial-gradient(1100px 760px at 18% 92%, var(--wash-teal) 0%, transparent 66%);
+        radial-gradient(1300px 900px at 8% -8%, var(--wash-teal) 0%, transparent 60%),
+        radial-gradient(1300px 900px at 100% 0%, var(--wash-coral) 0%, transparent 60%),
+        radial-gradient(1300px 900px at 100% 100%, var(--wash-sun) 0%, transparent 60%),
+        radial-gradient(1300px 900px at 0% 100%, var(--wash-depth) 0%, transparent 60%);
+
+    /* The rail's copy of the stack: the same blooms at the same anchors, attached the same way, so
+       the teal and lavender that cross its edge still carry straight through - minus the sun. That
+       bloom is anchored bottom-right and runs 780px in from the edge, which on anything narrower
+       than ~1040px, and in the drawer, reaches the foot of the rail and paints it yellow. The rail
+       is never yellow, whatever the viewport. Kept as a second token rather than an override of
+       --wash-sun on #app-sidebar, because var() inside a custom property resolves where the
+       property is declared - an override on the rail would change nothing. */
+    --rail-washes:
+        radial-gradient(1300px 900px at 8% -8%, var(--wash-teal) 0%, transparent 60%),
+        radial-gradient(1300px 900px at 100% 0%, var(--wash-coral) 0%, transparent 60%),
+        radial-gradient(1300px 900px at 0% 100%, var(--wash-depth) 0%, transparent 60%);
 
 }
 
@@ -809,10 +832,10 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
    behind a backdrop blur, and that is what made it not match. Its gradient ran on its own axis, so
    it met the page at a different colour top and bottom, and the blur pulled in whatever wash
    happened to sit behind it, so the rail changed colour as the page scrolled. Painting the page's
-   own --page-washes instead, attached fixed exactly as the workspace attaches them, means the two
-   resolve the same gradients against the same viewport: a bloom crossing the rail's edge carries
-   straight through it. The rail IS the page. --sidebar-bg is what makes it a shade darker, and it
-   is the only thing that differs.
+   own blooms instead (--rail-washes: the page's stack without the sun), attached fixed exactly as
+   the workspace attaches them, means the two resolve the same gradients against the same viewport:
+   a bloom crossing the rail's edge carries straight through it. The rail IS the page. --sidebar-bg
+   is what makes it a shade darker, and the missing sun bloom is the only other difference.
    background-COLOR, never the background shorthand. The shorthand resets background-color to
    transparent, so a theme that overrode background-image without also setting a colour got a rail
    painted with the ground - which is exactly what happened to Readable, where the rail was not
@@ -823,13 +846,25 @@ header p { color: var(--text-muted); margin: 5px 0 0 0; }
    Only the surface is described here; every button inside keeps its own fill, press and lift. */
 #app-sidebar {
     position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    /* border-box, so 100vh is the rail's whole height and its foot sits ON the viewport's bottom
+       edge. Content-box put the padding outside the 100vh and the last 36px of the rail below the
+       fold, permanently - pinned at the top, it could never scroll into view. A foot nobody can see
+       cannot be rounded. */
+    box-sizing: border-box;
     display: flex; flex-direction: column; gap: 16px; padding: 18px 13px;
     background-color: var(--sidebar-bg);
     background-image:
         linear-gradient(var(--rail-deepen), var(--rail-deepen)),
-        var(--page-washes);
+        var(--rail-washes);
     background-attachment: fixed;
     border-right: 1.5px solid var(--glass-dark-border);
+    /* The foot is rounded at the rail's own radius, so the rail ends the way every other surface on
+       the page does - a lozenge, not a slab cut off at the viewport. Only the foot: the head meets
+       the top of the viewport and a rounded corner there would show the ground through a gap. The
+       ground the rounded foot reveals is the page's own washes, which the rail already paints, so
+       nothing new appears - the rail just lifts off it at the last 32px. overflow-y: auto clips the
+       scrollbar to the curve as well, which is the point. */
+    border-radius: 0 0 var(--r-gum-lg) var(--r-gum-lg);
     box-shadow: 1px 0 24px -16px rgba(var(--shade), 0.25);
     color: var(--sidebar-ink); z-index: 60;
 }
@@ -2828,7 +2863,11 @@ label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-b
    dashboard uses - a deliberate exception, called out by Ashley. */
 .dash-footer-strip {
     display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 20px;
-    background: var(--lavender); color: var(--lavender-ink);
+    /* The mint pair, the same fill-and-ink pairing every badge on the page uses, so the words are
+       set in the ink chosen to carry text on that fill: 4.8:1 on day, 7.5:1 on Readable, AA for
+       text this size in both. Not a green with the lavender ink kept - that pairing was never
+       measured. */
+    background: var(--mint); color: var(--mint-ink);
     border: 1.5px solid rgba(255, 255, 255, 0.9);
     border-radius: var(--card-radius); padding: 13px 20px; font-size: var(--fs-xs); font-weight: 700;
 }

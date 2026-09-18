@@ -152,6 +152,10 @@ $('hub-export').fire('click');
 ok('pressing a hub goes to its first entry', $('nav-publish').classList.contains('is-active'));
 ck('and opens that hub', openHubs()[0], 'hub-export');
 ck('while the others close', $('hub-write').getAttribute('aria-expanded'), 'false');
+// Every group you are not in is folded, whatever it holds - the rail shows one open group.
+HUB_IDS.filter(function (h) { return h !== 'hub-export'; }).forEach(function (h) {
+    ck(h + ' is folded while you are in Publish', $(h).getAttribute('aria-expanded'), 'false');
+});
 
 print('\n1d. The workflow rail crosses the three views a pattern is written across');
 var STAGE_NAV = ['nav-patterns', 'nav-studio', 'nav-publish'];

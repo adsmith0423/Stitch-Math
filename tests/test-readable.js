@@ -197,11 +197,23 @@ no('and not the shorthand, which resets the colour to transparent',
 no('there is no blur on it', /backdrop-filter/.test(SIDEBAR_RULE));
 no('--sidebar-bg-deep is retired, not left dangling', /--sidebar-bg-deep/.test(CSS));
 
-// The rail paints the PAGE's washes, not a set of its own, and attaches them the same way, so the
-// two resolve the same gradients against the same viewport and a bloom crosses the edge unbroken.
-// A rail with its own gradient is what "does not match the main section" meant.
-ok('the rail paints the same wash stack the workspace does',
-   /background-image:[\s\S]{0,120}var\(--page-washes\)/.test(SIDEBAR_RULE));
+// The rail paints the PAGE's blooms at the page's anchors, attached the same way, so the two resolve
+// the same gradients against the same viewport and a bloom crosses the edge unbroken. A rail with a
+// gradient on its own axis is what "does not match the main section" meant. The one bloom it leaves
+// out is the sun: anchored bottom-right, it reaches the rail's foot on narrow viewports and in the
+// drawer, and the rail is never yellow.
+ok('the rail paints the page\'s wash stack, minus the sun',
+   /background-image:[\s\S]{0,120}var\(--rail-washes\)/.test(SIDEBAR_RULE));
+var RAIL_WASHES = CSS.slice(CSS.indexOf('--rail-washes:'));
+RAIL_WASHES = RAIL_WASHES.slice(0, RAIL_WASHES.indexOf(';'));
+var PAGE_WASHES = CSS.slice(CSS.indexOf('--page-washes:'));
+PAGE_WASHES = PAGE_WASHES.slice(0, PAGE_WASHES.indexOf(';'));
+no('no sun bloom on the rail', /--wash-sun/.test(RAIL_WASHES));
+['--wash-teal', '--wash-coral', '--wash-depth'].forEach(function (bloom) {
+    var onPage = PAGE_WASHES.match(new RegExp('radial-gradient\\([^)]*var\\(' + bloom + '\\)[^)]*\\)'));
+    ok(bloom + ' sits on the rail exactly where it sits on the page',
+       !!onPage && RAIL_WASHES.indexOf(onPage[0]) !== -1);
+});
 ok('and attaches it fixed, as the workspace does', /background-attachment: fixed/.test(SIDEBAR_RULE));
 // Anchored to the line start: "#app-shell {" also matches inside the Readable override
 // ':root[data-theme="readable"] #app-shell {', which sets background-image: none and would have
@@ -215,7 +227,7 @@ no('and neither writes the gradients out by hand', /radial-gradient/.test(SIDEBA
 // swallowed the base difference, measuring 0.4 L* at the foot of the day rail. The scrim is the
 // topmost layer for that reason - it deepens by the same amount wherever a bloom happens to fall.
 ok('a deepening scrim sits OVER the washes',
-   /background-image:\s*\n\s*linear-gradient\(var\(--rail-deepen\), var\(--rail-deepen\)\),\s*\n\s*var\(--page-washes\)/.test(SIDEBAR_RULE));
+   /background-image:\s*\n\s*linear-gradient\(var\(--rail-deepen\), var\(--rail-deepen\)\),\s*\n\s*var\(--rail-washes\)/.test(SIDEBAR_RULE));
 
 /** Each appearance's own rail and its own ground, read out of its own token block. */
 function scopeOf(selector) {
